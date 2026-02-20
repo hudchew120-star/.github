@@ -1,8 +1,16 @@
 name: MyFirstRobot
 on: [push]
+
 jobs:
   hello-job:
     runs-on: ubuntu-latest
     steps:
       - name: Greet
         run: echo "ยินดีด้วย! คุณสร้าง GitHub Actions แรกสำเร็จแล้ว"
+
+      - name: System Info
+        run: |
+          echo "เครื่องนี้ใช้ระบบปฏิบัติการอะไร:"
+          lsb_release -a
+          echo "มีพื้นที่เหลือเท่าไหร่:"
+          df -h
