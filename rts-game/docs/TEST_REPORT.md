@@ -1,9 +1,9 @@
-# Test Report - Phases 1-2 and graphics overhaul
+# Test Report - Phases 1-3 and graphics overhaul
 
 Environment: Godot 4.3 stable, Linux, headless run and software-rendered (Mesa llvmpipe)
 screenshots. Command: `godot --headless --path . res://tests/test_runner.tscn`
 
-**Result: 21 tests, 162 checks passed, 0 failed.**
+**Result: 28 tests, 239 checks passed, 0 failed.**
 
 | Test | What it verifies |
 | --- | --- |
@@ -26,7 +26,14 @@ screenshots. Command: `godot --headless --path . res://tests/test_runner.tscn`
 | test_fog | Unexplored/visible states; enemies hidden; reveal cheat |
 | test_ai_match | Two Hard AIs play 9 minutes (fixed random seed): both build bases, harvest, build armies, fight and damage each other's structures |
 | test_victory | Victory when enemies are eliminated; defeat when your forces are gone |
-| test_iso_view | Isometric renderer: pre-rendered sprite sheets for units and structures, hull frame follows facing, screen/world round trip, picking units and tall structures, box selection, sprite explosions, zoom |
+| test_iso_view | Isometric renderer: pre-rendered sprite sheets for units and structures, hull frame follows facing, screen/world round trip, picking units and tall structures, box selection, sprite explosions, zoom; helicopters drawn at altitude with a ground shadow and rotor, picking flying units, engineer sprites |
+| test_coastal_map | Coastal maps put water near every start, keep bases connected by land/bridges; dry maps have no water |
+| test_naval | Naval yard refuses land and is built entirely on water; ships launch onto water and stay on it; land units never spawn in the sea |
+| test_submarine_detection | Submerged submarines are invisible to enemies and immune to tank fire; destroyer sonar reveals and attacks them |
+| test_aircraft | Airfield pad assignment, take-off to altitude, attacking, ammunition use, returning to the pad and rearming; tanks cannot hit flying aircraft |
+| test_anti_air | Tanks cannot target aircraft; anti-air vehicles can and shoot a helicopter down |
+| test_engineer | Engineer captures an enemy structure (consumed, ownership and power change) and fully repairs a friendly one |
+| test_repair_facility | Damaged tank is repaired at the repair facility and repairs cost credits |
 | test_view3d_picking | 3D view builds models; screen/world round trip; clicking units and the top of tall structures; box selection; 3D effects; zoom |
 
 Manual checks (1920x1080 screenshots, Forward+ renderer on a software Vulkan driver): isometric

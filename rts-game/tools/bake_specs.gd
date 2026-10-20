@@ -5,6 +5,8 @@ extends RefCounted
 
 const M := preload("res://tools/art/hd_models.gd")
 const B := preload("res://tools/art/hd_buildings.gd")
+const H := preload("res://tools/art/humans.gd")
+const V := preload("res://tools/art/vehicles.gd")
 const DIRS := 32
 const PXU := 90.509668      # pixels per world unit at 2x
 const COS30 := 0.8660254
@@ -18,18 +20,25 @@ static func _wrap(n: Node3D) -> Node3D:
 	h.add_child(n)
 	return h
 
-static func vehicle(name: String, builder: Callable, scale: float, states: int = 1) -> Array:
+static func vehicle(name: String, builder: Callable, scale: float, states: int = 1, frame: Vector2i = Vector2i(192, 160), air: bool = false) -> Array:
 	var probe: Dictionary = builder.call(0)
-	var fw := 192
-	var fh := 160
+	var fw := frame.x
+	var fh := frame.y
+	var anchor := Vector2(fw * 0.5, fh * 0.62)
 	var piv: Vector3 = probe.pivot * scale
-	var out := [{"name": name, "fw": fw, "fh": fh, "anchor": Vector2(96, 100), "count": DIRS * states, "scale": scale,
-		"extra": {"pivot": [piv.x, piv.y, piv.z], "dirs": DIRS, "states": states},
+	var extra := {"pivot": [piv.x, piv.y, piv.z], "dirs": DIRS, "states": states}
+	if probe.has("rotor"):
+		var rp: Array = probe.rotor.pos
+		extra["rotor"] = {"pos": [rp[0] * scale, rp[1] * scale, rp[2] * scale], "r": probe.rotor.r * scale, "blades": probe.rotor.blades}
+	if air:
+		extra["air"] = true
+	var out := [{"name": name, "fw": fw, "fh": fh, "anchor": anchor, "count": DIRS * states, "scale": scale,
+		"extra": extra, "separate_shadow": air,
 		"build": func(i):
 			var d: Dictionary = builder.call(i / DIRS)
 			return _rot(_wrap(d.root), i % DIRS)}]
 	if probe.turret != null:
-		out.append({"name": name + "_turret", "fw": fw, "fh": fh, "anchor": Vector2(96, 100), "count": DIRS, "scale": scale, "shadow": false,
+		out.append({"name": name + "_turret", "fw": fw, "fh": fh, "anchor": anchor, "count": DIRS, "scale": scale, "shadow": false,
 			"extra": {"dirs": DIRS},
 			"build": func(i):
 				var d: Dictionary = builder.call(0)
@@ -45,11 +54,11 @@ static func infantry(name: String, kind: String, faction: String) -> Array:
 			if fr >= 1 and fr <= 6:
 				pose["walk"] = float(fr - 1) / 6.0
 			elif fr >= 7:
-				pose["fire"] = true
-			return _rot(M.infantry(kind, faction, pose), (i % 8) * 4)},
+				pose["fire"] = fr - 6
+			return _rot(H.soldier(kind, faction, pose), (i % 8) * 4)},
 		{"name": name + "_die", "fw": 112, "fh": 112, "anchor": Vector2(56, 80), "count": 5, "scale": 1.45, "extra": {"frames": 5},
 		"build": func(i):
-			return _rot(M.infantry(kind, faction, {"dead": float(i) / 4.0}), 12)}]
+			return _rot(H.soldier(kind, faction, {"dead": float(i) / 4.0}), 12)}]
 
 static func building_frame(sx: int, sz: int, h: float) -> Dictionary:
 	var top := int(h * PXU * COS30) + 70
@@ -86,7 +95,11 @@ static func building(sprite: String, faction: String, sx: int, sz: int) -> Array
 		out.append({"name": key + "_turret", "fw": 192, "fh": 160, "anchor": Vector2(96, 100), "count": DIRS, "scale": 1.0, "shadow": false,
 			"extra": {"dirs": DIRS, "pivot": [pv.x, pv.y, pv.z]},
 			"build": func(i):
-				var t: Node3D = B.gun_turret_top(P, faction) if sprite == "gun_turret" else B.flame_turret_top(P, faction)
+				var t: Node3D
+				if probe.has("top"):
+					t = probe.top.call(P, faction)
+				else:
+					t = B.gun_turret_top(P, faction) if sprite == "gun_turret" else B.flame_turret_top(P, faction)
 				return _rot(_wrap(t), i)})
 	return out
 
@@ -96,21 +109,34 @@ static func decor(name: String, count: int, fw: int, fh: int, anchor: Vector2, b
 
 const BUILDINGS := {
 	"coalition": [["conyard", 3, 3], ["power", 2, 2], ["adv_power", 3, 3], ["refinery", 3, 3], ["silo", 1, 1], ["barracks", 2, 2],
-		["factory", 3, 3], ["radar", 2, 2], ["pillbox", 1, 1], ["gun_turret", 1, 1]],
+		["factory", 3, 3], ["radar", 2, 2], ["pillbox", 1, 1], ["gun_turret", 1, 1],
+		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["sam_site", 1, 1]],
 	"dominion": [["conyard", 3, 3], ["power", 2, 2], ["adv_power", 3, 3], ["refinery", 3, 3], ["silo", 1, 1], ["barracks_dom", 2, 2],
-		["factory", 3, 3], ["radar", 2, 2], ["flame_tower", 1, 1], ["arc_coil", 1, 2]],
+		["factory", 3, 3], ["radar", 2, 2], ["flame_tower", 1, 1], ["arc_coil", 1, 2],
+		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["flak_cannon", 1, 1]],
 }
 
 static func all() -> Array:
 	var out := []
-	out += vehicle("u_tank_light_coalition", func(_s): return M.tank("light", "coalition"), 1.3)
-	out += vehicle("u_tank_medium_coalition", func(_s): return M.tank("medium", "coalition"), 1.3)
-	out += vehicle("u_tank_heavy_dominion", func(_s): return M.tank("heavy", "dominion"), 1.3)
-	out += vehicle("u_jeep_coalition", func(_s): return M.jeep("coalition"), 1.35)
+	out += vehicle("u_tank_light_coalition", func(_s): return V.light_tank(), 1.3)
+	out += vehicle("u_tank_medium_coalition", func(_s): return V.medium_tank(), 1.3)
+	out += vehicle("u_tank_heavy_dominion", func(_s): return V.heavy_tank(), 1.25, 1, Vector2i(224, 176))
+	out += vehicle("u_jeep_coalition", func(_s): return V.jeep(), 1.35)
+	out += vehicle("u_aa_coalition", func(_s): return V.aa_coalition(), 1.3)
+	out += vehicle("u_aa_dominion", func(_s): return V.aa_dominion(), 1.25)
+	out += vehicle("u_heli_coalition", func(_s): return V.heli_coalition(), 1.0, 1, Vector2i(224, 192), true)
+	out += vehicle("u_heli_dominion", func(_s): return V.heli_dominion(), 1.0, 1, Vector2i(240, 200), true)
+	out += vehicle("u_jet_coalition", func(_s): return V.jet_coalition(), 1.0, 1, Vector2i(224, 176), true)
+	out += vehicle("u_jet_dominion", func(_s): return V.jet_dominion(), 1.0, 1, Vector2i(240, 176), true)
+	out += vehicle("u_gunboat_coalition", func(_s): return V.boat_coalition(), 1.15, 1, Vector2i(208, 160))
+	out += vehicle("u_destroyer_coalition", func(_s): return V.destroyer_coalition(), 1.0, 1, Vector2i(336, 224))
+	out += vehicle("u_submarine_dominion", func(_s): return V.sub_dominion(), 1.0, 1, Vector2i(288, 176))
+	out += vehicle("u_cruiser_dominion", func(_s): return V.cruiser_dominion(), 1.0, 1, Vector2i(368, 240))
 	for f in ["coalition", "dominion"]:
-		out += vehicle("u_harvester_" + f, func(s): return M.harvester(f, float(s)), 1.25, 2)
-		out += vehicle("u_mcv_" + f, func(_s): return M.mcv(f), 1.25)
+		out += vehicle("u_harvester_" + f, func(s): return V.harvester(f, float(s)), 1.2, 2, Vector2i(208, 176))
+		out += vehicle("u_mcv_" + f, func(_s): return V.mcv(f), 1.15, 1, Vector2i(224, 192))
 		out += infantry("i_infantry_" + f, "infantry", f)
+		out += infantry("i_engineer_" + f, "engineer", f)
 	out += infantry("i_rocket_inf_coalition", "rocket_inf", "coalition")
 	out += infantry("i_heavy_inf_dominion", "heavy_inf", "dominion")
 	out += infantry("i_flame_inf_dominion", "flame_inf", "dominion")

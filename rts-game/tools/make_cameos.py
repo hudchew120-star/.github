@@ -89,6 +89,17 @@ UNITS = {
     "mcv": ("u_mcv_{f}", 3, None),
 }
 
+RENDERS = os.path.join(ROOT, "tools", "_bake_out", "cameos")
+
+def from_render(t, faction):
+    """High-resolution cameo rendered straight from the 3D model by tools/showcase.gd."""
+    p = os.path.join(RENDERS, "%s_%s.png" % (t, faction))
+    if not os.path.exists(p):
+        return None
+    img = Image.open(p).convert("RGBA")
+    s = min((W - 12) / img.width, (H - 12) / img.height)
+    return img.resize((max(1, int(img.width * s)), max(1, int(img.height * s))), Image.LANCZOS)
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     data = json.load(open(os.path.join(ROOT, "data", "units.json")))
@@ -103,8 +114,11 @@ def main():
             if faction in d["factions"]:
                 items.append((t, "building"))
         for t, kind in items:
+            img = from_render(t, faction)
             try:
-                if kind == "unit":
+                if img is not None:
+                    pass
+                elif kind == "unit":
                     name, i, tur = UNITS[t]
                     name = name.format(f=faction)
                     turret = None

@@ -307,7 +307,7 @@ func _update_unit(v: Dictionary, delta: float) -> void:
 	n.visible = e.visible
 	if not n.visible:
 		return
-	var target := to3(e.pos, terrain.ground_height(e.pos))
+	var target := to3(e.pos, terrain.ground_height(e.pos) + e.altitude_now)
 	var moved := n.position.distance_to(target)
 	if moved > 2.0:
 		n.position = target

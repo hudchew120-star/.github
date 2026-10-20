@@ -297,7 +297,7 @@
    "factory",
    "radar"
   ],
-  "sprite": "aa_coalition",
+  "sprite": "aa",
   "turret": true,
   "turn_rate": 5.0
  },
@@ -323,7 +323,7 @@
    "factory",
    "radar"
   ],
-  "sprite": "aa_dominion",
+  "sprite": "aa",
   "turret": true,
   "turn_rate": 3.5
  },
@@ -352,7 +352,7 @@
   "prereq": [
    "airfield"
   ],
-  "sprite": "heli_coalition",
+  "sprite": "heli",
   "turn_rate": 4.0
  },
  "jet_c": {
@@ -381,7 +381,7 @@
    "airfield",
    "radar"
   ],
-  "sprite": "jet_coalition",
+  "sprite": "jet",
   "turn_rate": 2.2
  },
  "heli_d": {
@@ -409,7 +409,7 @@
   "prereq": [
    "airfield"
   ],
-  "sprite": "heli_dominion",
+  "sprite": "heli",
   "turn_rate": 3.2
  },
  "jet_d": {
@@ -438,7 +438,7 @@
    "airfield",
    "radar"
   ],
-  "sprite": "jet_dominion",
+  "sprite": "jet",
   "turn_rate": 1.8
  },
  "boat_c": {
@@ -462,7 +462,7 @@
   "prereq": [
    "naval_yard"
   ],
-  "sprite": "boat_coalition",
+  "sprite": "gunboat",
   "turn_rate": 3.0
  },
  "dest_c": {
@@ -489,7 +489,7 @@
    "naval_yard",
    "radar"
   ],
-  "sprite": "destroyer_coalition",
+  "sprite": "destroyer",
   "turn_rate": 1.8
  },
  "sub_d": {
@@ -514,7 +514,7 @@
   "prereq": [
    "naval_yard"
   ],
-  "sprite": "sub_dominion",
+  "sprite": "submarine",
   "turn_rate": 2.0
  },
  "cruiser_d": {
@@ -539,7 +539,7 @@
    "naval_yard",
    "radar"
   ],
-  "sprite": "cruiser_dominion",
+  "sprite": "cruiser",
   "turn_rate": 1.4
  }
 }

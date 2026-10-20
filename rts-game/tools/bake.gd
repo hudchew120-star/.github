@@ -25,12 +25,16 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_setup()
 	var args := OS.get_cmdline_user_args()
-	var filter := args[0] if args.size() > 0 else ""
+	# Filters: comma-separated substrings; add "--resume" to skip sheets already in _bake_out.
+	var filters: PackedStringArray = (args[0] if args.size() > 0 else "").split(",", false)
+	var resume := args.has("--resume")
 	await get_tree().process_frame
 	var specs: Array = SPECS.all()
 	var n := 0
 	for spec in specs:
-		if filter != "" and not String(spec.name).contains(filter):
+		if filters.size() > 0 and not Array(filters).any(func(f): return String(spec.name).contains(f)):
+			continue
+		if resume and FileAccess.file_exists(out_dir + "/" + spec.name + ".json"):
 			continue
 		var t0 := Time.get_ticks_msec()
 		await bake_sheet(spec)
@@ -198,6 +202,6 @@ func bake_sheet(spec: Dictionary) -> void:
 	if want_shadow:
 		ssheet.save_png(out_dir + "/" + spec.name + "_shadow.png")
 	var meta := {"res": R, "fw": fw, "fh": fh, "ax": spec.anchor.x, "ay": spec.anchor.y, "cols": cols, "rows": rows, "count": count,
-		"ss": SS, "mask": want_mask, "shadow": want_shadow, "extra": spec.get("extra", {})}
+		"ss": SS, "mask": want_mask, "shadow": want_shadow, "separate_shadow": spec.get("separate_shadow", false), "extra": spec.get("extra", {})}
 	var f := FileAccess.open(out_dir + "/" + spec.name + ".json", FileAccess.WRITE)
 	f.store_string(JSON.stringify(meta))

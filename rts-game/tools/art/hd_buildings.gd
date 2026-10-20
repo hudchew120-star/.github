@@ -5,6 +5,7 @@ extends RefCounted
 
 const K := preload("res://tools/art/kit.gd")
 const M := preload("res://tools/art/hd_models.gd")
+const B2 := preload("res://tools/art/buildings2.gd")
 
 # ---------------------------------------------------------------- shared details
 
@@ -146,6 +147,11 @@ static func build(sprite: String, faction: String, anim_t: float = 0.0) -> Dicti
 		"gun_turret": return gun_base(P, faction)
 		"flame_tower": return flame_base(P, faction)
 		"arc_coil": return arc_coil(P, faction, anim_t)
+		"airfield": return B2.airfield(P, faction)
+		"naval_yard": return B2.naval_yard(P, faction)
+		"repair": return B2.repair(P, faction)
+		"sam_site": return B2.sam_base(P, faction)
+		"flak_cannon": return B2.flak_base(P, faction)
 	return {"root": Node3D.new(), "height": 0.5}
 
 static func conyard(P: Dictionary, f: String, t: float) -> Dictionary:

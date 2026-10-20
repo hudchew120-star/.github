@@ -173,8 +173,25 @@ static func build_unit(sprite: String, team: Color, faction: String) -> Node3D:
 	var body := pivot(root, Vector3.ZERO, "body")
 	root.set_meta("body", body)
 	match sprite:
-		"infantry", "rocket_inf", "heavy_inf", "flame_inf":
+		"infantry", "rocket_inf", "heavy_inf", "flame_inf", "engineer":
 			_infantry(root, body, sprite, team, faction)
+		"aa":
+			_tank(root, body, team, faction, 0.7, 0.5, 0.18, 0.3, 2)
+			box(body, Vector3(0.24, 0.1, 0.36), team_mat(team), Vector3(-0.05, 0.36, 0))
+		"heli":
+			box(body, Vector3(0.6, 0.22, 0.2), team_mat(team), Vector3(0.05, 0.25, 0))
+			box(body, Vector3(0.7, 0.06, 0.05), team_mat(team), Vector3(-0.55, 0.3, 0))
+			box(body, Vector3(0.12, 0.03, 0.5), metal_dark(), Vector3(0.05, 0.22, 0))
+			cyl(body, 0.55, 0.55, 0.01, metal_dark(), Vector3(0.0, 0.42, 0), Vector3.ZERO, 24)
+		"jet":
+			box(body, Vector3(0.9, 0.1, 0.14), team_mat(team), Vector3(0, 0.15, 0))
+			box(body, Vector3(0.3, 0.02, 0.8), team_mat(team), Vector3(-0.08, 0.14, 0))
+			box(body, Vector3(0.15, 0.02, 0.36), team_mat(team), Vector3(-0.4, 0.15, 0))
+			box(body, Vector3(0.14, 0.16, 0.02), team_mat(team), Vector3(-0.4, 0.25, 0))
+		"gunboat", "destroyer", "submarine", "cruiser":
+			var L: float = {"gunboat": 0.8, "destroyer": 1.7, "submarine": 1.3, "cruiser": 1.9}[sprite]
+			box(body, Vector3(L, 0.1, L * 0.2), team_mat(team) if sprite != "submarine" else metal_dark(), Vector3(0, 0.05, 0))
+			box(body, Vector3(L * 0.3, 0.14, L * 0.12), team_mat(team), Vector3(0.05, 0.17, 0))
 		"jeep":
 			_jeep(root, body, team, faction)
 		"tank_light":

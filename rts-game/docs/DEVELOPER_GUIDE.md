@@ -55,22 +55,32 @@ Key rules:
 ```
 tools/art/kit.gd          Mesh kit: chamfered/convex solids from planes, lathe, extrude, tubes;
                           painted bake shader (panel lines, grime, stripes, burn, cut-away)
-tools/art/hd_models.gd    Vehicles and infantry (posable for walk/fire/death)
+tools/art/kit.gd (cont.)  loft() streamlined bodies, limb() tapered capsules, ellipsoid(), ik()
+tools/art/humans.gd       Soldiers in metres (1.8 m, ~7.5 heads), FK legs + two-bone IK arms,
+                          per-faction uniforms (camouflage shader), weapons, poses
+tools/art/vehicles.gd     Faction-specific armour, logistics, aircraft (rotor info) and ships
+tools/art/hd_models.gd    Shared palettes/materials (older vehicle models kept for reference)
 tools/art/hd_buildings.gd Structures, scaffolding, trees, rocks and props
+tools/art/buildings2.gd   Airfield, naval yard (on water), repair facility, SAM site, flak cannon
+tools/art/catalog.gd      Named model sets for previews, cameos and the catalogue posters
+tools/showcase.gd/.tscn   High-resolution model renderer (auto-framing, one PNG per item or a grid)
+tools/make_catalog.py     Faction catalogue posters -> docs/screenshots/catalog_<faction>.png
 tools/bake_specs.gd       List of every sprite sheet: frame size, anchor, frame count, states
 tools/bake.gd/.tscn       Renders each frame 3x supersampled + team mask + projected shadow pass
 tools/finalize_sprites.py Downsamples, composites soft shadows, finishes edges -> assets/sprites
 tools/paint_assets.py     Painted terrain textures, ore, effects, HUD metal and emblems
-tools/make_cameos.py      Sidebar build icons from the baked sprites
+tools/make_cameos.py      Sidebar build icons (from showcase renders, else from baked sprites)
 ```
 
 Rebuild everything (needs a GPU or a software Vulkan driver):
 
 ```
-godot --path . res://tools/bake.tscn            # or: -- <name filter>
+godot --path . res://tools/bake.tscn            # or: -- "<filter1,filter2>" [--resume]
 python3 tools/finalize_sprites.py
 python3 tools/paint_assets.py
+godot --path . res://tools/showcase.tscn -- cameos <absolute path>/tools/_bake_out/cameos/ 400
 python3 tools/make_cameos.py
+python3 tools/make_catalog.py
 godot --headless --path . --import               # refresh imported textures
 ```
 
@@ -81,7 +91,12 @@ anchor (the model's ground origin; for structures the footprint's top corner), g
 frame count and extras (turret pivot, smoke points, structure height). `_mask.png` holds the
 team-colour mask that `SpriteLib.team_material()` uses to recolour per player.
 
-**Adding art for a new unit**: build its model in `hd_models.gd`, add a `vehicle()`/`infantry()`
+Aircraft sheets set `extra.air` and write a separate `_shadow.png` (drawn on the ground while the
+body is lifted by `Unit.altitude_now`); helicopters carry `extra.rotor` (hub position, radius,
+blade count) and `IsoView` draws the spinning rotor disc. Ships bob slightly and leave a wake;
+own submerged submarines are drawn translucent and enemy ones are hidden unless detected.
+
+**Adding art for a new unit**: build its model in `vehicles.gd` / `humans.gd`, add a `vehicle()`/`infantry()`
 entry in `bake_specs.gd` named `u_<sprite>_<faction>` (or `i_...`), bake, finalize, and add a
 cameo mapping in `make_cameos.py`. Structures use `building()` and are named `b_<sprite>_<faction>`.
 
@@ -129,12 +144,17 @@ All balance numbers live here and can be edited without touching code.
 }
 ```
 
-- `category`: `infantry` (built at barracks) or `vehicle` (war factory).
+- `category`: `infantry` (barracks), `vehicle` (war factory), `aircraft` (airfield) or `naval` (naval yard).
 - `speed`: cells per second. `sight`: cells. `radius`: pixels (for collision and range).
-- `move`: `foot`, `wheel`, `track` (and `naval` later) - matched against terrain costs.
+- `move`: `foot`, `wheel`, `track`, `naval` (water and bridges) or `air` - matched against terrain costs.
 - `armor`: `none`, `light`, `heavy`, `wood`, `concrete`, `aircraft`, `ship`.
 - `prereq`: tech tags provided by buildings (see `provides`).
 - Optional: `harvester: {capacity, scoop_time, unload_time}`, `deploys_to: "<building>"`.
+- Aircraft: `altitude` (world units), `hover` (helicopters hover and turn in place; jets keep
+  flying and strafe), `ammo` (shots before returning to an airfield pad to rearm), `rearm_time`.
+- Ships: `submarine` (invisible to enemies while submerged unless inside a `detector` radius;
+  surfaces briefly after firing), `detector` (sonar radius in cells).
+- Engineers: `engineer: true` (right-click captures enemy / fully repairs friendly structures).
 
 ### buildings.json
 
@@ -143,12 +163,18 @@ All balance numbers live here and can be edited without touching code.
 - `provides`: tech tags unlocked while the building stands.
 - `power`: positive produces, negative consumes. `requires_power`: goes offline on low power.
 - `storage`, `free_unit`, `dock`, `exit`, `weapons`, `turret` as needed.
+- `placement: "water"`: every footprint cell must be water (naval yard).
+- `pads`: landing pad positions in cells relative to the footprint (airfield).
+- `repair_rate`: fraction of max HP per second restored to units standing on it (repair facility);
+  costs 40% of the unit's price for a full repair.
 
 ### weapons.json and warheads.json
 
 Weapons define `damage` ([min, max]), `range` (cells), `rof` (seconds between shots),
 `warhead`, `projectile` (`bullet`, `shell`, `rocket`, `flame`, `zap`), `speed`, `splash` (cells),
-`accuracy`, `targets` (`ground`, `air`), optional `burst`, `min_range`.
+`accuracy`, `targets` (`ground`, `air`, `naval`, `sub`), optional `burst`, `min_range`.
+Target classes: aircraft are `air`; ships are `naval` (also hit by `ground` weapons); submerged
+submarines are `sub` and can only be hit by weapons that list it (torpedoes, depth charges).
 Warheads multiply damage by the target's armor class (`vs`).
 
 ### terrain.json
@@ -164,10 +190,12 @@ and counter-unit lists.
 
 ## Adding content
 
-**A new unit**: add an entry to `units.json`. If it needs new art, add a case to
-`Sprites.draw_unit()`. It appears in the sidebar automatically for the listed factions.
+**A new unit**: add an entry to `units.json`. For art, add a model to `tools/art/vehicles.gd` or
+`humans.gd`, a sheet in `tools/bake_specs.gd` and a case in `tools/art/catalog.gd`, then bake
+(see Art pipeline). It appears in the sidebar automatically for the listed factions.
 
-**A new building**: add to `buildings.json` and a case in `Sprites.draw_building()`.
+**A new building**: add to `buildings.json`, a model in `tools/art/buildings2.gd` (dispatched
+from `hd_buildings.gd build()`) and an entry in `BUILDINGS` in `bake_specs.gd`.
 
 **A new faction**: add it to `factions.json`, list it in the `factions` arrays of the units and
 buildings it may use, and add an `army` entry in `ai.json`.

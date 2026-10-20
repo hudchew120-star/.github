@@ -341,8 +341,15 @@ func on_entity_died(e, killer) -> void:
 	if e.is_unit():
 		p.stats.units_lost += 1
 		var inf: bool = e.is_infantry()
-		spawn_effect("explosion_small" if inf else "explosion", e.pos)
-		if not inf:
+		if e.is_air_unit and e.altitude_now > 0.1:
+			# Shot down: burst in the air, then the wreck hits the ground.
+			spawn_effect("explosion", e.pos, {"h": e.altitude_now})
+			spawn_effect("explosion_big", e.pos + Vector2(randf_range(-10, 10), randf_range(-10, 10)))
+		elif e.is_naval:
+			spawn_effect("explosion", e.pos)
+		else:
+			spawn_effect("explosion_small" if inf else "explosion", e.pos)
+		if not inf and not e.is_naval and map.terrain_id(e.cell()) != "water":
 			spawn_effect("crater", e.pos, {"r": e.radius * 0.8})
 		play_sound("die_inf" if inf else "explode", e.pos)
 		if e.pid == human_pid and e.def.get("category", "") != "infantry":

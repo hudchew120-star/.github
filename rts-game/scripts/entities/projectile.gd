@@ -15,6 +15,8 @@ var homing: bool = false
 var t: float = 0.0
 var dead: bool = false
 var trail: Array = []
+var h_from: float = 0.0      # launch / impact heights (aircraft), used by renderers
+var h_to: float = 0.0
 
 func _ready() -> void:
 	z_index = 5
@@ -31,6 +33,10 @@ func setup(g, sh, weapon: Dictionary, tgt, start: Vector2, target_pos: Vector2) 
 	speed = maxf(60.0, float(w.get("speed", 400)))
 	homing = kind == "rocket" and target_pos.distance_to(tgt.pos) < 1.0
 	position = cur
+	if sh != null and sh.is_unit() and sh.is_air_unit:
+		h_from = sh.altitude_now
+	if tgt != null and tgt.is_unit() and tgt.is_air_unit:
+		h_to = tgt.altitude_now
 
 func tick(dt: float) -> void:
 	if dead:

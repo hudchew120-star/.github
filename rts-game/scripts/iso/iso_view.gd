@@ -12,6 +12,7 @@ var camera: Camera2D
 var terrain: IsoTerrain
 var ground_fx: Node2D
 var entity_layer: Node2D
+var air_layer: Node2D               # flying aircraft, drawn above everything on the ground
 var air_fx: Node2D
 var fog: Polygon2D
 var ghost: Node2D
@@ -39,6 +40,9 @@ func setup(g: Game) -> void:
 	entity_layer = Node2D.new()
 	entity_layer.y_sort_enabled = true
 	add_child(entity_layer)
+	air_layer = Node2D.new()
+	air_layer.y_sort_enabled = true
+	add_child(air_layer)
 	air_fx = Node2D.new()
 	add_child(air_fx)
 	terrain.setup(g, entity_layer)
@@ -163,7 +167,7 @@ func pick(sp: Vector2):
 	for u in game.units:
 		if u.dead or not u.visible:
 			continue
-		var s := world_to_screen(u.pos, 0.25)
+		var s := world_to_screen(u.pos, 0.25 + u.altitude_now)
 		var d := s.distance_to(sp)
 		if d < unit_screen_radius(u) + 8.0 and d < best_d:
 			best_d = d
@@ -200,7 +204,7 @@ func _sprite(sheet: SpriteLib.Sheet, team: Color) -> Sprite2D:
 	return sp
 
 func _make_visual(e) -> Dictionary:
-	var v := {"e": e, "t": randf() * 5.0, "smoke_t": randf(), "fire_t": 0.0}
+	var v := {"e": e, "t": randf() * 5.0, "smoke_t": randf(), "fire_t": 0.0, "pid": e.pid, "wake_t": 0.0}
 	var n := Node2D.new()
 	var name := SpriteLib.entity_sheet_name(e)
 	var sheet := SpriteLib.sheet(name)
@@ -221,6 +225,23 @@ func _make_visual(e) -> Dictionary:
 			v["turret"] = tur
 			v["tsheet"] = ts
 		n.position = SpriteLib.iso(e.pos)
+		if e.is_air_unit:
+			# Ground shadow (separate sheet) and, for helicopters, a spinning rotor disc.
+			var stex := SpriteLib._load_tex("res://assets/sprites/%s_shadow.png" % name)
+			if stex != null:
+				var sh := Sprite2D.new()
+				sh.texture = stex
+				sh.region_enabled = true
+				sh.centered = false
+				sh.offset = -Vector2(sheet.ax, sheet.ay)
+				ground_fx.add_child(sh)
+				v["shadow"] = sh
+			if sheet.extra.has("rotor"):
+				var rot := Node2D.new()
+				rot.set_meta("rotor", sheet.extra.rotor)
+				rot.draw.connect(_draw_rotor.bind(rot, v))
+				n.add_child(rot)
+				v["rotor"] = rot
 	else:
 		var size: Vector2i = e.size
 		var anchor_world := Vector2(e.cell0) * T
@@ -239,8 +260,29 @@ func _make_visual(e) -> Dictionary:
 			v["turret"] = tur
 			v["tsheet"] = ts
 		terrain.clear_decor(e.all_cells())
-	entity_layer.add_child(n)
+	if e.is_unit() and e.is_air_unit:
+		air_layer.add_child(n)
+	else:
+		entity_layer.add_child(n)
 	return v
+
+## Helicopter main rotor: translucent blurred disc plus fast-turning blade highlights.
+func _draw_rotor(rot: Node2D, v: Dictionary) -> void:
+	var info: Dictionary = rot.get_meta("rotor")
+	var r: float = float(info.r) * SpriteLib.PXU
+	var blades: int = int(info.get("blades", 4))
+	var pts := PackedVector2Array()
+	for k in 33:
+		var a := TAU * k / 32.0
+		pts.append(Vector2(cos(a) * r, sin(a) * r * 0.5))
+	rot.draw_colored_polygon(pts, Color(0.08, 0.08, 0.08, 0.16))
+	rot.draw_polyline(pts, Color(0.1, 0.1, 0.1, 0.25), 1.2)
+	var spin: float = v.t * 26.0
+	for b in blades:
+		var a := spin + TAU * b / blades
+		for k in 3:
+			var aa := a - k * 0.09
+			rot.draw_line(Vector2.ZERO, Vector2(cos(aa) * r, sin(aa) * r * 0.5), Color(0.06, 0.06, 0.06, 0.5 - k * 0.15), 3.0 - k)
 
 func _process(delta: float) -> void:
 	if game == null:
@@ -251,9 +293,14 @@ func _process(delta: float) -> void:
 	for uid in visuals.keys():
 		var v: Dictionary = visuals[uid]
 		if not game.entities.has(uid) or not is_instance_valid(v.e) or v.e.dead:
-			v.node.queue_free()
+			_free_visual(v)
 			visuals.erase(uid)
 			continue
+		if v.pid != v.e.pid:
+			# Captured: rebuild with the new owner's colours.
+			_free_visual(v)
+			visuals[uid] = _make_visual(v.e)
+			v = visuals[uid]
 		if v.sheet == null:
 			continue
 		if v.e.is_unit():
@@ -264,15 +311,48 @@ func _process(delta: float) -> void:
 	_update_ghost()
 	overlay.queue_redraw()
 
+func _free_visual(v: Dictionary) -> void:
+	v.node.queue_free()
+	if v.has("shadow"):
+		v.shadow.queue_free()
+
 func _update_unit(v: Dictionary, delta: float) -> void:
 	var e = v.e
 	var n: Node2D = v.node
 	n.visible = e.visible
+	if v.has("shadow"):
+		v.shadow.visible = e.visible
 	if not n.visible:
 		return
 	v.t += delta
-	var target := SpriteLib.iso(e.pos)
+	var h: float = e.altitude_now
+	if e.is_naval:
+		h = sin(v.t * 1.7 + float(e.uid)) * 0.012
+	var target := SpriteLib.iso(e.pos, h)
 	n.position = target if n.position.distance_to(target) > 120.0 else n.position.lerp(target, minf(1.0, delta * 18.0))
+	if e.is_air_unit:
+		var gp := SpriteLib.iso(e.pos)
+		if v.has("shadow"):
+			v.shadow.position = gp
+			v.shadow.modulate.a = clampf(1.0 - h * 0.25, 0.45, 1.0)
+		if h > 0.05:
+			n.position.y += sin(v.t * 2.3 + float(e.uid)) * 1.5
+		if v.has("rotor"):
+			var info: Dictionary = v.rotor.get_meta("rotor")
+			var rp: Array = info.pos
+			var c := cos(e.facing)
+			var sn := sin(e.facing)
+			v.rotor.position = SpriteLib.iso_cells(Vector2(rp[0] * c - rp[2] * sn, rp[0] * sn + rp[2] * c), rp[1])
+			v.rotor.queue_redraw()
+	# Submarines: own submerged boats show as a dark translucent shape.
+	if e.submarine:
+		n.modulate = Color(0.55, 0.65, 0.75, 0.45) if e.submerged() else Color.WHITE
+	elif e.is_naval and e.moving and not game.headless:
+		v.wake_t -= delta
+		if v.wake_t <= 0.0:
+			v.wake_t = 0.09
+			var back: Vector2 = e.pos - Vector2(cos(e.facing), sin(e.facing)) * e.radius * 1.1
+			_wake(SpriteLib.iso(back))
 	var s: SpriteLib.Sheet = v.sheet
 	var body: Sprite2D = v.body
 	var dirs: int = int(s.extra.get("dirs", 32))
@@ -357,6 +437,14 @@ func _update_building(v: Dictionary, delta: float) -> void:
 				fx.life = 1.2
 				air_fx.add_child(fx)
 
+func _wake(p: Vector2) -> void:
+	if fx_sheets.get("smoke_light") == null or ground_fx.get_child_count() > 400:
+		return
+	var fx := IsoFx.new()
+	fx.play(fx_sheets.smoke_light, p + Vector2(randf_range(-4, 4), randf_range(-2, 2)), 7.0, 0.32)
+	fx.modulate = Color(1.3, 1.4, 1.5, 0.7)
+	ground_fx.add_child(fx)
+
 func _puff(kind: String, p: Vector2, sc: float, drift: Vector2) -> void:
 	if fx_sheets.get(kind) == null or air_fx.get_child_count() > 500:
 		return
@@ -399,7 +487,9 @@ func _update_projectiles(_delta: float) -> void:
 			air_fx.add_child(n)
 			proj_vis[id] = n
 			n.set_meta("trail_t", 0.0)
-		n.position = SpriteLib.iso(pr.cur, 0.35)
+		var tot: float = maxf(pr.from.distance_to(pr.to), 1.0)
+		var k: float = clampf(pr.from.distance_to(pr.cur) / tot, 0.0, 1.0)
+		n.position = SpriteLib.iso(pr.cur, 0.35 + lerpf(pr.h_from, pr.h_to, k))
 		var d := Vector2(cos(pr.rotation), sin(pr.rotation))
 		n.rotation = Vector2((d.x - d.y) * 64.0, (d.x + d.y) * 32.0).angle()
 		if pr.kind == "flame":
@@ -423,7 +513,7 @@ func spawn_fx(kind: String, p: Vector2, opts: Dictionary) -> void:
 	match kind:
 		"explosion", "explosion_big", "explosion_small":
 			var fx := IsoFx.new()
-			fx.play(fx_sheets.get(kind), SpriteLib.iso(p), 22.0)
+			fx.play(fx_sheets.get(kind), SpriteLib.iso(p, float(opts.get("h", 0.0))), 22.0)
 			fx.fade = 0.2
 			air_fx.add_child(fx)
 		"crater":
@@ -441,7 +531,7 @@ func spawn_fx(kind: String, p: Vector2, opts: Dictionary) -> void:
 			if s == null:
 				return
 			var fx := IsoFx.new()
-			fx.play(s, SpriteLib.iso(p, 0.32), 50.0, 1.3 if opts.get("big", false) else 0.8)
+			fx.play(s, SpriteLib.iso(p, 0.32 + float(opts.get("h", 0.0))), 50.0, 1.3 if opts.get("big", false) else 0.8)
 			var a: float = opts.get("angle", 0.0)
 			var d := Vector2(cos(a), sin(a))
 			fx.rotation = Vector2((d.x - d.y) * 64.0, (d.x + d.y) * 32.0).angle()
@@ -449,8 +539,8 @@ func spawn_fx(kind: String, p: Vector2, opts: Dictionary) -> void:
 			air_fx.add_child(fx)
 		"tracer", "zap":
 			var fx := IsoFx.new()
-			fx.position = SpriteLib.iso(p, 0.32)
-			fx.line_to = SpriteLib.iso(opts.get("to", p), 0.25)
+			fx.position = SpriteLib.iso(p, 0.32 + float(opts.get("h", 0.0)))
+			fx.line_to = SpriteLib.iso(opts.get("to", p), 0.25 + float(opts.get("th", 0.0)))
 			fx.life = 0.07 if kind == "tracer" else 0.25
 			fx.zap = kind == "zap"
 			fx.line_w = 1.5 if kind == "tracer" else 2.0
@@ -512,7 +602,10 @@ func _draw_ghost_cells() -> void:
 			var cc := c + Vector2i(x, y)
 			var good := ok
 			if not ok:
-				good = game.map.buildable(cc) if String(fp[y])[x] == "x" else game.map.passable(cc, "track")
+				if d.get("placement", "") == "water":
+					good = game.map.in_bounds(cc) and game.map.terrain_id(cc) == "water" and game.map.occupied[game.map.idx(cc)] == 0
+				else:
+					good = game.map.buildable(cc) if String(fp[y])[x] == "x" else game.map.passable(cc, "track")
 			var col := Color(0.2, 1.0, 0.35, 0.32) if ok else (Color(1.0, 0.8, 0.2, 0.3) if good else Color(1.0, 0.2, 0.15, 0.4))
 			var pts := PackedVector2Array([SpriteLib.iso_cells(Vector2(cc) + Vector2(0.04, 0.04)), SpriteLib.iso_cells(Vector2(cc) + Vector2(0.96, 0.04)),
 				SpriteLib.iso_cells(Vector2(cc) + Vector2(0.96, 0.96)), SpriteLib.iso_cells(Vector2(cc) + Vector2(0.04, 0.96))])
@@ -569,7 +662,7 @@ func _draw_overlay() -> void:
 	for u in game.units:
 		if u.dead or not u.visible:
 			continue
-		var base := world_to_screen(u.pos)
+		var base := world_to_screen(u.pos, u.altitude_now)
 		if not screen_has(base):
 			continue
 		var rs := unit_screen_radius(u)

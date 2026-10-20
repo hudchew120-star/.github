@@ -60,7 +60,14 @@ def main():
         meta = json.load(open(os.path.join(SRC, fn)))
         ss = meta["ss"]
         col = finish(down(np.array(Image.open(os.path.join(SRC, name + ".png")).convert("RGBA")), ss))
-        if meta.get("shadow"):
+        if meta.get("shadow") and meta.get("separate_shadow"):
+            # Aircraft: the shadow is drawn on the ground while the body flies above it.
+            sil = down(np.array(Image.open(os.path.join(SRC, name + "_shadow.png")).convert("RGBA")), ss)[..., 3]
+            soft = np.clip(blur(sil, 2) * 0.45, 0, 1)
+            sh = np.zeros(soft.shape + (4,), dtype=np.float32)
+            sh[..., 3] = soft
+            to_img(sh).save(os.path.join(DST, name + "_shadow.png"), optimize=True)
+        elif meta.get("shadow"):
             sil = down(np.array(Image.open(os.path.join(SRC, name + "_shadow.png")).convert("RGBA")), ss)[..., 3]
             soft = blur(sil, 2)
             sa = (0.4 * soft)[..., None]

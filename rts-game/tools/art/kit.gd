@@ -24,6 +24,12 @@ uniform float noise_amt = 0.22;
 uniform float burn = 0.0;
 uniform float emit = 0.0;
 uniform float cut_y = 99.0;
+uniform float camo = 0.0;
+uniform vec3 camo_a : source_color = vec3(0.5);
+uniform vec3 camo_b : source_color = vec3(0.3);
+uniform vec3 camo_c : source_color = vec3(0.2);
+uniform float fabric = 0.0;
+uniform float rivets = 0.0;
 varying vec3 lpos;
 varying vec3 wpos;
 varying vec3 lnorm;
@@ -37,6 +43,15 @@ void vertex() { lpos = VERTEX; lnorm = NORMAL; wpos = (MODEL_MATRIX * vec4(VERTE
 void fragment() {
 	if (wpos.y > cut_y) { discard; }
 	vec3 c = base_color;
+	if (camo > 0.0) {
+		// Blotchy disruptive pattern in mesh space so it stays put between frames.
+		vec3 q = lpos * camo + vec3(17.3, 5.1, 9.7);
+		float a = vnoise(q) * 0.65 + vnoise(q * 2.3) * 0.35;
+		float b = vnoise(q * 1.7 + 31.0) * 0.6 + vnoise(q * 4.1) * 0.4;
+		c = mix(c, camo_a, smoothstep(0.52, 0.56, a));
+		c = mix(c, camo_b, smoothstep(0.58, 0.62, b));
+		c = mix(c, camo_c, smoothstep(0.66, 0.7, vnoise(q * 2.9 + 7.0)));
+	}
 	float n = vnoise(wpos * 9.0) * 0.6 + vnoise(wpos * 31.0) * 0.4;
 	c *= 1.0 - noise_amt * 0.5 + noise_amt * n;
 	c *= mix(1.0, 0.72, grime * (1.0 - smoothstep(0.0, 0.3, wpos.y)));
@@ -58,6 +73,14 @@ void fragment() {
 	}
 	if (corrugate > 0.0) {
 		c *= 0.86 + 0.14 * sin(uv.x * corrugate);
+	}
+	if (fabric > 0.0) {
+		// Cloth folds: soft stretched streaks along the limb.
+		c *= 0.9 + 0.1 * sin(lpos.y * fabric + vnoise(lpos * 40.0) * 3.0);
+	}
+	if (rivets > 0.0) {
+		vec2 g = abs(fract(uv * rivets) - 0.5);
+		c *= 1.0 - (1.0 - smoothstep(0.05, 0.09, length(g))) * 0.35;
 	}
 	if (burn > 0.0) {
 		float b = smoothstep(0.55, 0.75, vnoise(wpos * 4.0) * 0.7 + vnoise(wpos * 13.0) * 0.3);
@@ -306,3 +329,113 @@ static func pivot(parent: Node3D, pos: Vector3, name: String = "pivot") -> Node3
 	p.position = pos
 	parent.add_child(p)
 	return p
+
+# ---------------------------------------------------------------- organic / streamlined shapes
+
+## Smooth lofted body along X. stations: Array of [x, half_width, y_top, y_bottom] (optionally a
+## 5th value: superellipse exponent, 2 = ellipse, 4+ = rounded box). Used for fuselages, hulls,
+## cast turrets and torsos so silhouettes read as curved rather than faceted.
+static func loft(stations: Array, seg: int = 20, p_default: float = 2.0, cap: bool = true) -> ArrayMesh:
+	var rings := []
+	for s in stations:
+		var ring := []
+		var p: float = s[4] if s.size() > 4 else p_default
+		var yc: float = (s[2] + s[3]) * 0.5
+		var hh: float = (s[2] - s[3]) * 0.5
+		for j in seg:
+			var th := TAU * j / seg
+			var ct := cos(th)
+			var sn := sin(th)
+			var z := float(s[1]) * signf(ct) * pow(absf(ct), 2.0 / p)
+			var y := yc + hh * signf(sn) * pow(absf(sn), 2.0 / p)
+			ring.append(Vector3(s[0], y, z))
+		rings.append(ring)
+	var n := rings.size()
+	var normals := []
+	for i in n:
+		var nr := []
+		for j in seg:
+			var a: Vector3 = rings[i][(j + 1) % seg] - rings[i][(j - 1 + seg) % seg]
+			var b: Vector3 = rings[mini(i + 1, n - 1)][j] - rings[maxi(i - 1, 0)][j]
+			var nv := a.cross(b)
+			var c := Vector3(stations[i][0], (stations[i][2] + stations[i][3]) * 0.5, 0.0)
+			if nv.length() < 1e-6:
+				nv = Vector3(-1 if i == 0 else 1, 0, 0)
+			nv = nv.normalized()
+			if nv.dot(rings[i][j] - c) < 0.0 and (rings[i][j] - c).length() > 1e-5:
+				nv = -nv
+			nr.append(nv)
+		normals.append(nr)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in n - 1:
+		for j in seg:
+			var j2 := (j + 1) % seg
+			var q := [[i, j], [i, j2], [i + 1, j2], [i + 1, j]]
+			for k in [0, 1, 2, 0, 2, 3]:
+				st.set_normal(normals[q[k][0]][q[k][1]])
+				st.add_vertex(rings[q[k][0]][q[k][1]])
+	if cap:
+		for e in [[0, -1.0], [n - 1, 1.0]]:
+			var i: int = e[0]
+			var c := Vector3.ZERO
+			for v in rings[i]:
+				c += v
+			c /= seg
+			for j in seg:
+				for v in [c, rings[i][j], rings[i][(j + 1) % seg]]:
+					st.set_normal(Vector3(e[1], 0, 0))
+					st.add_vertex(v)
+	return st.commit()
+
+static var _limb_cache := {}
+## Tapered capsule from a to b (radius r0 at a, r1 at b) with rounded ends.
+static func limb(parent: Node3D, a: Vector3, b: Vector3, r0: float, r1: float, mat: Material, seg: int = 12, team: bool = false) -> MeshInstance3D:
+	var d := b - a
+	var L := maxf(d.length(), 0.0001)
+	var key := "%d_%d_%d_%d" % [int(L * 2000), int(r0 * 4000), int(r1 * 4000), seg]
+	if not _limb_cache.has(key):
+		var prof := []
+		for k in 5:
+			var t := PI * 0.5 * (1.0 - float(k) / 4.0)
+			prof.append(Vector2(cos(t) * r0, -sin(t) * r0))
+		for k in range(1, 5):
+			var t := PI * 0.5 * float(k) / 4.0
+			prof.append(Vector2(cos(t) * r1, L + sin(t) * r1))
+		prof[0].x = 0.0
+		prof[-1].x = 0.0
+		_limb_cache[key] = lathe(prof, seg, true, false, false)
+	var mi := MeshInstance3D.new()
+	mi.mesh = _limb_cache[key]
+	mi.material_override = mat
+	var y := d / L
+	var x := y.cross(Vector3.FORWARD if absf(y.z) < 0.9 else Vector3.RIGHT).normalized()
+	var z := x.cross(y)
+	mi.transform = Transform3D(Basis(x, y, z), a)
+	mi.set_meta("team", team)
+	parent.add_child(mi)
+	return mi
+
+static func ellipsoid(parent: Node3D, c: Vector3, r: Vector3, mat: Material, rot_deg: Vector3 = Vector3.ZERO, team: bool = false, seg: int = 16) -> MeshInstance3D:
+	var key := "ell_%d" % seg
+	if not _limb_cache.has(key):
+		var prof := []
+		for k in 9:
+			var t := -PI * 0.5 + PI * float(k) / 8.0
+			prof.append(Vector2(cos(t), sin(t)))
+		prof[0].x = 0.0
+		prof[-1].x = 0.0
+		_limb_cache[key] = lathe(prof, seg, true, false, false)
+	return add(parent, _limb_cache[key], mat, c, rot_deg, team, r)
+
+## Two-bone IK: returns the elbow/knee for a limb from root s to end t, bending toward pole.
+static func ik(s: Vector3, t: Vector3, l1: float, l2: float, pole: Vector3) -> Vector3:
+	var d := t - s
+	var dist := clampf(d.length(), 0.001, l1 + l2 - 0.0005)
+	var dir := d.normalized()
+	var a := (l1 * l1 - l2 * l2 + dist * dist) / (2.0 * dist)
+	var h := sqrt(maxf(l1 * l1 - a * a, 0.0))
+	var perp := (pole - dir * pole.dot(dir))
+	if perp.length() < 1e-5:
+		perp = Vector3.UP - dir * dir.y
+	return s + dir * a + perp.normalized() * h

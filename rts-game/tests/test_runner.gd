@@ -545,6 +545,19 @@ func test_iso_view() -> void:
 	check(v.air_fx.get_child_count() > 0, "sprite explosion spawned")
 	v.zoom_by(1.2, Vector2(800, 400))
 	check(v.camera.zoom.x > 0.8, "zoom works")
+	# Aircraft: body lifted to altitude, separate ground shadow, rotor disc for helicopters.
+	var heli = g.spawn_unit(0, "heli_c", cy.pos + Vector2(120, 200))
+	heli.altitude_now = heli.altitude
+	var inf = g.spawn_unit(0, "eng", cy.pos + Vector2(60, 220))
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var hv: Dictionary = v.visuals.get(heli.uid, {})
+	check(hv.get("sheet") != null, "helicopter uses a pre-rendered sprite sheet")
+	check(hv.has("shadow") and hv.has("rotor"), "helicopter has a ground shadow and a rotor")
+	if hv.has("shadow"):
+		check(hv.node.position.y < hv.shadow.position.y - 40.0, "helicopter is drawn above its shadow")
+	check(v.visuals.has(inf.uid) and v.visuals[inf.uid].sheet != null, "engineer uses a pre-rendered sprite sheet")
+	check(v.pick(v.world_to_screen(heli.pos, heli.altitude_now + 0.25)) == heli, "clicking a flying helicopter picks it")
 	v.queue_free()
 	await free_game(g)
 

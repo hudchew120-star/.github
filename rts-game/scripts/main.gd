@@ -35,7 +35,15 @@ func _ready() -> void:
 	elif "--iso" in args:
 		Config.settings.graphics = "iso"
 	_setup_screenshot(args)
-	if "--quickstart" in args:
+	var stage := ""
+	for a in args:
+		if a.begins_with("--stage="):
+			stage = a.substr(8)
+	if stage != "":
+		start_match({"mode": "sandbox", "map_size": "medium", "water": "coastal", "seed": 11, "start_units": "base", "fog": false,
+			"ai_count": 1, "cheats_allowed": true, "victory": "none", "start_credits": 50000, "player_faction": "coalition", "enemy_factions": ["dominion"]})
+		_stage_scene(stage)
+	elif "--quickstart" in args:
 		start_match({"map_size": "small", "start_units": "base", "cheats_allowed": true})
 	elif "--sandbox" in args:
 		start_match(_sandbox_defaults())
@@ -77,6 +85,50 @@ func _setup_screenshot(args: PackedStringArray) -> void:
 	img.save_png(path)
 	print("screenshot saved: ", path)
 	get_tree().quit()
+
+## Developer helper: --stage=naval|army builds a showcase scene (used for documentation screenshots).
+func _stage_scene(kind: String) -> void:
+	await get_tree().process_frame
+	game.cheats.set_flag("ai_disabled", true)
+	var ai := AIController.new(game, game.players[0])
+	var base: Vector2i = ai._base_center()
+	var yard := ai._water_site("syrd")
+	if yard.x >= 0:
+		game.create_building(0, "syrd", yard, true)
+	for t in ["afld", "fix", "dome", "weap", "sam"]:
+		var c := ai._find_spot(t)
+		if c.x >= 0:
+			game.create_building(0, t, c, true)
+	var bp := MapGrid.cell_center(base)
+	var ships := [["dest_c", 0], ["boat_c", 0], ["boat_c", 0], ["sub_d", 1], ["cruiser_d", 1]]
+	var wc: Vector2i = ai._nearest_water(yard + Vector2i(1, 1) if yard.x >= 0 else base, 14)
+	for i in ships.size():
+		var c: Vector2i = ai._nearest_water(wc + Vector2i(i * 3 - 4, (i % 2) * 3 - 1) * (2 if ships[i][1] == 1 else 1), 10)
+		if c.x >= 0:
+			var u = game.spawn_unit(ships[i][1], ships[i][0], MapGrid.cell_center(c))
+			if u != null:
+				u.facing = randf() * TAU
+	var land := [["mtank", 0, Vector2(4, 5)], ["mtank", 0, Vector2(5, 4)], ["ltank", 0, Vector2(6, 6)], ["aa_c", 0, Vector2(3, 6)], ["jeep", 0, Vector2(7, 4)],
+		["e1", 0, Vector2(6, 2)], ["e1", 0, Vector2(6.4, 2.5)], ["e1", 0, Vector2(6.8, 2.1)], ["e3", 0, Vector2(7.2, 2.6)], ["eng", 0, Vector2(5.6, 2.8)],
+		["htank", 1, Vector2(10, 9)], ["aa_d", 1, Vector2(11, 8)], ["e1", 1, Vector2(9, 10.5)], ["e4", 1, Vector2(9.5, 11)], ["flm", 1, Vector2(10, 11.2)], ["e1", 1, Vector2(10.5, 10.6)]]
+	for e in land:
+		var p: Vector2 = bp + (e[2] as Vector2) * MapGrid.T
+		var u = game.spawn_unit(e[1], e[0], p)
+		if u != null:
+			u.facing = (bp + Vector2(8, 8) * MapGrid.T - u.pos).angle() if e[1] == 0 else (bp - u.pos).angle()
+			u.turret_facing = u.facing
+	for e in [["heli_c", 0, Vector2(2, 7)], ["heli_c", 0, Vector2(3.5, 8.5)], ["jet_c", 0, Vector2(0, 4)], ["heli_d", 1, Vector2(9, 6)], ["jet_d", 1, Vector2(12, 4)]]:
+		var u = game.spawn_unit(e[1], e[0], bp + (e[2] as Vector2) * MapGrid.T)
+		if u != null:
+			u.air_state = "flying"
+			u.altitude_now = u.altitude
+			u.facing = 0.8 if e[1] == 0 else 3.9
+			u.cmd_move(u.pos + Vector2(cos(u.facing), sin(u.facing)) * 160.0)
+	if controller != null:
+		if kind == "naval" and yard.x >= 0:
+			controller.center_on(MapGrid.cell_center(yard) + Vector2(2.5, 3.5) * MapGrid.T)
+		else:
+			controller.center_on(bp + Vector2(7, 7) * MapGrid.T)
 
 # ---------------------------------------------------------------- menus
 

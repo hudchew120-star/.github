@@ -50,7 +50,8 @@ static func fire(game, shooter, w: Dictionary, t) -> void:
 		var impact: Vector2 = t.pos + Vector2(randf_range(-4, 4), randf_range(-4, 4))
 		if not hit:
 			impact += Vector2.RIGHT.rotated(randf() * TAU) * randf_range(8, 18)
-		game.spawn_effect("zap" if kind == "zap" else "tracer", muzzle, {"to": impact, "h": h})
+		var th: float = t.altitude_now if t.is_unit() and t.is_air_unit else 0.0
+		game.spawn_effect("zap" if kind == "zap" else "tracer", muzzle, {"to": impact, "h": h, "th": th})
 		if kind == "bullet":
 			game.spawn_effect("muzzle", muzzle, {"angle": (t.pos - from).angle(), "h": h})
 		if hit:
@@ -78,7 +79,8 @@ static func detonate(game, p: Vector2, w: Dictionary, shooter, direct) -> void:
 		fx = "flame_burst"
 	elif float(w.get("splash", 0.0)) >= 0.8:
 		fx = "explosion"
-	game.spawn_effect(fx, p)
+	var eh: float = direct.altitude_now if direct != null and is_instance_valid(direct) and direct.is_unit() and direct.is_air_unit else 0.0
+	game.spawn_effect(fx, p, {"h": eh})
 
 static func splash(game, p: Vector2, w: Dictionary, shooter, exclude) -> void:
 	var r := float(w.get("splash", 0.0)) * MapGrid.T

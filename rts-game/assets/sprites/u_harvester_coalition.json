@@ -1,1 +1,1 @@
-{"ax": 96, "ay": 100, "cols": 28, "count": 64, "extra": {"dirs": 32, "pivot": [0, 0, 0], "states": 2}, "fh": 160, "fw": 192, "mask": true, "res": 2, "rows": 3, "shadow": true}
+{"ax": 104, "ay": 109.120002746582, "cols": 25, "count": 64, "extra": {"dirs": 32, "pivot": [0, 0, 0], "states": 2}, "fh": 176, "fw": 208, "mask": true, "res": 2, "rows": 3, "separate_shadow": false, "shadow": true}
