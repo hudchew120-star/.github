@@ -28,6 +28,12 @@ scripts/
   systems/cheats.gd       Developer console commands and cheat flags
   systems/audio_fx.gd     Procedural sound effects and music, Music/SFX/UI buses
   ui/                     Main HUD, sidebar buttons, minimap, input controller, cheat panel
+  view3d/view3d.gd        3D presentation: camera, light/environment, entity models, effects,
+                          placement ghost, selection/health overlay, screen picking
+  view3d/terrain3d.gd     Height-mapped terrain mesh, water shader, instanced props and ore, fog shading
+  view3d/models.gd        Procedural 3D models for all units and structures
+  view3d/fx3d.gd          3D explosions, muzzle flashes, tracers, arcs, scorch marks
+  ui/view2d.gd            Classic 2D camera with the same API as View3D
   main.gd                 Menus, skirmish/sandbox setup, settings, save files, match lifecycle
 tests/test_runner.gd      Automated headless gameplay tests
 ```
@@ -43,6 +49,31 @@ Key rules:
   All balances clamp at `Player.MAX_VALUE`.
 - **Production** is paid gradually while building. If money runs out the item goes "on hold".
   Cancelling refunds `paid * refund_ratio` (Settings).
+
+## Presentation layers (3D and 2D)
+
+The simulation never depends on graphics. `Game` keeps entities as lightweight `Node2D`s holding
+logic state. A presentation is attached afterwards:
+
+- **View3D** (default) reads `game.entities` every frame, creates a 3D model per entity
+  (`Models.build_unit` / `Models.build_building`) and interpolates position, facing and turret
+  rotation. Effects requested by the simulation through `Game.spawn_effect()` are turned into
+  `Fx3D` nodes. Projectiles are mirrored from `game.projectiles`. Health bars and selection
+  brackets are drawn in screen space on top of the 3D view.
+- **View2D** uses the original top-down sprites (`Sprites`) and a `Camera2D`.
+
+Both expose the same API used by `PlayerController`, `Minimap` and `AudioFX`:
+`set_focus`, `get_focus`, `mouse_world`, `world_to_screen`, `ground_from_screen`, `pan_screen`,
+`scroll`, `zoom_by`, `visible_ground_quad`, `view_radius_px`, `screen_has`, `pick`.
+
+World mapping in 3D: one map cell = one 3D unit; simulation pixel `(x, y)` maps to `(x/32, h, y/32)`.
+The camera looks down at 42 degrees with a 45-degree yaw, so the square grid appears as a diamond.
+
+**Adding 3D art for a new unit or building**: add a case to `Models.build_unit()` or
+`Models.build_building()` keyed by the `sprite` value in the data file. Name animated parts with
+metadata (`turret`, `dish`, `crane`, `glow`, `blink`, `fill`, `legs`) and list chimney points in the
+`smoke` metadata; `View3D` animates them automatically. Also add its height to `Models.height_of()`
+so clicks on the upper part of the model select it.
 
 ## Data files (data/*.json)
 

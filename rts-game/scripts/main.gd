@@ -9,7 +9,7 @@ var audio: AudioFX
 var game: Game = null
 var controller: PlayerController = null
 var hud: HUD = null
-var camera: Camera2D = null
+var view = null
 var menu_layer: CanvasLayer
 var menu_root: Control
 var last_settings: Dictionary = {}
@@ -28,6 +28,10 @@ func _ready() -> void:
 	menu_layer.layer = 20
 	add_child(menu_layer)
 	var args := OS.get_cmdline_user_args()
+	if "--2d" in args:
+		Config.settings.graphics = "2d"
+	elif "--3d" in args:
+		Config.settings.graphics = "3d"
 	_setup_screenshot(args)
 	if "--quickstart" in args:
 		start_match({"map_size": "small", "start_units": "base", "cheats_allowed": true})
@@ -42,11 +46,15 @@ func _setup_screenshot(args: PackedStringArray) -> void:
 	var at := 3.0
 	var spd := 1.0
 	var cmds := ""
+	var focus_cell := ""
+	var zoom_v := 0.0
 	for a in args:
 		if a.begins_with("--shot="): path = a.substr(7)
 		elif a.begins_with("--shot-at="): at = float(a.substr(10))
 		elif a.begins_with("--speed="): spd = float(a.substr(8))
 		elif a.begins_with("--cheats="): cmds = a.substr(9)
+		elif a.begins_with("--focus="): focus_cell = a.substr(8)
+		elif a.begins_with("--zoom="): zoom_v = float(a.substr(7))
 	if path == "":
 		return
 	await get_tree().create_timer(0.5).timeout
@@ -54,6 +62,11 @@ func _setup_screenshot(args: PackedStringArray) -> void:
 		game.set_speed(spd)
 		for c in cmds.split(";", false):
 			game.cheats.execute(c.replace("_", " "))
+		if focus_cell != "" and controller != null:
+			var fc := focus_cell.split(",")
+			controller.center_on(MapGrid.cell_center(Vector2i(int(fc[0]), int(fc[1]))))
+		if zoom_v > 0.0 and view != null:
+			view.zoom_by(zoom_v, get_viewport().get_visible_rect().size * 0.5)
 	await get_tree().create_timer(at).timeout
 	if hud != null and "--open-cheats" in args:
 		hud.toggle_cheats()
@@ -132,7 +145,7 @@ func show_main_menu() -> void:
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(sp)
-	v.add_child(UITheme.label("Development build - phase 1-2. All content is original.", 12, UITheme.DIM))
+	v.add_child(UITheme.label("Development build - phases 1-2 + 3D graphics. All content is original.", 12, UITheme.DIM))
 	first.grab_focus()
 	audio.start_music()
 
@@ -237,6 +250,8 @@ func show_settings() -> void:
 	_header(v, "Settings")
 	var S: Dictionary = Config.settings
 	v.add_child(UITheme.label("Display", 17, UITheme.AMBER))
+	var gfx := _opt(v, "Graphics", ["3D (recommended)", "Classic 2D (low-end PCs)"], 0 if use_3d() else 1)
+	gfx.item_selected.connect(func(i): S.graphics = "3d" if i == 0 else "2d")
 	_slider(v, "UI scale", 0.75, 1.75, 0.05, float(S.ui_scale), func(x):
 		S.ui_scale = x
 		Config.apply_display())
@@ -359,7 +374,9 @@ func load_game(name: String) -> void:
 	_stop_attract()
 	last_settings = d.get("last_settings", {})
 	_create_match_nodes()
+	d.settings["use_3d"] = use_3d()
 	game.load_save(d)
+	_attach_view()
 	_finish_match_setup()
 
 func show_load() -> void:
@@ -393,16 +410,26 @@ func _create_match_nodes() -> void:
 	game = Game.new()
 	add_child(game)
 	game.audio = audio
-	camera = Camera2D.new()
-	game.add_child(camera)
-	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
-	camera.make_current()
-	audio.camera = camera
+
+func use_3d() -> bool:
+	return String(Config.settings.get("graphics", "3d")) == "3d"
+
+## Creates the 3D (or classic 2D) presentation once the game's map exists.
+func _attach_view() -> void:
+	if use_3d():
+		view = View3D.new()
+		add_child(view)
+		view.setup(game)
+	else:
+		view = View2D.new()
+		game.add_child(view)
+		view.setup(game)
+	audio.view = view
 
 func _finish_match_setup() -> void:
 	controller = PlayerController.new()
 	game.add_child(controller)
-	controller.setup(game, camera)
+	controller.setup(game, view)
 	hud = HUD.new()
 	add_child(hud)
 	hud.setup(game, controller, self)
@@ -423,8 +450,10 @@ func start_match(s: Dictionary) -> void:
 	full["max_units"] = int(Config.settings.max_units)
 	if not full.has("seed"):
 		full["seed"] = randi() % 100000
+	full["use_3d"] = use_3d()
 	_create_match_nodes()
 	game.setup(full)
+	_attach_view()
 	_finish_match_setup()
 
 func restart_match() -> void:
@@ -438,11 +467,15 @@ func _end_match() -> void:
 	if hud != null:
 		hud.queue_free()
 		hud = null
+	if view != null and is_instance_valid(view) and view.get_parent() == self:
+		view.queue_free()
+	view = null
 	if game != null:
 		game.queue_free()
 		game = null
 	controller = null
-	camera = null
+	if audio != null:
+		audio.view = null
 
 func _process(delta: float) -> void:
 	if game != null and attract_bot == null and not game.over and not game.paused:
@@ -458,7 +491,7 @@ func _process(delta: float) -> void:
 		if attract_bot_t <= 0.0:
 			attract_bot_t = 0.5
 			attract_bot.tick(0.5)
-		camera.position = camera.position.lerp(_attract_focus(), delta * 0.25)
+		view.set_focus(view.get_focus().lerp(_attract_focus(), delta * 0.25))
 		if game.over:
 			_stop_attract()
 			_start_attract()
@@ -470,14 +503,14 @@ func _start_attract() -> void:
 		return
 	_create_match_nodes()
 	game.setup({"map_size": "small", "seed": randi() % 9999, "ai_count": 1, "difficulty": "hard", "start_units": "base",
-		"start_credits": 15000, "cheats_allowed": true, "fog": false, "player_faction": "coalition", "enemy_factions": ["dominion"]})
+		"start_credits": 15000, "cheats_allowed": true, "fog": false, "player_faction": "coalition", "enemy_factions": ["dominion"], "use_3d": use_3d()})
+	_attach_view()
 	game.speed = 1.5
 	game.audio = null
 	attract_bot = AIController.new(game, game.players[0])
 	attract_bot.cfg = Data.ai.difficulty.hard
-	camera.zoom = Vector2(1.1, 1.1)
-	camera.position = Vector2(game.map.w, game.map.h) * MapGrid.T * 0.5
-	audio.camera = null
+	view.set_focus(MapGrid.cell_center(game._base_center(0)) + Vector2(-60, 40))
+	audio.view = null
 
 func _attract_focus() -> Vector2:
 	var sum := Vector2.ZERO
@@ -487,8 +520,9 @@ func _attract_focus() -> Vector2:
 			sum += u.pos
 			n += 1
 	if n > 0:
-		return sum / n + Vector2(-200, 0)
-	return Vector2(game.map.w, game.map.h) * MapGrid.T * 0.5 + Vector2(sin(Time.get_ticks_msec() * 0.0001), cos(Time.get_ticks_msec() * 0.00013)) * 600.0
+		return sum / n
+	# No fighting: drift slowly around the first base.
+	return MapGrid.cell_center(game._base_center(0)) + Vector2(sin(Time.get_ticks_msec() * 0.00012), cos(Time.get_ticks_msec() * 0.0001)) * 160.0
 
 func _stop_attract() -> void:
 	if attract_bot != null:

@@ -6,6 +6,7 @@ const CHEATS_PATH := "user://cheats.cfg"
 
 var settings := {
 	"ui_scale": 1.0,
+	"graphics": "3d",
 	"edge_scroll": true,
 	"scroll_speed": 900.0,
 	"fullscreen": false,

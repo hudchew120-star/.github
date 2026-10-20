@@ -8,7 +8,7 @@ signal mode_changed
 
 var game: Game
 var hud = null
-var camera: Camera2D
+var view = null      # View3D or View2D
 var selection: Array = []
 var groups := {}
 var mode: String = ""            # "", place, attack_move, patrol, repair, sell
@@ -22,11 +22,12 @@ var last_click_t: int = 0
 var last_group_t := {}
 var hovered = null
 var markers: Array = []          # [{pos, t, col}]
-var sidebar_width: float = 300.0
+var sidebar_width: float = 316.0
 
-func setup(g: Game, cam: Camera2D) -> void:
+func setup(g: Game, v) -> void:
 	game = g
-	camera = cam
+	view = v
+	v.controller = self
 	z_index = 30
 	game.entity_removed.connect(_on_entity_removed)
 
@@ -43,20 +44,7 @@ func _on_entity_removed(e) -> void:
 # ---------------------------------------------------------------- camera
 
 func center_on(p: Vector2) -> void:
-	camera.position = p
-	_clamp_camera()
-
-func _clamp_camera() -> void:
-	var view := get_viewport().get_visible_rect().size / camera.zoom
-	var sw := sidebar_width / camera.zoom.x
-	var mw := game.map.w * MapGrid.T
-	var mh := game.map.h * MapGrid.T
-	var minx := view.x * 0.5 - 64.0
-	var maxx := mw - view.x * 0.5 + sw + 64.0
-	var miny := view.y * 0.5 - 96.0
-	var maxy := mh - view.y * 0.5 + 220.0 / camera.zoom.y
-	camera.position.x = clampf(camera.position.x, minf(minx, maxx), maxf(minx, maxx))
-	camera.position.y = clampf(camera.position.y, minf(miny, maxy), maxf(miny, maxy))
+	view.set_focus(p)
 
 func _process(delta: float) -> void:
 	if game == null:
@@ -76,10 +64,9 @@ func _process(delta: float) -> void:
 			if mp.y < 6: move.y -= 1
 			if mp.y > vs.y - 6: move.y += 1
 	if move != Vector2.ZERO:
-		camera.position += move.normalized() * float(Config.settings.scroll_speed) * delta / camera.zoom.x
-		_clamp_camera()
+		view.scroll(move, float(Config.settings.scroll_speed) * delta)
 	_update_hover()
-	var mc := MapGrid.to_cell(get_global_mouse_position())
+	var mc := MapGrid.to_cell(view.mouse_world())
 	game.cursor_cell = mc
 	for m in markers:
 		m.t -= delta
@@ -93,8 +80,7 @@ func _typing() -> bool:
 # ---------------------------------------------------------------- picking
 
 func _update_hover() -> void:
-	var p := get_global_mouse_position()
-	var h = _pick(p)
+	var h = view.pick(get_viewport().get_mouse_position())
 	if h != hovered:
 		if hovered != null and is_instance_valid(hovered):
 			hovered.hovered = false
@@ -112,29 +98,8 @@ func _update_hover() -> void:
 		shape = Input.CURSOR_CROSS
 	Input.set_default_cursor_shape(shape)
 
-func _pick(p: Vector2):
-	var best = null
-	var best_d := INF
-	for u in game.unit_hash.query(p, 24.0):
-		if u.dead or not u.visible:
-			continue
-		var d: float = u.pos.distance_to(p)
-		if d <= u.radius + 5.0 and d < best_d:
-			best_d = d
-			best = u
-	if best != null:
-		return best
-	var c := MapGrid.to_cell(p)
-	if game.map.in_bounds(c):
-		var uid := game.map.occupied[game.map.idx(c)]
-		if uid != 0:
-			var b = game.entities.get(uid)
-			if b != null and b.visible:
-				return b
-	for b in game.buildings:
-		if b.visible and not b.dead and b.rect_px().has_point(p):
-			return b
-	return null
+func _pick_screen(sp: Vector2):
+	return view.pick(sp)
 
 func _has_own_units() -> bool:
 	for e in selection:
@@ -174,20 +139,20 @@ func toggle(e) -> void:
 		set_selection([e], true)
 
 func _box_select(a: Vector2, b: Vector2, add: bool) -> void:
-	var r := Rect2(a, b - a).abs()
+	# a and b are screen positions; test each unit's projected position.
+	var r := Rect2(a, b - a).abs().grow(4.0)
 	var found := []
 	for u in game.units:
-		if u.pid == game.human_pid and not u.dead and r.has_point(u.pos):
+		if u.pid == game.human_pid and not u.dead and r.has_point(view.world_to_screen(u.pos, 0.15)):
 			found.append(u)
 	# Prefer combat units over collectors when both are boxed.
 	var fighters := found.filter(func(u): return not u.is_harvester)
 	set_selection(fighters if fighters.size() > 0 else found, add)
 
 func _select_same_type(e) -> void:
-	var view := Rect2(camera.get_screen_center_position() - get_viewport().get_visible_rect().size / camera.zoom * 0.5, get_viewport().get_visible_rect().size / camera.zoom)
 	var list := []
 	for u in game.units:
-		if u.pid == e.pid and u.type == e.type and not u.dead and view.has_point(u.pos):
+		if u.pid == e.pid and u.type == e.type and not u.dead and view.screen_has(view.world_to_screen(u.pos), 0.0):
 			list.append(u)
 	set_selection(list)
 
@@ -210,7 +175,7 @@ func cancel_mode() -> void:
 
 func placement_cell() -> Vector2i:
 	var size: Vector2i = Data.def(place_type).size
-	var p := get_global_mouse_position() - Vector2(size) * MapGrid.T * 0.5 + Vector2(MapGrid.T, MapGrid.T) * 0.5
+	var p: Vector2 = view.mouse_world() - Vector2(size) * MapGrid.T * 0.5 + Vector2(MapGrid.T, MapGrid.T) * 0.5
 	return MapGrid.to_cell(p)
 
 # ---------------------------------------------------------------- input
@@ -222,24 +187,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		_mouse_button(event)
 	elif event is InputEventMouseMotion:
 		if mmb_drag:
-			camera.position -= event.relative / camera.zoom
-			_clamp_camera()
+			view.pan_screen(event.relative)
 		if dragging:
 			drag_now = event.position
 	elif event is InputEventKey and event.pressed and not event.echo:
 		_key(event)
 
 func _mouse_button(ev: InputEventMouseButton) -> void:
-	var wp := get_global_mouse_position()
+	var wp: Vector2 = view.mouse_world()
 	if ev.button_index == MOUSE_BUTTON_WHEEL_UP or ev.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 		if ev.pressed:
-			var before := get_global_mouse_position()
-			var z := camera.zoom.x * (1.1 if ev.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.1)
-			camera.zoom = Vector2.ONE * clampf(z, 0.45, 2.0)
-			camera.force_update_scroll()
-			var after := get_global_mouse_position()
-			camera.position += before - after
-			_clamp_camera()
+			view.zoom_by(1.1 if ev.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.1, ev.position)
 		return
 	if ev.button_index == MOUSE_BUTTON_MIDDLE:
 		mmb_drag = ev.pressed
@@ -248,7 +206,7 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 		if mode != "":
 			cancel_mode()
 			return
-		_right_click(wp, ev.shift_pressed)
+		_right_click(wp, ev.shift_pressed, ev.position)
 		return
 	if ev.button_index != MOUSE_BUTTON_LEFT:
 		return
@@ -272,7 +230,7 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 					cancel_mode()
 				return
 			"repair", "sell":
-				var e = _pick(wp)
+				var e = _pick_screen(ev.position)
 				if e != null and e.is_building() and e.pid == game.human_pid:
 					if mode == "sell":
 						game.sell_building(e)
@@ -289,10 +247,9 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 			return
 		dragging = false
 		if drag_start.distance_to(ev.position) > 8.0:
-			var inv := get_canvas_transform().affine_inverse()
-			_box_select(inv * drag_start, inv * ev.position, ev.shift_pressed)
+			_box_select(drag_start, ev.position, ev.shift_pressed)
 			return
-		var e = _pick(wp)
+		var e = _pick_screen(ev.position)
 		var now := Time.get_ticks_msec()
 		var dbl := now - last_click_t < 350
 		last_click_t = now
@@ -307,9 +264,9 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 		else:
 			set_selection([e])
 
-func _right_click(wp: Vector2, shift: bool) -> void:
+func _right_click(wp: Vector2, shift: bool, sp: Vector2) -> void:
 	var units := own_units()
-	var target = _pick(wp)
+	var target = _pick_screen(sp)
 	if units.is_empty():
 		# Production building selected: set its rally point.
 		var set_any := false
@@ -415,7 +372,7 @@ func _key(ev: InputEventKey) -> void:
 # ---------------------------------------------------------------- overlay drawing
 
 func _draw() -> void:
-	if game == null:
+	if game == null or view == null or view.is_3d():
 		return
 	for m in markers:
 		var a: float = m.t / 0.6

@@ -88,11 +88,14 @@ func _draw() -> void:
 			continue
 		var p: Vector2 = r.position + u.pos * sx
 		draw_rect(Rect2(p - Vector2(1, 1), Vector2(2.5, 2.5)), u.team_color().lightened(0.35))
-	# Camera frame.
-	var cam = controller.camera
-	var vs = get_viewport().get_visible_rect().size / cam.zoom
-	var tl = cam.get_screen_center_position() - vs * 0.5
-	draw_rect(Rect2(r.position + tl * sx, vs * sx).intersection(r.grow(1)), Color(1, 1, 1, 0.85), false, 1.0)
+	# Camera frame (a diamond in 3D, a rectangle in 2D).
+	var quad: PackedVector2Array = controller.view.visible_ground_quad()
+	var pts := PackedVector2Array()
+	for q in quad:
+		var mp := r.position + q * sx
+		pts.append(Vector2(clampf(mp.x, r.position.x, r.end.x), clampf(mp.y, r.position.y, r.end.y)))
+	pts.append(pts[0])
+	draw_polyline(pts, Color(1, 1, 1, 0.85), 1.0)
 	if not radar:
 		draw_string(ThemeDB.fallback_font, Vector2(6, size.y - 8), "NO RADAR: enemy contacts hidden", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1, 0.6, 0.3, 0.9))
 	draw_rect(Rect2(Vector2.ZERO, size), UITheme.BORDER, false, 1.0)

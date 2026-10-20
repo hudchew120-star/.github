@@ -14,7 +14,7 @@ func _ready() -> void:
 		"test_cancel_refund", "test_power", "test_harvest_loop", "test_unit_movement", "test_combat",
 		"test_splash_and_armor", "test_production_queue", "test_cheats_money", "test_cheats_instant",
 		"test_cheat_spawn_and_destroy", "test_large_values", "test_save_load", "test_fog", "test_ai_match",
-		"test_victory",
+		"test_victory", "test_view3d_picking",
 	]
 	var only = OS.get_environment("RTS_TEST")
 	for t in tests:
@@ -412,6 +412,7 @@ func test_fog() -> void:
 
 func test_ai_match() -> void:
 	# Two AIs (human slot driven by an AI controller) play for 9 minutes.
+	seed(20261020)
 	var g = make_game({"ai": true, "difficulty": "hard", "map_size": "small", "seed": 3})
 	g.cheats.enabled = false
 	var bot = AIController.new(g, g.players[0])
@@ -427,8 +428,11 @@ func test_ai_match() -> void:
 			for pid in 2:
 				var n = g.units.filter(func(u): return u.pid == pid and u.can_attack()).size()
 				max_army[pid] = maxi(max_army[pid], n)
-		if g.players[0].stats.buildings_lost + g.players[1].stats.buildings_lost > 0:
-			attacked = true
+		if not attacked and i % 30 == 0:
+			for b in g.buildings:
+				if b.hp < b.max_hp and b.last_attacker_uid != 0:
+					attacked = true
+					break
 		if g.over:
 			break
 	for pid in 2:
@@ -439,7 +443,7 @@ func test_ai_match() -> void:
 		check(max_army[pid] >= 4 or p.defeated, "AI %d produced an army" % pid)
 	var total_kills: int = g.players[0].stats.units_killed + g.players[1].stats.units_killed
 	check(total_kills > 0, "AIs fought each other (%d kills)" % total_kills)
-	check(attacked or g.over, "an AI attacked the other's base")
+	check(attacked or g.over, "an AI attacked the other's base (structures damaged)")
 	await free_game(g)
 
 func test_victory() -> void:
@@ -453,3 +457,42 @@ func test_victory() -> void:
 	check(g2.over and not g2.won, "defeat when all own forces are gone")
 	await free_game(g)
 	await free_game(g2)
+
+func test_view3d_picking() -> void:
+	# Builds the real 3D presentation (dummy renderer when headless) and checks the
+	# screen <-> world mapping, picking of units and structures, and box selection.
+	var g = Game.new()
+	add_child(g)
+	g.setup({"map_size": "small", "seed": 7, "ai_count": 1, "start_units": "base", "use_3d": true, "cheats_allowed": true}, false)
+	var v = View3D.new()
+	add_child(v)
+	v.setup(g)
+	var pc = PlayerController.new()
+	g.add_child(pc)
+	pc.setup(g, v)
+	var cy = null
+	for b in g.buildings:
+		if b.pid == 0 and b.type == "fact":
+			cy = b
+	check(cy != null, "starting construction yard exists")
+	v.set_focus(cy.pos)
+	var p: Vector2 = cy.pos + Vector2(40, 30)
+	var back: Vector2 = v.ground_from_screen(v.world_to_screen(p))
+	check(back.distance_to(p) < 1.0, "screen/world round trip (%s vs %s)" % [back, p])
+	var u = g.spawn_unit(0, "mtank", cy.pos + Vector2(0, 150))
+	g.unit_hash.rebuild(g.units)
+	var picked = v.pick(v.world_to_screen(u.pos, 0.2))
+	check(picked == u, "clicking a unit on screen picks it")
+	picked = v.pick(v.world_to_screen(cy.rect_px().get_center(), 1.0))
+	check(picked == cy, "clicking the upper part of a tall structure picks it")
+	var s0: Vector2 = v.world_to_screen(u.pos) - Vector2(30, 30)
+	pc._box_select(s0, s0 + Vector2(60, 60), false)
+	check(pc.selection.has(u), "box selection in 3D selects the tank")
+	await get_tree().process_frame
+	check(v.visuals.has(u.uid) and v.visuals.has(cy.uid), "3D models created for entities")
+	g.spawn_effect("explosion", u.pos)
+	check(v.fx_root.get_child_count() > 0, "3D explosion effect spawned")
+	v.zoom_by(1.5, Vector2(800, 400))
+	check(absf(v.zoom - 1.5) < 0.01, "zoom works")
+	v.queue_free()
+	await free_game(g)

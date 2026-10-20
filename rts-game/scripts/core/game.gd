@@ -40,6 +40,7 @@ var _attack_msg_t: float = -100.0
 var _circle_cache := {}
 var audio = null
 var objectives: Array = []
+var view3d = null                  # View3D presentation, when 3D graphics are used
 
 var terrain_layer: TileMapLayer
 var ore_layer: TileMapLayer
@@ -171,6 +172,14 @@ func _build_layers() -> void:
 	add_child(unit_layer)
 	add_child(fx_layer)
 	if headless:
+		return
+	if bool(settings.get("use_3d", false)):
+		# The 3D view draws everything; keep the 2D nodes for logic only.
+		building_layer.visible = false
+		unit_layer.visible = false
+		fx_layer.visible = false
+		fog_image = Image.create(map.w, map.h, false, Image.FORMAT_L8)
+		fog_texture = ImageTexture.create_from_image(fog_image)
 		return
 	terrain_layer.tile_set = TerrainArt.build_terrain_tileset()
 	ore_layer.tile_set = TerrainArt.build_ore_tileset()
@@ -804,7 +813,10 @@ func update_fog(force_full: bool = false) -> void:
 		p.vis = vis
 	_apply_human_visibility()
 	for c in map.ore_dirty_cells:
-		_refresh_ore_cell(c)
+		if view3d != null:
+			view3d.terrain.mark_ore_dirty(c)
+		elif terrain_layer.tile_set != null:
+			_refresh_ore_cell(c)
 	map.ore_dirty_cells.clear()
 	if headless or fog_image == null:
 		return
@@ -898,7 +910,12 @@ func notify(pid: int, text: String, kind: String = "info") -> void:
 		message.emit(text, kind)
 
 func spawn_effect(kind: String, p: Vector2, opts: Dictionary = {}) -> void:
-	if headless or fx_layer.get_child_count() > 450:
+	if headless:
+		return
+	if view3d != null:
+		view3d.spawn_fx(kind, p, opts)
+		return
+	if fx_layer.get_child_count() > 450 or not fx_layer.visible:
 		return
 	var fx := Effect.new()
 	fx.setup(kind, p, opts)

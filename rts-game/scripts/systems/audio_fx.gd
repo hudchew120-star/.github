@@ -8,7 +8,7 @@ var sounds := {}
 var players: Array = []
 var music_player: AudioStreamPlayer
 var last_play := {}
-var camera: Camera2D = null
+var view = null       # View3D or View2D; positional volume uses its focus
 
 func _ready() -> void:
 	_ensure_buses()
@@ -112,10 +112,9 @@ func play(name: String, world_pos: Vector2 = Vector2.INF, bus: String = "SFX") -
 	if now - int(last_play.get(name, 0)) < 45:
 		return
 	var vol := 0.0
-	if world_pos != Vector2.INF and camera != null and is_instance_valid(camera):
-		var view := get_viewport().get_visible_rect().size / camera.zoom
-		var d := world_pos.distance_to(camera.get_screen_center_position())
-		var reach := view.length() * 0.6
+	if world_pos != Vector2.INF and view != null and is_instance_valid(view):
+		var d: float = world_pos.distance_to(view.get_focus())
+		var reach: float = view.view_radius_px()
 		if d > reach:
 			return
 		vol = linear_to_db(clampf(1.0 - d / reach, 0.08, 1.0))
