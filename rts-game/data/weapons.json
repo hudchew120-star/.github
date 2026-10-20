@@ -1,0 +1,13 @@
+{
+  "rifle":       {"name": "Service rifle",     "damage": [13, 17], "range": 4.0, "rof": 0.9, "warhead": "SA", "projectile": "bullet", "speed": 0, "splash": 0.0, "accuracy": 0.95, "targets": ["ground"], "sound": "rifle"},
+  "smg":         {"name": "Carbine",           "damage": [10, 14], "range": 3.5, "rof": 0.5, "warhead": "SA", "projectile": "bullet", "speed": 0, "splash": 0.0, "accuracy": 0.9, "targets": ["ground"], "sound": "rifle"},
+  "mg":          {"name": "Heavy machine gun", "damage": [16, 22], "range": 4.5, "rof": 0.45, "warhead": "SA", "projectile": "bullet", "speed": 0, "splash": 0.0, "accuracy": 0.9, "targets": ["ground"], "sound": "mg"},
+  "lancer_rkt":  {"name": "Guided rocket",     "damage": [42, 50], "range": 5.0, "rof": 2.4, "warhead": "AP", "projectile": "rocket", "speed": 330, "splash": 0.4, "accuracy": 1.0, "targets": ["ground", "air"], "sound": "rocket"},
+  "breacher_rkt":{"name": "Heavy RPG",         "damage": [60, 70], "range": 4.25, "rof": 3.0, "warhead": "AP", "projectile": "rocket", "speed": 300, "splash": 0.5, "accuracy": 0.9, "targets": ["ground"], "sound": "rocket"},
+  "cannon_75":   {"name": "75mm cannon",       "damage": [26, 32], "range": 4.75, "rof": 1.3, "warhead": "AP", "projectile": "shell", "speed": 560, "splash": 0.3, "accuracy": 0.92, "targets": ["ground"], "sound": "cannon"},
+  "cannon_90":   {"name": "90mm cannon",       "damage": [36, 42], "range": 4.75, "rof": 1.5, "warhead": "AP", "projectile": "shell", "speed": 560, "splash": 0.35, "accuracy": 0.92, "targets": ["ground"], "sound": "cannon"},
+  "cannon_120":  {"name": "Twin 120mm cannon", "damage": [40, 46], "range": 4.75, "rof": 1.9, "burst": 2, "burst_delay": 0.15, "warhead": "AP", "projectile": "shell", "speed": 520, "splash": 0.4, "accuracy": 0.9, "targets": ["ground"], "sound": "cannon_heavy"},
+  "turret_gun":  {"name": "105mm emplacement", "damage": [42, 50], "range": 6.0, "rof": 1.6, "warhead": "AP", "projectile": "shell", "speed": 620, "splash": 0.35, "accuracy": 0.95, "targets": ["ground"], "sound": "cannon"},
+  "flamer":      {"name": "Flame projector",   "damage": [38, 48], "range": 3.5, "rof": 1.2, "warhead": "FIRE", "projectile": "flame", "speed": 260, "splash": 0.9, "accuracy": 1.0, "targets": ["ground"], "sound": "flame"},
+  "arc_coil":    {"name": "Arc discharge",     "damage": [110, 130], "range": 6.5, "rof": 3.0, "warhead": "ELEC", "projectile": "zap", "speed": 0, "splash": 0.3, "accuracy": 1.0, "targets": ["ground"], "sound": "zap"}
+}

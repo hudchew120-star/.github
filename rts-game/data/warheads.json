@@ -1,0 +1,8 @@
+{
+  "SA":   {"name": "Small arms",       "vs": {"none": 1.0, "light": 0.45, "heavy": 0.2, "wood": 0.5, "concrete": 0.25, "aircraft": 0.5, "ship": 0.3}},
+  "HE":   {"name": "High explosive",   "vs": {"none": 0.9, "light": 0.75, "heavy": 0.6, "wood": 1.0, "concrete": 0.8, "aircraft": 0.5, "ship": 0.7}},
+  "AP":   {"name": "Armor piercing",   "vs": {"none": 0.3, "light": 0.75, "heavy": 1.0, "wood": 0.7, "concrete": 0.6, "aircraft": 0.8, "ship": 0.9}},
+  "FIRE": {"name": "Incendiary",       "vs": {"none": 1.0, "light": 0.5, "heavy": 0.25, "wood": 1.0, "concrete": 0.4, "aircraft": 0.0, "ship": 0.3}},
+  "ELEC": {"name": "Electric arc",     "vs": {"none": 1.0, "light": 1.0, "heavy": 0.8, "wood": 0.8, "concrete": 0.6, "aircraft": 0.6, "ship": 0.8}},
+  "AA":   {"name": "Flak",             "vs": {"none": 0.1, "light": 0.2, "heavy": 0.1, "wood": 0.1, "concrete": 0.1, "aircraft": 1.0, "ship": 0.1}}
+}

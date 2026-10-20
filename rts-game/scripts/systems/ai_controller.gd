@@ -1,0 +1,375 @@
+class_name AIController
+extends RefCounted
+## Computer opponent. Uses exactly the same production, placement and command
+## functions as the human player; difficulty changes decision speed and quality.
+
+var game = null
+var player = null
+var cfg: Dictionary = {}
+var think_t: float = 2.0
+var attack_wave: int = 0
+var threshold: int = 8
+var next_attack_time: float = 300.0
+var attack_group: Array = []        # unit uids currently attacking
+var gathering: bool = false
+var gather_started: float = 0.0
+var scouted: bool = false
+var scout_uid: int = 0
+var threat_pos := Vector2.INF
+var threat_time: float = -100.0
+var respond_at: float = -1.0
+var seen_armor := {"none": 0, "light": 0, "heavy": 0}
+
+func _init(g, p) -> void:
+	game = g
+	player = p
+	cfg = Data.ai.get("difficulty", {}).get(p.difficulty, Data.ai.difficulty.normal)
+	threshold = int(cfg.attack_threshold)
+	next_attack_time = float(cfg.first_attack)
+	think_t = 1.0 + randf()
+
+func tick(dt: float) -> void:
+	think_t -= dt
+	if think_t > 0.0:
+		return
+	think_t = float(cfg.think_interval) * randf_range(0.8, 1.2)
+	_think()
+
+func _my_units() -> Array:
+	return game.units.filter(func(u): return u.pid == player.id and not u.dead)
+
+func _my_buildings() -> Array:
+	return game.buildings.filter(func(b): return b.pid == player.id and not b.dead)
+
+func _base_center() -> Vector2i:
+	for b in _my_buildings():
+		if b.type == "fact":
+			return b.cell0 + Vector2i(1, 1)
+	var bs := _my_buildings()
+	if bs.size() > 0:
+		return bs[0].cell0
+	return game.map.starts[player.id % game.map.starts.size()]
+
+func _enemy_start() -> Vector2i:
+	var e: int = game.first_enemy_of(player.id)
+	if e < 0:
+		return game.map.starts[0]
+	return game.map.starts[e % game.map.starts.size()]
+
+func _think() -> void:
+	_deploy_mcv()
+	_manage_construction()
+	_manage_production()
+	_manage_harvesters()
+	_manage_army()
+	if cfg.repair:
+		_manage_repairs()
+
+# ---------------------------------------------------------------- base building
+
+func _deploy_mcv() -> void:
+	if player.has_tech(["construction"]):
+		return
+	for u in _my_units():
+		if not u.def.has("deploys_to"):
+			continue
+		if u.moving:
+			return
+		if u.cmd_deploy():
+			return
+		var c: Vector2i = game._find_build_spot(player.id, "fact", u.cell(), 8)
+		if c.x >= 0:
+			u.cmd_move(MapGrid.cell_center(c + Vector2i(1, 1)))
+		return
+
+func _count_tag(tag: String, include_queued: bool = true) -> int:
+	var n := 0
+	for b in _my_buildings():
+		if b.def.get("provides", []).has(tag):
+			n += 1
+		if include_queued:
+			for cat in b.queues:
+				for it in b.queues[cat]:
+					if Data.def(it.type).get("provides", []).has(tag):
+						n += 1
+	return n
+
+func _next_build_tag() -> String:
+	var order: Array = Data.ai.build_order
+	var seen := {}
+	for tag in order:
+		seen[tag] = int(seen.get(tag, 0)) + 1
+		if tag == "defense":
+			continue
+		if tag == "refinery" and int(seen[tag]) > int(cfg.max_refineries):
+			continue
+		if _count_tag(tag) < int(seen[tag]):
+			return tag
+	return ""
+
+func _manage_construction() -> void:
+	var cy = game.producer_for(player.id, "building")
+	if cy == null:
+		return
+	# Place anything that is ready.
+	for cat in ["building", "defense"]:
+		var it = cy.ready_item(cat)
+		if it != null:
+			var spot := _find_spot(it.type)
+			if spot.x >= 0:
+				game.place_structure(player.id, cat, spot)
+			else:
+				cy.cancel_item(cat, 0)
+	var q: Array = cy.queues.get("building", [])
+	if q.is_empty():
+		var t := ""
+		if game.power_enabled(player.id) and player.power_total() - player.power_use < 30 and player.has_tech(["construction"]):
+			t = "apwr" if game.availability(player.id, "apwr") == "" and player.credits() > 1500 else "powr"
+		else:
+			var tag := _next_build_tag()
+			if tag != "":
+				t = Data.building_for_tag(player.faction, tag)
+		if t != "" and game.availability(player.id, t) == "" and player.credits() >= int(Data.def(t).cost) * 0.25:
+			game.queue_item(player.id, t)
+	var dq: Array = cy.queues.get("defense", [])
+	if dq.is_empty() and int(cfg.defenses) > 0 and _count_tag("defense") < int(cfg.defenses) and _count_tag("factory", false) > 0:
+		if cfg.parallel or q.is_empty():
+			var options := Data.types_in_category("defense", player.faction).filter(func(t): return game.availability(player.id, t) == "")
+			if options.size() > 0 and player.credits() > 800:
+				game.queue_item(player.id, options[randi() % options.size()])
+
+## Searches for a placement near the base, leaving a one-cell gap between structures.
+func _find_spot(t: String) -> Vector2i:
+	var origin := _base_center()
+	var d := Data.def(t)
+	if d.get("provides", []).has("refinery"):
+		var ore := _nearest_ore(origin, 14)
+		if ore.x >= 0:
+			origin = Vector2i((origin + ore) / 2)
+	elif d.get("category", "") == "defense":
+		var dir := Vector2(_enemy_start() - origin).normalized()
+		origin += Vector2i((dir * randf_range(4.0, 7.0)).round()) + Vector2i(randi_range(-3, 3), randi_range(-3, 3))
+	var size: Vector2i = d.size
+	for r in range(0, 16):
+		var cands := []
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if abs(dx) != r and abs(dy) != r:
+					continue
+				cands.append(origin + Vector2i(dx, dy))
+		cands.shuffle()
+		for c in cands:
+			if game.can_place(player.id, t, c) != "":
+				continue
+			if _has_gap(c, size):
+				return c
+	return Vector2i(-1, -1)
+
+func _has_gap(c: Vector2i, size: Vector2i) -> bool:
+	for y in range(-1, size.y + 1):
+		for x in range(-1, size.x + 1):
+			if x >= 0 and y >= 0 and x < size.x and y < size.y:
+				continue
+			var cc := c + Vector2i(x, y)
+			if game.map.in_bounds(cc) and game.map.occupied[game.map.idx(cc)] != 0:
+				return false
+	return true
+
+func _nearest_ore(origin: Vector2i, max_r: int) -> Vector2i:
+	for r in range(0, max_r + 1):
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if abs(dx) != r and abs(dy) != r:
+					continue
+				var c := origin + Vector2i(dx, dy)
+				if game.map.in_bounds(c) and game.map.ore[game.map.idx(c)] > 0:
+					return c
+	return Vector2i(-1, -1)
+
+# ---------------------------------------------------------------- production
+
+func _harvester_count() -> int:
+	var n := 0
+	for u in _my_units():
+		if u.is_harvester:
+			n += 1
+	for b in _my_buildings():
+		for it in b.queues.get("vehicle", []):
+			if it.type == "harv":
+				n += 1
+	return n
+
+func _pick_unit(cat: String) -> String:
+	var weights: Dictionary = Data.ai.army.get(player.faction, {})
+	var options := []
+	var total := 0.0
+	for t in weights:
+		if Data.def(t).get("category", "") != cat or game.availability(player.id, t) != "":
+			continue
+		var wgt := float(weights[t])
+		if cfg.counter:
+			var tot := float(seen_armor.none + seen_armor.light + seen_armor.heavy)
+			if tot > 4:
+				for armor in seen_armor:
+					if Data.ai.counters.get(armor, []).has(t):
+						wgt *= 1.0 + 2.0 * float(seen_armor[armor]) / tot
+		options.append([t, wgt])
+		total += wgt
+	if options.is_empty():
+		return ""
+	var r := randf() * total
+	for o in options:
+		r -= o[1]
+		if r <= 0.0:
+			return o[0]
+	return options[-1][0]
+
+func _manage_production() -> void:
+	var refineries := _count_tag("refinery", false)
+	var fac = game.producer_for(player.id, "vehicle")
+	var bar = game.producer_for(player.id, "infantry")
+	if fac != null and _harvester_count() < refineries * int(cfg.harvesters_per_refinery) and game.availability(player.id, "harv") == "":
+		if fac.queue_count("vehicle") == 0:
+			game.queue_item(player.id, "harv")
+		return
+	var lanes_busy := 0
+	var reserve := 300 if player.difficulty == "hard" else 600
+	if bar != null:
+		if bar.queue_count("infantry") < (2 if cfg.parallel else 1):
+			var t := _pick_unit("infantry")
+			if t != "" and player.credits() > int(Data.def(t).cost) + reserve * 0.5:
+				game.queue_item(player.id, t)
+		lanes_busy += bar.queue_count("infantry")
+	if fac != null and (cfg.parallel or lanes_busy == 0):
+		if fac.queue_count("vehicle") < (2 if cfg.parallel else 1):
+			var t := _pick_unit("vehicle")
+			if t != "" and player.credits() > int(Data.def(t).cost) + reserve:
+				game.queue_item(player.id, t)
+
+func _manage_harvesters() -> void:
+	for u in _my_units():
+		if u.is_harvester and u.order != "harvest":
+			u.cmd_harvest()
+
+func _manage_repairs() -> void:
+	if player.credits() < 800:
+		return
+	for b in _my_buildings():
+		if b.completed and b.hp_ratio() < 0.6:
+			b.repairing = true
+
+# ---------------------------------------------------------------- army
+
+func _combat_units() -> Array:
+	return _my_units().filter(func(u): return u.can_attack() and not u.is_harvester)
+
+func on_unit_built(u) -> void:
+	if u.can_attack():
+		var rp := _rally_point()
+		u.cmd_attack_move(rp + Vector2(randf_range(-40, 40), randf_range(-40, 40)))
+
+func _rally_point() -> Vector2:
+	var base := MapGrid.cell_center(_base_center())
+	var dir := (MapGrid.cell_center(_enemy_start()) - base).normalized()
+	return base + dir * MapGrid.T * 7.0
+
+func on_damaged(e, attacker) -> void:
+	if attacker == null or not is_instance_valid(attacker):
+		return
+	if attacker.is_unit():
+		var a: String = attacker.armor
+		if seen_armor.has(a):
+			seen_armor[a] += 1
+	var base := MapGrid.cell_center(_base_center())
+	var important: bool = e.is_building() or e.pos.distance_to(base) < MapGrid.T * 16 or (e.is_unit() and e.is_harvester)
+	if important:
+		threat_pos = attacker.pos
+		if game.sim_time - threat_time > 8.0:
+			respond_at = game.sim_time + float(cfg.reaction)
+		threat_time = game.sim_time
+
+func _known_target() -> Vector2:
+	# Prefer enemy structures we have actually seen; otherwise the enemy start position.
+	var best = null
+	var best_d := INF
+	var base := MapGrid.cell_center(_base_center())
+	for b in game.buildings:
+		if b.dead or not game.are_enemies(player.id, b.pid):
+			continue
+		var c: Vector2i = b.cell0
+		if player.vis.size() > 0 and player.vis[game.map.idx(c)] == 0 and not cfg.counter:
+			continue
+		var d: float = b.pos.distance_to(base)
+		if d < best_d:
+			best_d = d
+			best = b
+	if best != null:
+		return best.pos
+	return MapGrid.cell_center(_enemy_start())
+
+func _manage_army() -> void:
+	attack_group = attack_group.filter(func(uid): return game.entities.has(uid))
+	var army := _combat_units()
+	var idle := army.filter(func(u): return not attack_group.has(u.uid) and u.uid != scout_uid)
+	# Defend the base.
+	if threat_pos != Vector2.INF and game.sim_time - threat_time < 12.0 and game.sim_time >= respond_at:
+		var defenders := idle
+		if game.sim_time - threat_time < 3.0 and idle.size() < 3:
+			defenders = army
+		for u in defenders:
+			if u.order != "attack" and u.order != "attack_move" or u.pos.distance_to(threat_pos) > MapGrid.T * 12:
+				u.cmd_attack_move(threat_pos)
+		return
+	# Scouting.
+	if cfg.scout and not scouted and game.sim_time > 70.0 and idle.size() > 0:
+		var s = idle[0]
+		for u in idle:
+			if u.speed_px > s.speed_px:
+				s = u
+		scout_uid = s.uid
+		s.cmd_attack_move(MapGrid.cell_center(_enemy_start()))
+		scouted = true
+	# Attack waves.
+	if gathering:
+		var rp := _rally_point()
+		var members := attack_group.map(func(uid): return game.entities.get(uid)).filter(func(u): return u != null)
+		var near := members.filter(func(u): return u.pos.distance_to(rp) < MapGrid.T * 7).size()
+		if near >= members.size() * 0.7 or game.sim_time - gather_started > 35.0:
+			gathering = false
+			var tgt := _known_target()
+			game.command_group(members, "attack_move", tgt)
+		return
+	if game.sim_time >= next_attack_time and idle.size() >= threshold:
+		attack_wave += 1
+		threshold += int(cfg.wave_growth)
+		next_attack_time = game.sim_time + randf_range(80.0, 140.0) * (1.4 if player.difficulty == "easy" else 1.0)
+		for u in idle:
+			attack_group.append(u.uid)
+		if cfg.group_up:
+			gathering = true
+			gather_started = game.sim_time
+			game.command_group(idle, "attack_move", _rally_point())
+		else:
+			game.command_group(idle, "attack_move", _known_target())
+		return
+	# Keep attackers moving once they finish their current objective.
+	var tgt := _known_target()
+	for uid in attack_group:
+		var u = game.entities.get(uid)
+		if u != null and (u.order == "guard" or u.order == "idle") and u.target == null:
+			u.cmd_attack_move(tgt + Vector2(randf_range(-48, 48), randf_range(-48, 48)))
+
+func to_dict() -> Dictionary:
+	return {"wave": attack_wave, "threshold": threshold, "next_attack": next_attack_time, "group": attack_group.duplicate(),
+		"gathering": gathering, "scouted": scouted, "scout": scout_uid, "seen_armor": seen_armor.duplicate()}
+
+func from_dict(d: Dictionary) -> void:
+	attack_wave = int(d.get("wave", 0))
+	threshold = int(d.get("threshold", threshold))
+	next_attack_time = float(d.get("next_attack", next_attack_time))
+	attack_group = d.get("group", []).map(func(x): return int(x))
+	gathering = bool(d.get("gathering", false))
+	scouted = bool(d.get("scouted", false))
+	scout_uid = int(d.get("scout", 0))
+	for k in d.get("seen_armor", {}):
+		seen_armor[k] = int(d.seen_armor[k])

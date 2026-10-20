@@ -1,0 +1,4 @@
+{
+  "coalition": {"name": "Advanced Coalition", "short": "Coalition", "color": "#3f7fd9", "description": "Balanced forces, precise weapons, flexible defenses and strong reconnaissance."},
+  "dominion":  {"name": "Iron Dominion",      "short": "Dominion",  "color": "#c8352c", "description": "Heavy armor, brutal direct-fire weapons and powerful area-denial defenses."}
+}
