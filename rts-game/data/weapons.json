@@ -1,13 +1,441 @@
 {
-  "rifle":       {"name": "Service rifle",     "damage": [13, 17], "range": 4.0, "rof": 0.9, "warhead": "SA", "projectile": "bullet", "speed": 0, "splash": 0.0, "accuracy": 0.95, "targets": ["ground"], "sound": "rifle"},
-  "smg":         {"name": "Carbine",           "damage": [10, 14], "range": 3.5, "rof": 0.5, "warhead": "SA", "projectile": "bullet", "speed": 0, "splash": 0.0, "accuracy": 0.9, "targets": ["ground"], "sound": "rifle"},
-  "mg":          {"name": "Heavy machine gun", "damage": [16, 22], "range": 4.5, "rof": 0.45, "warhead": "SA", "projectile": "bullet", "speed": 0, "splash": 0.0, "accuracy": 0.9, "targets": ["ground"], "sound": "mg"},
-  "lancer_rkt":  {"name": "Guided rocket",     "damage": [42, 50], "range": 5.0, "rof": 2.4, "warhead": "AP", "projectile": "rocket", "speed": 330, "splash": 0.4, "accuracy": 1.0, "targets": ["ground", "air"], "sound": "rocket"},
-  "breacher_rkt":{"name": "Heavy RPG",         "damage": [60, 70], "range": 4.25, "rof": 3.0, "warhead": "AP", "projectile": "rocket", "speed": 300, "splash": 0.5, "accuracy": 0.9, "targets": ["ground"], "sound": "rocket"},
-  "cannon_75":   {"name": "75mm cannon",       "damage": [26, 32], "range": 4.75, "rof": 1.3, "warhead": "AP", "projectile": "shell", "speed": 560, "splash": 0.3, "accuracy": 0.92, "targets": ["ground"], "sound": "cannon"},
-  "cannon_90":   {"name": "90mm cannon",       "damage": [36, 42], "range": 4.75, "rof": 1.5, "warhead": "AP", "projectile": "shell", "speed": 560, "splash": 0.35, "accuracy": 0.92, "targets": ["ground"], "sound": "cannon"},
-  "cannon_120":  {"name": "Twin 120mm cannon", "damage": [40, 46], "range": 4.75, "rof": 1.9, "burst": 2, "burst_delay": 0.15, "warhead": "AP", "projectile": "shell", "speed": 520, "splash": 0.4, "accuracy": 0.9, "targets": ["ground"], "sound": "cannon_heavy"},
-  "turret_gun":  {"name": "105mm emplacement", "damage": [42, 50], "range": 6.0, "rof": 1.6, "warhead": "AP", "projectile": "shell", "speed": 620, "splash": 0.35, "accuracy": 0.95, "targets": ["ground"], "sound": "cannon"},
-  "flamer":      {"name": "Flame projector",   "damage": [38, 48], "range": 3.5, "rof": 1.2, "warhead": "FIRE", "projectile": "flame", "speed": 260, "splash": 0.9, "accuracy": 1.0, "targets": ["ground"], "sound": "flame"},
-  "arc_coil":    {"name": "Arc discharge",     "damage": [110, 130], "range": 6.5, "rof": 3.0, "warhead": "ELEC", "projectile": "zap", "speed": 0, "splash": 0.3, "accuracy": 1.0, "targets": ["ground"], "sound": "zap"}
+ "rifle": {
+  "name": "Service rifle",
+  "damage": [
+   13,
+   17
+  ],
+  "range": 4.0,
+  "rof": 0.9,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.95,
+  "targets": [
+   "ground"
+  ],
+  "sound": "rifle"
+ },
+ "smg": {
+  "name": "Carbine",
+  "damage": [
+   10,
+   14
+  ],
+  "range": 3.5,
+  "rof": 0.5,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "rifle"
+ },
+ "mg": {
+  "name": "Heavy machine gun",
+  "damage": [
+   16,
+   22
+  ],
+  "range": 4.5,
+  "rof": 0.45,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "mg"
+ },
+ "lancer_rkt": {
+  "name": "Guided rocket",
+  "damage": [
+   42,
+   50
+  ],
+  "range": 5.0,
+  "rof": 2.4,
+  "warhead": "AP",
+  "projectile": "rocket",
+  "speed": 330,
+  "splash": 0.4,
+  "accuracy": 1.0,
+  "targets": [
+   "ground",
+   "air"
+  ],
+  "sound": "rocket"
+ },
+ "breacher_rkt": {
+  "name": "Heavy RPG",
+  "damage": [
+   60,
+   70
+  ],
+  "range": 4.25,
+  "rof": 3.0,
+  "warhead": "AP",
+  "projectile": "rocket",
+  "speed": 300,
+  "splash": 0.5,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "rocket"
+ },
+ "cannon_75": {
+  "name": "75mm cannon",
+  "damage": [
+   26,
+   32
+  ],
+  "range": 4.75,
+  "rof": 1.3,
+  "warhead": "AP",
+  "projectile": "shell",
+  "speed": 560,
+  "splash": 0.3,
+  "accuracy": 0.92,
+  "targets": [
+   "ground"
+  ],
+  "sound": "cannon"
+ },
+ "cannon_90": {
+  "name": "90mm cannon",
+  "damage": [
+   36,
+   42
+  ],
+  "range": 4.75,
+  "rof": 1.5,
+  "warhead": "AP",
+  "projectile": "shell",
+  "speed": 560,
+  "splash": 0.35,
+  "accuracy": 0.92,
+  "targets": [
+   "ground"
+  ],
+  "sound": "cannon"
+ },
+ "cannon_120": {
+  "name": "Twin 120mm cannon",
+  "damage": [
+   40,
+   46
+  ],
+  "range": 4.75,
+  "rof": 1.9,
+  "burst": 2,
+  "burst_delay": 0.15,
+  "warhead": "AP",
+  "projectile": "shell",
+  "speed": 520,
+  "splash": 0.4,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "cannon_heavy"
+ },
+ "turret_gun": {
+  "name": "105mm emplacement",
+  "damage": [
+   42,
+   50
+  ],
+  "range": 6.0,
+  "rof": 1.6,
+  "warhead": "AP",
+  "projectile": "shell",
+  "speed": 620,
+  "splash": 0.35,
+  "accuracy": 0.95,
+  "targets": [
+   "ground"
+  ],
+  "sound": "cannon"
+ },
+ "flamer": {
+  "name": "Flame projector",
+  "damage": [
+   38,
+   48
+  ],
+  "range": 3.5,
+  "rof": 1.2,
+  "warhead": "FIRE",
+  "projectile": "flame",
+  "speed": 260,
+  "splash": 0.9,
+  "accuracy": 1.0,
+  "targets": [
+   "ground"
+  ],
+  "sound": "flame"
+ },
+ "arc_coil": {
+  "name": "Arc discharge",
+  "damage": [
+   110,
+   130
+  ],
+  "range": 6.5,
+  "rof": 3.0,
+  "warhead": "ELEC",
+  "projectile": "zap",
+  "speed": 0,
+  "splash": 0.3,
+  "accuracy": 1.0,
+  "targets": [
+   "ground"
+  ],
+  "sound": "zap"
+ },
+ "aa_missiles": {
+  "name": "Stinger pod",
+  "damage": [
+   34,
+   40
+  ],
+  "range": 6.5,
+  "rof": 0.8,
+  "warhead": "AA",
+  "projectile": "rocket",
+  "speed": 620,
+  "splash": 0.3,
+  "accuracy": 1.0,
+  "targets": [
+   "air"
+  ],
+  "sound": "rocket"
+ },
+ "sam": {
+  "name": "SAM missile",
+  "damage": [
+   70,
+   80
+  ],
+  "range": 8.0,
+  "rof": 2.2,
+  "warhead": "AA",
+  "projectile": "rocket",
+  "speed": 560,
+  "splash": 0.4,
+  "accuracy": 1.0,
+  "targets": [
+   "air"
+  ],
+  "sound": "rocket"
+ },
+ "sam_site": {
+  "name": "Patriot missile",
+  "damage": [
+   80,
+   95
+  ],
+  "range": 9.0,
+  "rof": 2.0,
+  "warhead": "AA",
+  "projectile": "rocket",
+  "speed": 650,
+  "splash": 0.4,
+  "accuracy": 1.0,
+  "targets": [
+   "air"
+  ],
+  "sound": "rocket"
+ },
+ "flak_cannon": {
+  "name": "Twin 57mm flak",
+  "damage": [
+   26,
+   32
+  ],
+  "range": 7.5,
+  "rof": 0.45,
+  "warhead": "AA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.5,
+  "accuracy": 0.9,
+  "targets": [
+   "air"
+  ],
+  "sound": "mg"
+ },
+ "heli_rockets": {
+  "name": "Hydra rockets",
+  "damage": [
+   38,
+   46
+  ],
+  "range": 4.5,
+  "rof": 0.9,
+  "warhead": "AP",
+  "projectile": "rocket",
+  "speed": 420,
+  "splash": 0.4,
+  "accuracy": 0.95,
+  "targets": [
+   "ground"
+  ],
+  "sound": "rocket"
+ },
+ "chin_cannon": {
+  "name": "30mm chin cannon",
+  "damage": [
+   18,
+   24
+  ],
+  "range": 4.0,
+  "rof": 0.28,
+  "warhead": "HE",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.25,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "mg"
+ },
+ "jet_missiles": {
+  "name": "Strike missiles",
+  "damage": [
+   70,
+   80
+  ],
+  "range": 6.0,
+  "rof": 0.45,
+  "warhead": "AP",
+  "projectile": "rocket",
+  "speed": 700,
+  "splash": 0.4,
+  "accuracy": 1.0,
+  "targets": [
+   "ground",
+   "air"
+  ],
+  "sound": "rocket"
+ },
+ "bombs": {
+  "name": "500 kg bombs",
+  "damage": [
+   130,
+   160
+  ],
+  "range": 1.4,
+  "rof": 0.25,
+  "warhead": "HE",
+  "projectile": "bomb",
+  "speed": 220,
+  "splash": 1.3,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "explode"
+ },
+ "boat_gun": {
+  "name": "Twin 25mm",
+  "damage": [
+   16,
+   22
+  ],
+  "range": 5.0,
+  "rof": 0.35,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.9,
+  "targets": [
+   "ground",
+   "air"
+  ],
+  "sound": "mg"
+ },
+ "naval_gun": {
+  "name": "127mm naval gun",
+  "damage": [
+   50,
+   60
+  ],
+  "range": 7.5,
+  "rof": 1.6,
+  "warhead": "HE",
+  "projectile": "shell",
+  "speed": 620,
+  "splash": 0.6,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "cannon_heavy"
+ },
+ "depth_charges": {
+  "name": "Depth charges",
+  "damage": [
+   90,
+   110
+  ],
+  "range": 3.0,
+  "rof": 2.2,
+  "warhead": "HE",
+  "projectile": "bomb",
+  "speed": 200,
+  "splash": 0.8,
+  "accuracy": 1.0,
+  "targets": [
+   "sub"
+  ],
+  "sound": "explode"
+ },
+ "torpedo": {
+  "name": "Torpedo",
+  "damage": [
+   120,
+   140
+  ],
+  "range": 6.5,
+  "rof": 3.2,
+  "warhead": "AP",
+  "projectile": "torpedo",
+  "speed": 190,
+  "splash": 0.3,
+  "accuracy": 1.0,
+  "targets": [
+   "naval",
+   "sub"
+  ],
+  "sound": "rocket"
+ },
+ "cruise_missiles": {
+  "name": "Cruise missiles",
+  "damage": [
+   100,
+   120
+  ],
+  "range": 11.0,
+  "min_range": 3.0,
+  "rof": 4.0,
+  "warhead": "HE",
+  "projectile": "rocket",
+  "speed": 360,
+  "splash": 1.0,
+  "accuracy": 0.95,
+  "targets": [
+   "ground"
+  ],
+  "sound": "rocket"
+ }
 }

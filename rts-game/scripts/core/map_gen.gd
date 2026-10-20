@@ -5,7 +5,8 @@ extends RefCounted
 const SIZES := {"small": 64, "medium": 96, "large": 128, "xlarge": 176}
 const LEGEND := {".": "grass", "d": "dirt", "s": "sand", "w": "water", "~": "shore", "=": "road", "r": "rock", "#": "cliff", "b": "bridge", "f": "forest"}
 
-## opts: size (key of SIZES or int), players (2-4), seed, resources ("low","normal","high")
+## opts: size (key of SIZES or int), players (2-4), seed, resources ("low","normal","high"),
+## water ("none", "lakes", "coastal": a sea ring along the map edges plus a central lake, so every base has a shore for a naval yard)
 static func generate(opts: Dictionary) -> MapGrid:
 	var size_v = opts.get("size", "medium")
 	var n: int = SIZES.get(size_v, 96) if typeof(size_v) == TYPE_STRING else int(size_v)
@@ -23,9 +24,30 @@ static func generate(opts: Dictionary) -> MapGrid:
 	var moist := FastNoiseLite.new()
 	moist.seed = rng.randi()
 	moist.frequency = 0.07
+	var water_mode: String = str(opts.get("water", "lakes"))
+	var shore_noise := FastNoiseLite.new()
+	shore_noise.seed = rng.randi()
+	shore_noise.frequency = 0.09
 	for y in n:
 		for x in n:
 			var e := elev.get_noise_2d(x, y)
+			if water_mode == "none":
+				e = maxf(e, -0.24)
+			elif water_mode == "coastal":
+				# Sea along the edges: sink elevation near the border, wobbled by noise.
+				var edge := float(mini(mini(x, y), mini(n - 1 - x, n - 1 - y)))
+				var band := float(n) * 0.075 + shore_noise.get_noise_2d(x, y) * float(n) * 0.04
+				if edge < band:
+					e = minf(e, -0.4 - (band - edge) * 0.02)
+				elif edge < band + 3.0:
+					e = minf(e, -0.33 + (edge - band) * 0.03)
+				else:
+					e = maxf(e, -0.24) if edge < band + 6.0 else e
+				# Central lake.
+				var dc := Vector2(x - n / 2, y - n / 2).length()
+				var lake_r := float(n) * 0.09 + shore_noise.get_noise_2d(x * 2, y * 2) * 3.0
+				if dc < lake_r:
+					e = minf(e, -0.42)
 			var mo := moist.get_noise_2d(x, y)
 			var id := "grass"
 			if e < -0.38:

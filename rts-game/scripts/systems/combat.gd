@@ -8,9 +8,25 @@ static func roll_damage(w: Dictionary) -> float:
 		return randf_range(float(d[0]), float(d[1]))
 	return float(d)
 
+## Target classes: "air", "sub" (submerged submarine), "naval" (ships), "ground" (land and ships).
+static func target_class(t) -> String:
+	if t.is_air():
+		return "air"
+	if t.is_unit():
+		if t.submarine and t.submerged():
+			return "sub"
+		if t.is_naval:
+			return "naval"
+	return "ground"
+
 static func can_target(w: Dictionary, t) -> bool:
 	var targets: Array = w.get("targets", ["ground"])
-	return targets.has("air") if t.is_air() else targets.has("ground")
+	var c := target_class(t)
+	if targets.has(c):
+		return true
+	if c == "naval" and targets.has("ground"):
+		return true
+	return false
 
 ## Final damage against a target after armor, terrain cover and cheat modifiers.
 static func damage_against(w: Dictionary, t, base: float) -> float:
@@ -26,6 +42,7 @@ static func fire(game, shooter, w: Dictionary, t) -> void:
 		return
 	var from: Vector2 = shooter.pos
 	var muzzle = from + (t.pos - from).normalized() * shooter.radius
+	var h: float = shooter.altitude_now if shooter.is_unit() and shooter.is_air_unit else 0.0
 	var kind: String = w.get("projectile", "bullet")
 	game.play_sound(w.get("sound", ""), from)
 	if kind == "bullet" or kind == "zap":
@@ -33,9 +50,9 @@ static func fire(game, shooter, w: Dictionary, t) -> void:
 		var impact: Vector2 = t.pos + Vector2(randf_range(-4, 4), randf_range(-4, 4))
 		if not hit:
 			impact += Vector2.RIGHT.rotated(randf() * TAU) * randf_range(8, 18)
-		game.spawn_effect("zap" if kind == "zap" else "tracer", muzzle, {"to": impact})
+		game.spawn_effect("zap" if kind == "zap" else "tracer", muzzle, {"to": impact, "h": h})
 		if kind == "bullet":
-			game.spawn_effect("muzzle", muzzle, {"angle": (t.pos - from).angle()})
+			game.spawn_effect("muzzle", muzzle, {"angle": (t.pos - from).angle(), "h": h})
 		if hit:
 			t.take_damage(damage_against(w, t, roll_damage(w)), shooter)
 			if float(w.get("splash", 0.0)) > 0.0:
@@ -48,7 +65,7 @@ static func fire(game, shooter, w: Dictionary, t) -> void:
 		target_pos += Vector2.RIGHT.rotated(randf() * TAU) * randf_range(10, 26)
 	game.spawn_projectile(shooter, w, t, muzzle, target_pos)
 	if kind == "shell":
-		game.spawn_effect("muzzle", muzzle, {"angle": (t.pos - from).angle(), "big": true})
+		game.spawn_effect("muzzle", muzzle, {"angle": (t.pos - from).angle(), "big": true, "h": h})
 
 ## Called when a projectile arrives.
 static func detonate(game, p: Vector2, w: Dictionary, shooter, direct) -> void:

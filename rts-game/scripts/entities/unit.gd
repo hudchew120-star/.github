@@ -34,6 +34,26 @@ var anim: float = 0.0
 var rally_after_spawn := Vector2.INF
 var last_fire_time: float = -10.0   # used by the renderer for firing animations
 
+# Aircraft
+var is_air_unit: bool = false
+var altitude: float = 0.0          # cruising height (world units)
+var altitude_now: float = 0.0      # current height, used by renderers
+var hover: bool = true
+var ammo: int = -1                 # -1 = unlimited
+var max_ammo: int = -1
+var rearm_t: float = 0.0
+var air_state: String = "flying"   # flying, landed
+var pad_uid: int = 0
+var pad_index: int = -1
+var orbit_t: float = 0.0
+
+# Naval / special
+var is_naval: bool = false
+var submarine: bool = false
+var surfaced_until: float = -100.0
+var detector_px: float = 0.0
+var engineer: bool = false
+
 # Harvester state
 var is_harvester: bool = false
 var cargo: int = 0
@@ -50,6 +70,12 @@ func _ready() -> void:
 
 func is_unit() -> bool:
 	return true
+
+func is_air() -> bool:
+	return is_air_unit
+
+func submerged() -> bool:
+	return submarine and game.sim_time > surfaced_until
 
 func setup_unit() -> void:
 	move_class = def.get("move", "foot")
@@ -68,6 +94,17 @@ func setup_unit() -> void:
 	if def.has("harvester"):
 		is_harvester = true
 		capacity = int(def.harvester.capacity)
+	is_air_unit = move_class == "air"
+	if is_air_unit:
+		altitude = float(def.get("altitude", 1.4))
+		altitude_now = altitude
+		hover = bool(def.get("hover", true))
+		max_ammo = int(def.get("ammo", -1))
+		ammo = max_ammo
+	is_naval = move_class == "naval"
+	submarine = bool(def.get("submarine", false))
+	detector_px = float(def.get("detector", 0)) * MapGrid.T
+	engineer = bool(def.get("engineer", false))
 	position = pos
 	last_pos = pos
 	guard_pos = pos
@@ -94,6 +131,12 @@ func cmd_stop() -> void:
 		harv_state = ""
 
 func cmd_move(p: Vector2, keep_order: bool = false) -> void:
+	if is_air_unit:
+		order = "move"
+		clear_target()
+		goal = p
+		moving = true
+		return
 	if not keep_order:
 		order = "move"
 		clear_target()
@@ -103,7 +146,12 @@ func cmd_move(p: Vector2, keep_order: bool = false) -> void:
 	_request_path()
 
 func cmd_attack(t) -> void:
-	if t == null or not can_attack():
+	if t == null:
+		return
+	if engineer and t.is_building():
+		cmd_capture(t)
+		return
+	if not can_attack():
 		return
 	order = "attack"
 	target = t
@@ -116,7 +164,23 @@ func cmd_attack_move(p: Vector2) -> void:
 	order = "attack_move"
 	clear_target()
 	goal = p
+	if is_air_unit:
+		moving = true
+		return
 	_request_path()
+
+## Engineers: walk to a structure, then capture it (enemy) or fully repair it (own).
+func cmd_capture(b) -> void:
+	order = "capture"
+	target = b
+	target_uid = b.uid
+	forced_target = true
+	goal = b.pos
+	_request_path()
+
+func cmd_return_to_base() -> void:
+	if is_air_unit:
+		_return_to_base()
 
 func cmd_guard() -> void:
 	order = "guard"
@@ -182,6 +246,10 @@ func _stop_moving() -> void:
 
 func compute_path() -> void:
 	need_path = false
+	if is_air_unit:
+		return
+	if order == "capture" and target != null and is_instance_valid(target):
+		goal = MapGrid.cell_center(game.map.nearest_passable(MapGrid.to_cell(target.pos), move_class, 4))
 	var gc := MapGrid.to_cell(goal)
 	path = game.map.find_path(cell(), gc, move_class)
 	path_i = 0
@@ -266,6 +334,11 @@ func tick(dt: float) -> void:
 		hit_flash -= dt
 	if game.cheats.frozen(pid):
 		return
+	if is_air_unit:
+		_tick_weapons_cd(dt)
+		_tick_air(dt)
+		position = pos
+		return
 	for w in weapons:
 		if w.cd > 0.0:
 			w.cd -= dt * game.rof_factor(pid)
@@ -302,12 +375,16 @@ func tick(dt: float) -> void:
 			_tick_hold(dt)
 		"harvest":
 			_tick_harvest(dt)
+		"capture":
+			_tick_capture(dt)
 	_check_stuck(dt)
 	position = pos
 	queue_redraw()
 
 func _target_valid(t) -> bool:
 	if t == null or not is_instance_valid(t) or t.dead:
+		return false
+	if game.is_hidden_from(t, pid):
 		return false
 	if not is_enemy(t) and not forced_target:
 		return false
@@ -357,6 +434,10 @@ func _engage(t, dt: float) -> bool:
 func _fire_weapon(w: Dictionary, t) -> void:
 	Combat.fire(game, self, w.def, t)
 	last_fire_time = game.sim_time
+	if max_ammo > 0:
+		ammo -= 1
+	if submarine:
+		surfaced_until = game.sim_time + 3.0
 	if is_infantry():
 		anim += 0.05
 
@@ -611,6 +692,168 @@ func _go_to_refinery() -> void:
 	goal = MapGrid.cell_center(r.dock_cell())
 	_request_path()
 
+# ---------------------------------------------------------------- engineers
+
+func _tick_capture(dt: float) -> void:
+	if target == null or not is_instance_valid(target) or target.dead:
+		order = "idle"
+		clear_target()
+		_stop_moving()
+		return
+	if target.edge_distance(pos) <= MapGrid.T * 0.85:
+		game.engineer_use(self, target)
+		return
+	repath_t -= dt
+	if not moving and not need_path and repath_t <= 0.0:
+		repath_t = 1.0
+		_request_path()
+	_follow_path(dt)
+
+# ---------------------------------------------------------------- aircraft
+
+func _tick_weapons_cd(dt: float) -> void:
+	for w in weapons:
+		if w.cd > 0.0:
+			w.cd -= dt
+
+func _tick_air(dt: float) -> void:
+	var want_h := altitude if air_state == "flying" else 0.0
+	altitude_now = move_toward(altitude_now, want_h, dt * 1.1)
+	anim += dt
+	if target != null and not _target_valid(target):
+		clear_target()
+		if order == "attack":
+			order = "idle"
+			guard_pos = pos
+	if air_state == "landed":
+		_rearm(dt)
+		if order in ["move", "attack", "attack_move", "patrol"]:
+			_take_off()
+		else:
+			moving = false
+			return
+	if max_ammo > 0 and ammo <= 0 and order != "return":
+		_return_to_base()
+	match order:
+		"move":
+			if _fly_to(goal, dt):
+				order = "idle"
+				guard_pos = pos
+				moving = false
+		"attack":
+			_air_attack(dt)
+		"attack_move", "patrol":
+			if target == null and (max_ammo <= 0 or ammo > 0):
+				_acquire(dt, float(sight) * MapGrid.T)
+			if target != null:
+				_air_attack(dt)
+			elif _fly_to(goal, dt):
+				order = "idle"
+				guard_pos = pos
+		"return":
+			var b = game.entities.get(pad_uid)
+			if b == null or b.dead:
+				_return_to_base()
+				return
+			var pp: Vector2 = game.pad_position(b, pad_index)
+			if _fly_to(pp, dt, true):
+				pos = pp
+				air_state = "landed"
+				facing = PI * 0.25
+				order = "idle"
+				moving = false
+		_:
+			if hover:
+				moving = false
+				if max_ammo <= 0 or ammo > 0:
+					if target == null:
+						_acquire(dt, max_range_px)
+					if target != null and not _air_engage_hover(target, dt):
+						clear_target()
+			else:
+				if game.has_airfield(pid):
+					_return_to_base()
+				else:
+					orbit_t += dt
+					_fly_to(guard_pos + Vector2(cos(orbit_t * 0.8), sin(orbit_t * 0.8)) * 70.0, dt)
+
+func _fly_to(p: Vector2, dt: float, precise: bool = false) -> bool:
+	var to := p - pos
+	var d := to.length()
+	moving = true
+	if hover or precise and d < 60.0:
+		if d < 3.0:
+			return true
+		var desired := to.angle()
+		facing = rotate_toward(facing, desired, turn_rate * dt)
+		turret_facing = facing
+		var step := speed_px * dt * (0.6 if precise and d < 60.0 else 1.0)
+		pos += to / d * minf(step, d)
+		return d < 4.0
+	# Jets always fly forward and turn with a limited rate.
+	var desired := to.angle()
+	facing = rotate_toward(facing, desired, turn_rate * dt)
+	turret_facing = facing
+	pos += Vector2.RIGHT.rotated(facing) * speed_px * dt
+	pos.x = clampf(pos.x, 0.0, game.map.w * MapGrid.T)
+	pos.y = clampf(pos.y, 0.0, game.map.h * MapGrid.T)
+	return d < maxf(40.0, speed_px * dt * 2.0)
+
+func _air_engage_hover(t, dt: float) -> bool:
+	var w = _weapon_for(t)
+	if w == null or not _in_range(w, t):
+		return false
+	var desired: float = (t.pos - pos).angle()
+	facing = rotate_toward(facing, desired, turn_rate * dt)
+	turret_facing = facing
+	if absf(angle_difference(facing, desired)) < 0.3 and w.cd <= 0.0 and (max_ammo <= 0 or ammo > 0):
+		_fire_weapon(w, t)
+		w.cd = float(w.def.rof)
+	return true
+
+func _air_attack(dt: float) -> void:
+	if target == null:
+		order = "idle"
+		return
+	var w = _weapon_for(target)
+	if w == null:
+		order = "idle"
+		clear_target()
+		return
+	if hover:
+		if not _air_engage_hover(target, dt):
+			_fly_to(target.pos, dt)
+		return
+	# Strafing run: keep flying, fire whenever the target is ahead and in range.
+	_fly_to(target.pos, dt)
+	var desired: float = (target.pos - pos).angle()
+	if _in_range(w, target) and absf(angle_difference(facing, desired)) < 0.6 and w.cd <= 0.0 and ammo > 0:
+		_fire_weapon(w, target)
+		w.cd = float(w.def.rof)
+
+func _rearm(dt: float) -> void:
+	if max_ammo > 0 and ammo < max_ammo:
+		rearm_t += dt
+		if rearm_t >= float(def.get("rearm_time", 1.0)):
+			rearm_t = 0.0
+			ammo += 1
+	if hp < max_hp:
+		heal(max_hp * 0.03 * dt)
+
+func _take_off() -> void:
+	air_state = "flying"
+	game.release_pad(self)
+
+func _return_to_base(prefer = null) -> void:
+	var r: Dictionary = game.reserve_pad(self, prefer)
+	clear_target()
+	if r.is_empty():
+		order = "idle"
+		guard_pos = pos
+		return
+	order = "return"
+	moving = true
+
 # ---------------------------------------------------------------- drawing
 
 func _draw() -> void:
@@ -644,6 +887,7 @@ func to_dict() -> Dictionary:
 		"cargo": cargo, "cargo_kind": cargo_kind.duplicate(), "harv_state": harv_state,
 		"harv_cell": [harv_cell.x, harv_cell.y], "last_field": [last_field.x, last_field.y],
 		"cd": weapons.map(func(w): return w.cd),
+		"ammo": ammo, "air_state": air_state, "alt": altitude_now, "pad": pad_uid, "pad_i": pad_index,
 	})
 	return d
 
@@ -668,6 +912,11 @@ func apply_dict(d: Dictionary) -> void:
 	var cds: Array = d.get("cd", [])
 	for i in mini(cds.size(), weapons.size()):
 		weapons[i].cd = float(cds[i])
+	ammo = int(d.get("ammo", ammo))
+	air_state = d.get("air_state", air_state)
+	altitude_now = float(d.get("alt", altitude_now))
+	pad_uid = int(d.get("pad", 0))
+	pad_index = int(d.get("pad_i", -1))
 	if bool(d.get("moving", false)) or order in ["move", "attack_move", "patrol"]:
 		_request_path()
 	if is_harvester and order == "harvest" and harv_state in ["to_refinery", "unloading", "wait_dock"]:

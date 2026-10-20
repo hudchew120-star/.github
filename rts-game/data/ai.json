@@ -1,17 +1,124 @@
 {
-  "difficulty": {
-    "easy":   {"think_interval": 3.0, "reaction": 6.0, "attack_threshold": 6,  "wave_growth": 2, "first_attack": 480, "harvesters_per_refinery": 1, "max_refineries": 1, "defenses": 1, "scout": false, "counter": false, "parallel": false, "repair": false, "group_up": false},
-    "normal": {"think_interval": 1.5, "reaction": 3.0, "attack_threshold": 9,  "wave_growth": 3, "first_attack": 330, "harvesters_per_refinery": 2, "max_refineries": 2, "defenses": 3, "scout": true,  "counter": false, "parallel": true,  "repair": true,  "group_up": true},
-    "hard":   {"think_interval": 0.75, "reaction": 1.0, "attack_threshold": 12, "wave_growth": 3, "first_attack": 240, "harvesters_per_refinery": 2, "max_refineries": 3, "defenses": 5, "scout": true,  "counter": true,  "parallel": true,  "repair": true,  "group_up": true}
+ "difficulty": {
+  "easy": {
+   "think_interval": 3.0,
+   "reaction": 6.0,
+   "attack_threshold": 6,
+   "wave_growth": 2,
+   "first_attack": 480,
+   "harvesters_per_refinery": 1,
+   "max_refineries": 1,
+   "defenses": 1,
+   "scout": false,
+   "counter": false,
+   "parallel": false,
+   "repair": false,
+   "group_up": false,
+   "air": false
   },
-  "build_order": ["power", "refinery", "barracks", "power", "factory", "radar", "power", "refinery", "defense", "power", "defense", "refinery", "defense", "power", "defense", "silo", "power", "defense"],
-  "army": {
-    "coalition": {"e1": 3, "e3": 2, "jeep": 1, "ltank": 2, "mtank": 3},
-    "dominion":  {"e1": 3, "e4": 2, "flm": 1, "htank": 4}
+  "normal": {
+   "think_interval": 1.5,
+   "reaction": 3.0,
+   "attack_threshold": 9,
+   "wave_growth": 3,
+   "first_attack": 330,
+   "harvesters_per_refinery": 2,
+   "max_refineries": 2,
+   "defenses": 3,
+   "scout": true,
+   "counter": false,
+   "parallel": true,
+   "repair": true,
+   "group_up": true,
+   "air": true
   },
-  "counters": {
-    "heavy": ["e3", "e4", "mtank", "htank"],
-    "none":  ["e1", "flm", "jeep"],
-    "light": ["ltank", "e3", "e4"]
+  "hard": {
+   "think_interval": 0.75,
+   "reaction": 1.0,
+   "attack_threshold": 12,
+   "wave_growth": 3,
+   "first_attack": 240,
+   "harvesters_per_refinery": 2,
+   "max_refineries": 3,
+   "defenses": 5,
+   "scout": true,
+   "counter": true,
+   "parallel": true,
+   "repair": true,
+   "group_up": true,
+   "air": true
   }
+ },
+ "build_order": [
+  "power",
+  "refinery",
+  "barracks",
+  "power",
+  "factory",
+  "refinery",
+  "radar",
+  "power",
+  "defense",
+  "refinery",
+  "power",
+  "airfield",
+  "defense",
+  "naval_yard",
+  "power",
+  "repair",
+  "defense",
+  "silo",
+  "power",
+  "defense",
+  "power",
+  "defense"
+ ],
+ "army": {
+  "coalition": {
+   "e1": 3,
+   "e3": 2,
+   "jeep": 1,
+   "ltank": 2,
+   "mtank": 3,
+   "aa_c": 1,
+   "heli_c": 2,
+   "jet_c": 1,
+   "boat_c": 2,
+   "dest_c": 2
+  },
+  "dominion": {
+   "e1": 3,
+   "e4": 2,
+   "flm": 1,
+   "htank": 4,
+   "aa_d": 1,
+   "heli_d": 2,
+   "jet_d": 1,
+   "sub_d": 2,
+   "cruiser_d": 2
+  }
+ },
+ "counters": {
+  "heavy": [
+   "e3",
+   "e4",
+   "mtank",
+   "htank"
+  ],
+  "none": [
+   "e1",
+   "flm",
+   "jeep"
+  ],
+  "light": [
+   "ltank",
+   "e3",
+   "e4"
+  ],
+  "aircraft": [
+   "aa_c",
+   "aa_d",
+   "e3"
+  ]
+ }
 }

@@ -3,7 +3,7 @@ extends CanvasLayer
 ## In-game interface: top bar, sidebar (credits, power, minimap, build tabs, queue),
 ## selection panel with commands, message log, pause/game menu and game-over screen.
 
-const CATS := [["building", "Build"], ["defense", "Defense"], ["infantry", "Infantry"], ["vehicle", "Vehicle"]]
+const CATS := [["building", "Build"], ["defense", "Defense"], ["infantry", "Infantry"], ["vehicle", "Vehicle"], ["aircraft", "Aircraft"], ["naval", "Naval"]]
 const SIDEBAR_W := 316
 
 var game: Game
@@ -148,8 +148,10 @@ func _build_sidebar() -> void:
 	minimap.setup(game, controller)
 	v.add_child(minimap)
 	# Tabs.
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 3)
+	var tabs := GridContainer.new()
+	tabs.columns = 3
+	tabs.add_theme_constant_override("h_separation", 3)
+	tabs.add_theme_constant_override("v_separation", 3)
 	for c in CATS:
 		var b := Button.new()
 		b.text = c[1]

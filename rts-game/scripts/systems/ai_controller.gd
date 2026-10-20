@@ -19,6 +19,10 @@ var threat_pos := Vector2.INF
 var threat_time: float = -100.0
 var respond_at: float = -1.0
 var seen_armor := {"none": 0, "light": 0, "heavy": 0}
+var seen_air: int = 0                # times enemy aircraft hurt us: drives AA production
+var water_spot := Vector2i(-2, -2)   # cached naval yard site check (-2 = unknown, -1 = none)
+var navy_group: Array = []
+var next_navy_attack: float = 420.0
 
 func _init(g, p) -> void:
 	game = g
@@ -62,6 +66,8 @@ func _think() -> void:
 	_manage_production()
 	_manage_harvesters()
 	_manage_army()
+	_manage_navy()
+	_manage_air()
 	if cfg.repair:
 		_manage_repairs()
 
@@ -103,6 +109,10 @@ func _next_build_tag() -> String:
 			continue
 		if tag == "refinery" and int(seen[tag]) > int(cfg.max_refineries):
 			continue
+		if tag == "airfield" and not cfg.get("air", false):
+			continue
+		if tag == "naval_yard" and not _has_water_site():
+			continue
 		if _count_tag(tag) < int(seen[tag]):
 			return tag
 	return ""
@@ -132,11 +142,22 @@ func _manage_construction() -> void:
 		if t != "" and game.availability(player.id, t) == "" and player.credits() >= int(Data.def(t).cost) * 0.25:
 			game.queue_item(player.id, t)
 	var dq: Array = cy.queues.get("defense", [])
-	if dq.is_empty() and int(cfg.defenses) > 0 and _count_tag("defense") < int(cfg.defenses) and _count_tag("factory", false) > 0:
+	if dq.is_empty() and int(cfg.defenses) > 0 and _count_tag("defense") < int(cfg.defenses) and _count_tag("factory", false) > 0 and (_count_tag("refinery", false) >= mini(2, int(cfg.max_refineries)) or threat_time > 0.0):
 		if cfg.parallel or q.is_empty():
 			var options := Data.types_in_category("defense", player.faction).filter(func(t): return game.availability(player.id, t) == "")
+			var aa := options.filter(func(t): return _hits_air(Data.def(t)))
+			if seen_air >= 2 and aa.size() > 0 and _count_aa_defenses() < 2 + seen_air / 6:
+				options = aa
+			elif aa.size() < options.size():
+				options = options.filter(func(t): return not aa.has(t))
 			if options.size() > 0 and player.credits() > 800:
 				game.queue_item(player.id, options[randi() % options.size()])
+	# Extra anti-air defenses once enemy aircraft have shown up (beyond the normal defense cap).
+	if dq.is_empty() and seen_air >= 4 and _count_aa_defenses() < mini(1 + seen_air / 4, 4) and player.credits() > 1000:
+		for t in Data.types_in_category("defense", player.faction):
+			if _hits_air(Data.def(t)) and game.availability(player.id, t) == "":
+				game.queue_item(player.id, t)
+				break
 
 ## Searches for a placement near the base, leaving a one-cell gap between structures.
 func _find_spot(t: String) -> Vector2i:
@@ -149,6 +170,9 @@ func _find_spot(t: String) -> Vector2i:
 	elif d.get("category", "") == "defense":
 		var dir := Vector2(_enemy_start() - origin).normalized()
 		origin += Vector2i((dir * randf_range(4.0, 7.0)).round()) + Vector2i(randi_range(-3, 3), randi_range(-3, 3))
+	if d.get("placement", "") == "water":
+		var ws := _water_site(t)
+		return ws
 	var size: Vector2i = d.size
 	for r in range(0, 16):
 		var cands := []
@@ -164,6 +188,54 @@ func _find_spot(t: String) -> Vector2i:
 			if _has_gap(c, size):
 				return c
 	return Vector2i(-1, -1)
+
+## Nearest valid naval yard site to the base, or (-1,-1).
+func _water_site(t: String) -> Vector2i:
+	var origin := _base_center()
+	for r in range(2, 22):
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if abs(dx) != r and abs(dy) != r:
+					continue
+				var c := origin + Vector2i(dx, dy)
+				if game.map.in_bounds(c) and game.can_place(player.id, t, c) == "":
+					return c
+	return Vector2i(-1, -1)
+
+func _has_water_site() -> bool:
+	var t := Data.building_for_tag(player.faction, "naval_yard")
+	if t == "":
+		return false
+	if _count_tag("naval_yard") > 0:
+		return true
+	# Re-check now and then: the build radius grows as the base expands.
+	if water_spot.x == -2 or (water_spot.x == -1 and randf() < 0.05):
+		water_spot = _water_site(t) if player.has_tech(["construction"]) else Vector2i(-1, -1)
+		if water_spot.x < 0 and _has_any_water_near():
+			water_spot = Vector2i(-1, -1)
+	return water_spot.x >= 0
+
+func _has_any_water_near() -> bool:
+	var o := _base_center()
+	for dy in range(-14, 15, 2):
+		for dx in range(-14, 15, 2):
+			var c := o + Vector2i(dx, dy)
+			if game.map.in_bounds(c) and game.map.terrain_id(c) == "water":
+				return true
+	return false
+
+func _hits_air(d: Dictionary) -> bool:
+	for wid in d.get("weapons", []):
+		if Data.weapon(wid).get("targets", ["ground"]).has("air"):
+			return true
+	return false
+
+func _count_aa_defenses() -> int:
+	var n := 0
+	for b in _my_buildings():
+		if b.def.get("category", "") == "defense" and _hits_air(b.def):
+			n += 1
+	return n
 
 func _has_gap(c: Vector2i, size: Vector2i) -> bool:
 	for y in range(-1, size.y + 1):
@@ -207,6 +279,8 @@ func _pick_unit(cat: String) -> String:
 		if Data.def(t).get("category", "") != cat or game.availability(player.id, t) != "":
 			continue
 		var wgt := float(weights[t])
+		if seen_air > 0 and _hits_air(Data.def(t)) and Data.def(t).get("category", "") != "aircraft":
+			wgt *= 1.0 + minf(float(seen_air) * 0.5, 6.0)
 		if cfg.counter:
 			var tot := float(seen_armor.none + seen_armor.light + seen_armor.heavy)
 			if tot > 4:
@@ -245,6 +319,25 @@ func _manage_production() -> void:
 			var t := _pick_unit("vehicle")
 			if t != "" and player.credits() > int(Data.def(t).cost) + reserve:
 				game.queue_item(player.id, t)
+	var air = game.producer_for(player.id, "aircraft")
+	if air != null and cfg.get("air", false) and air.queue_count("aircraft") == 0:
+		# One aircraft per landing pad.
+		var pads := 0
+		for b in _my_buildings():
+			if b.completed and b.produces("aircraft"):
+				pads += maxi(b.def.get("pads", []).size(), 1)
+		var flyers := _my_units().filter(func(u): return u.is_air_unit).size()
+		if flyers < pads:
+			var t := _pick_unit("aircraft")
+			if t != "" and player.credits() > int(Data.def(t).cost) + reserve * 1.5:
+				game.queue_item(player.id, t)
+	var yard = game.producer_for(player.id, "naval")
+	if yard != null and yard.queue_count("naval") == 0:
+		var ships := _my_units().filter(func(u): return u.is_naval).size()
+		if ships < 10:
+			var t := _pick_unit("naval")
+			if t != "" and player.credits() > int(Data.def(t).cost) + reserve * 1.5:
+				game.queue_item(player.id, t)
 
 func _manage_harvesters() -> void:
 	for u in _my_units():
@@ -261,9 +354,11 @@ func _manage_repairs() -> void:
 # ---------------------------------------------------------------- army
 
 func _combat_units() -> Array:
-	return _my_units().filter(func(u): return u.can_attack() and not u.is_harvester)
+	return _my_units().filter(func(u): return u.can_attack() and not u.is_harvester and not u.is_naval and not u.is_air_unit)
 
 func on_unit_built(u) -> void:
+	if u.is_air_unit or u.is_naval:
+		return
 	if u.can_attack():
 		var rp := _rally_point()
 		u.cmd_attack_move(rp + Vector2(randf_range(-40, 40), randf_range(-40, 40)))
@@ -276,7 +371,9 @@ func _rally_point() -> Vector2:
 func on_damaged(e, attacker) -> void:
 	if attacker == null or not is_instance_valid(attacker):
 		return
-	if attacker.is_unit():
+	if attacker.is_unit() and attacker.is_air_unit:
+		seen_air += 1
+	elif attacker.is_unit():
 		var a: String = attacker.armor
 		if seen_armor.has(a):
 			seen_armor[a] += 1
@@ -359,9 +456,74 @@ func _manage_army() -> void:
 		if u != null and (u.order == "guard" or u.order == "idle") and u.target == null:
 			u.cmd_attack_move(tgt + Vector2(randf_range(-48, 48), randf_range(-48, 48)))
 
+# ---------------------------------------------------------------- navy and air force
+
+func _nearest_water(origin: Vector2i, max_r: int) -> Vector2i:
+	for r in range(0, max_r + 1):
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if abs(dx) != r and abs(dy) != r:
+					continue
+				var c := origin + Vector2i(dx, dy)
+				if game.map.in_bounds(c) and game.map.passable(c, "naval"):
+					return c
+	return Vector2i(-1, -1)
+
+func _manage_navy() -> void:
+	navy_group = navy_group.filter(func(uid): return game.entities.has(uid))
+	var ships := _my_units().filter(func(u): return u.is_naval and u.can_attack())
+	if ships.is_empty():
+		return
+	# Defend: ships near the base hunt anything hurting it from the water.
+	if threat_pos != Vector2.INF and game.sim_time - threat_time < 10.0:
+		var tc := _nearest_water(MapGrid.to_cell(threat_pos), 6)
+		if tc.x >= 0:
+			for u in ships:
+				if not navy_group.has(u.uid) and u.order != "attack":
+					u.cmd_attack_move(MapGrid.cell_center(tc))
+	var idle := ships.filter(func(u): return not navy_group.has(u.uid))
+	if game.sim_time >= next_navy_attack and idle.size() >= 4:
+		next_navy_attack = game.sim_time + randf_range(90.0, 150.0)
+		var goal := _naval_target()
+		if goal != Vector2.INF:
+			for u in idle:
+				navy_group.append(u.uid)
+			game.command_group(idle, "attack_move", goal)
+	for uid in navy_group:
+		var u = game.entities.get(uid)
+		if u != null and (u.order == "guard" or u.order == "idle") and u.target == null:
+			var g := _naval_target()
+			if g != Vector2.INF:
+				u.cmd_attack_move(g + Vector2(randf_range(-40, 40), randf_range(-40, 40)))
+
+## Enemy naval yard if known, otherwise the water closest to the enemy base.
+func _naval_target() -> Vector2:
+	for b in game.buildings:
+		if not b.dead and game.are_enemies(player.id, b.pid) and b.produces("naval"):
+			if cfg.counter or player.vis.size() == 0 or player.vis[game.map.idx(b.cell0)] != 0:
+				var c := _nearest_water(b.cell0, 5)
+				if c.x >= 0:
+					return MapGrid.cell_center(c)
+	var c := _nearest_water(_enemy_start(), 18)
+	return MapGrid.cell_center(c) if c.x >= 0 else Vector2.INF
+
+func _manage_air() -> void:
+	if not cfg.get("air", false):
+		return
+	var flyers := _my_units().filter(func(u): return u.is_air_unit and u.can_attack())
+	var ready := flyers.filter(func(u): return (u.order == "guard" or u.order == "idle") and (u.max_ammo < 0 or u.ammo == u.max_ammo))
+	# Defend the base against attackers first.
+	if threat_pos != Vector2.INF and game.sim_time - threat_time < 6.0 and ready.size() > 0:
+		game.command_group(ready, "attack_move", threat_pos)
+		return
+	# Strike in pairs or more once the land army has started attacking.
+	if ready.size() >= 2 and attack_wave > 0:
+		game.command_group(ready, "attack_move", _known_target())
+
 func to_dict() -> Dictionary:
 	return {"wave": attack_wave, "threshold": threshold, "next_attack": next_attack_time, "group": attack_group.duplicate(),
-		"gathering": gathering, "scouted": scouted, "scout": scout_uid, "seen_armor": seen_armor.duplicate()}
+		"gathering": gathering, "scouted": scouted, "scout": scout_uid, "seen_armor": seen_armor.duplicate(),
+		"seen_air": seen_air, "navy": navy_group.duplicate(), "next_navy": next_navy_attack}
 
 func from_dict(d: Dictionary) -> void:
 	attack_wave = int(d.get("wave", 0))
@@ -371,5 +533,8 @@ func from_dict(d: Dictionary) -> void:
 	gathering = bool(d.get("gathering", false))
 	scouted = bool(d.get("scouted", false))
 	scout_uid = int(d.get("scout", 0))
+	seen_air = int(d.get("seen_air", 0))
+	navy_group = d.get("navy", []).map(func(x): return int(x))
+	next_navy_attack = float(d.get("next_navy", next_navy_attack))
 	for k in d.get("seen_armor", {}):
 		seen_armor[k] = int(d.seen_armor[k])

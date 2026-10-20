@@ -22,6 +22,7 @@ var dock_busy_uid: int = 0
 var unload_anim: float = 0.0
 var charge: float = 0.0
 var smoke_t: float = 0.0
+var pad_uids: Array = []          # aircraft parked on each landing pad
 
 func _ready() -> void:
 	z_index = 1
@@ -37,6 +38,8 @@ func setup_building(c: Vector2i, instant: bool) -> void:
 	position = Vector2(c) * MapGrid.T
 	for cat in def.get("produces", []):
 		queues[cat] = []
+	for _i in def.get("pads", []).size():
+		pad_uids.append(0)
 	for wid in def.get("weapons", []):
 		var wd := Data.weapon(wid)
 		if not wd.is_empty():

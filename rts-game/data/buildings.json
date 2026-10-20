@@ -1,43 +1,527 @@
 {
-  "fact": {"name": "Construction Yard", "factions": ["coalition", "dominion"], "category": "building", "buildable": false,
-           "cost": 2500, "build_time": 30, "hp": 1000, "armor": "concrete", "power": 0, "sight": 5,
-           "footprint": ["xxx", "xxx", "xxx"], "prereq": [], "provides": ["construction"], "produces": ["building", "defense"],
-           "sprite": "conyard", "undeploys_to": "mcv"},
-  "powr": {"name": "Power Plant", "factions": ["coalition", "dominion"], "category": "building",
-           "cost": 300, "build_time": 7, "hp": 400, "armor": "wood", "power": 100, "sight": 3,
-           "footprint": ["xx", "xx"], "prereq": ["construction"], "provides": ["power"], "sprite": "power"},
-  "apwr": {"name": "Advanced Power Plant", "factions": ["coalition", "dominion"], "category": "building",
-           "cost": 500, "build_time": 11, "hp": 700, "armor": "wood", "power": 200, "sight": 3,
-           "footprint": ["xxx", "xxx", "xxx"], "prereq": ["power", "radar"], "provides": ["power"], "sprite": "adv_power"},
-  "proc": {"name": "Ore Refinery", "factions": ["coalition", "dominion"], "category": "building",
-           "cost": 2000, "build_time": 15, "hp": 900, "armor": "wood", "power": -30, "sight": 4, "storage": 2000,
-           "footprint": ["xxx", "xxx", "x.x"], "dock": [1, 2], "prereq": ["power"], "provides": ["refinery"],
-           "free_unit": "harv", "sprite": "refinery"},
-  "silo": {"name": "Ore Silo", "factions": ["coalition", "dominion"], "category": "building",
-           "cost": 150, "build_time": 4, "hp": 300, "armor": "wood", "power": -10, "sight": 2, "storage": 1500,
-           "footprint": ["x"], "prereq": ["refinery"], "provides": ["silo"], "sprite": "silo"},
-  "tent": {"name": "Barracks", "factions": ["coalition"], "category": "building",
-           "cost": 300, "build_time": 7, "hp": 600, "armor": "wood", "power": -20, "sight": 4,
-           "footprint": ["xx", "xx"], "exit": [0, 2], "prereq": ["power"], "provides": ["barracks"], "produces": ["infantry"], "sprite": "barracks"},
-  "barr": {"name": "Barracks", "factions": ["dominion"], "category": "building",
-           "cost": 300, "build_time": 7, "hp": 700, "armor": "wood", "power": -20, "sight": 4,
-           "footprint": ["xx", "xx"], "exit": [0, 2], "prereq": ["power"], "provides": ["barracks"], "produces": ["infantry"], "sprite": "barracks_dom"},
-  "weap": {"name": "War Factory", "factions": ["coalition", "dominion"], "category": "building",
-           "cost": 2000, "build_time": 16, "hp": 1000, "armor": "concrete", "power": -30, "sight": 4,
-           "footprint": ["xxx", "xxx", "xxx"], "exit": [1, 3], "prereq": ["refinery"], "provides": ["factory"], "produces": ["vehicle"], "sprite": "factory"},
-  "dome": {"name": "Radar Dome", "factions": ["coalition", "dominion"], "category": "building",
-           "cost": 1000, "build_time": 11, "hp": 800, "armor": "wood", "power": -40, "sight": 8,
-           "footprint": ["xx", "xx"], "prereq": ["refinery"], "provides": ["radar"], "requires_power": true, "sprite": "radar"},
-  "pbox": {"name": "Pillbox", "factions": ["coalition"], "category": "defense",
-           "cost": 400, "build_time": 5, "hp": 450, "armor": "concrete", "power": 0, "sight": 5,
-           "footprint": ["x"], "prereq": ["barracks"], "provides": ["defense"], "weapons": ["mg"], "sprite": "pillbox"},
-  "gun":  {"name": "Gun Turret", "factions": ["coalition"], "category": "defense",
-           "cost": 600, "build_time": 7, "hp": 500, "armor": "heavy", "power": -40, "sight": 6,
-           "footprint": ["x"], "prereq": ["barracks"], "provides": ["defense"], "weapons": ["turret_gun"], "turret": true, "requires_power": true, "sprite": "gun_turret"},
-  "ftur": {"name": "Flame Tower", "factions": ["dominion"], "category": "defense",
-           "cost": 600, "build_time": 6, "hp": 450, "armor": "concrete", "power": -20, "sight": 5,
-           "footprint": ["x"], "prereq": ["barracks"], "provides": ["defense"], "weapons": ["flamer"], "sprite": "flame_tower"},
-  "tsla": {"name": "Arc Coil", "factions": ["dominion"], "category": "defense",
-           "cost": 1500, "build_time": 12, "hp": 600, "armor": "heavy", "power": -150, "sight": 7,
-           "footprint": ["x", "x"], "prereq": ["radar"], "provides": ["defense"], "weapons": ["arc_coil"], "requires_power": true, "sprite": "arc_coil"}
+ "fact": {
+  "name": "Construction Yard",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "buildable": false,
+  "cost": 2500,
+  "build_time": 30,
+  "hp": 1000,
+  "armor": "concrete",
+  "power": 0,
+  "sight": 5,
+  "footprint": [
+   "xxx",
+   "xxx",
+   "xxx"
+  ],
+  "prereq": [],
+  "provides": [
+   "construction"
+  ],
+  "produces": [
+   "building",
+   "defense"
+  ],
+  "sprite": "conyard",
+  "undeploys_to": "mcv"
+ },
+ "powr": {
+  "name": "Power Plant",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 300,
+  "build_time": 7,
+  "hp": 400,
+  "armor": "wood",
+  "power": 100,
+  "sight": 3,
+  "footprint": [
+   "xx",
+   "xx"
+  ],
+  "prereq": [
+   "construction"
+  ],
+  "provides": [
+   "power"
+  ],
+  "sprite": "power"
+ },
+ "apwr": {
+  "name": "Advanced Power Plant",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 500,
+  "build_time": 11,
+  "hp": 700,
+  "armor": "wood",
+  "power": 200,
+  "sight": 3,
+  "footprint": [
+   "xxx",
+   "xxx",
+   "xxx"
+  ],
+  "prereq": [
+   "power",
+   "radar"
+  ],
+  "provides": [
+   "power"
+  ],
+  "sprite": "adv_power"
+ },
+ "proc": {
+  "name": "Ore Refinery",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 2000,
+  "build_time": 15,
+  "hp": 900,
+  "armor": "wood",
+  "power": -30,
+  "sight": 4,
+  "storage": 2000,
+  "footprint": [
+   "xxx",
+   "xxx",
+   "x.x"
+  ],
+  "dock": [
+   1,
+   2
+  ],
+  "prereq": [
+   "power"
+  ],
+  "provides": [
+   "refinery"
+  ],
+  "free_unit": "harv",
+  "sprite": "refinery"
+ },
+ "silo": {
+  "name": "Ore Silo",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 150,
+  "build_time": 4,
+  "hp": 300,
+  "armor": "wood",
+  "power": -10,
+  "sight": 2,
+  "storage": 1500,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "refinery"
+  ],
+  "provides": [
+   "silo"
+  ],
+  "sprite": "silo"
+ },
+ "tent": {
+  "name": "Barracks",
+  "factions": [
+   "coalition"
+  ],
+  "category": "building",
+  "cost": 300,
+  "build_time": 7,
+  "hp": 600,
+  "armor": "wood",
+  "power": -20,
+  "sight": 4,
+  "footprint": [
+   "xx",
+   "xx"
+  ],
+  "exit": [
+   0,
+   2
+  ],
+  "prereq": [
+   "power"
+  ],
+  "provides": [
+   "barracks"
+  ],
+  "produces": [
+   "infantry"
+  ],
+  "sprite": "barracks"
+ },
+ "barr": {
+  "name": "Barracks",
+  "factions": [
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 300,
+  "build_time": 7,
+  "hp": 700,
+  "armor": "wood",
+  "power": -20,
+  "sight": 4,
+  "footprint": [
+   "xx",
+   "xx"
+  ],
+  "exit": [
+   0,
+   2
+  ],
+  "prereq": [
+   "power"
+  ],
+  "provides": [
+   "barracks"
+  ],
+  "produces": [
+   "infantry"
+  ],
+  "sprite": "barracks_dom"
+ },
+ "weap": {
+  "name": "War Factory",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 2000,
+  "build_time": 16,
+  "hp": 1000,
+  "armor": "concrete",
+  "power": -30,
+  "sight": 4,
+  "footprint": [
+   "xxx",
+   "xxx",
+   "xxx"
+  ],
+  "exit": [
+   1,
+   3
+  ],
+  "prereq": [
+   "refinery"
+  ],
+  "provides": [
+   "factory"
+  ],
+  "produces": [
+   "vehicle"
+  ],
+  "sprite": "factory"
+ },
+ "dome": {
+  "name": "Radar Dome",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 1000,
+  "build_time": 11,
+  "hp": 800,
+  "armor": "wood",
+  "power": -40,
+  "sight": 8,
+  "footprint": [
+   "xx",
+   "xx"
+  ],
+  "prereq": [
+   "refinery"
+  ],
+  "provides": [
+   "radar"
+  ],
+  "requires_power": true,
+  "sprite": "radar"
+ },
+ "pbox": {
+  "name": "Pillbox",
+  "factions": [
+   "coalition"
+  ],
+  "category": "defense",
+  "cost": 400,
+  "build_time": 5,
+  "hp": 450,
+  "armor": "concrete",
+  "power": 0,
+  "sight": 5,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "mg"
+  ],
+  "sprite": "pillbox"
+ },
+ "gun": {
+  "name": "Gun Turret",
+  "factions": [
+   "coalition"
+  ],
+  "category": "defense",
+  "cost": 600,
+  "build_time": 7,
+  "hp": 500,
+  "armor": "heavy",
+  "power": -40,
+  "sight": 6,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "turret_gun"
+  ],
+  "turret": true,
+  "requires_power": true,
+  "sprite": "gun_turret"
+ },
+ "ftur": {
+  "name": "Flame Tower",
+  "factions": [
+   "dominion"
+  ],
+  "category": "defense",
+  "cost": 600,
+  "build_time": 6,
+  "hp": 450,
+  "armor": "concrete",
+  "power": -20,
+  "sight": 5,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "flamer"
+  ],
+  "sprite": "flame_tower"
+ },
+ "tsla": {
+  "name": "Arc Coil",
+  "factions": [
+   "dominion"
+  ],
+  "category": "defense",
+  "cost": 1500,
+  "build_time": 12,
+  "hp": 600,
+  "armor": "heavy",
+  "power": -150,
+  "sight": 7,
+  "footprint": [
+   "x",
+   "x"
+  ],
+  "prereq": [
+   "radar"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "arc_coil"
+  ],
+  "requires_power": true,
+  "sprite": "arc_coil"
+ },
+ "afld": {
+  "name": "Airfield",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 1000,
+  "build_time": 12,
+  "hp": 900,
+  "armor": "concrete",
+  "power": -30,
+  "sight": 5,
+  "footprint": [
+   "xxx",
+   "xxx",
+   "xxx"
+  ],
+  "prereq": [
+   "radar"
+  ],
+  "provides": [
+   "airfield"
+  ],
+  "produces": [
+   "aircraft"
+  ],
+  "pads": [
+   [
+    0.75,
+    1.95
+   ],
+   [
+    2.2,
+    1.95
+   ]
+  ],
+  "sprite": "airfield"
+ },
+ "syrd": {
+  "name": "Naval Yard",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 1200,
+  "build_time": 12,
+  "hp": 1100,
+  "armor": "heavy",
+  "power": -20,
+  "sight": 6,
+  "footprint": [
+   "xxx",
+   "xxx",
+   "xxx"
+  ],
+  "placement": "water",
+  "build_radius": 9,
+  "exit": [
+   1,
+   3
+  ],
+  "detector": 8,
+  "prereq": [
+   "power"
+  ],
+  "provides": [
+   "naval_yard"
+  ],
+  "produces": [
+   "naval"
+  ],
+  "sprite": "naval_yard"
+ },
+ "fix": {
+  "name": "Repair Facility",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "building",
+  "cost": 1200,
+  "build_time": 12,
+  "hp": 800,
+  "armor": "concrete",
+  "power": -30,
+  "sight": 4,
+  "footprint": [
+   "x.x",
+   "...",
+   "x.x"
+  ],
+  "prereq": [
+   "factory"
+  ],
+  "provides": [
+   "repair"
+  ],
+  "repair_rate": 0.07,
+  "sprite": "repair"
+ },
+ "sam": {
+  "name": "Patriot SAM Site",
+  "factions": [
+   "coalition"
+  ],
+  "category": "defense",
+  "cost": 750,
+  "build_time": 8,
+  "hp": 450,
+  "armor": "heavy",
+  "power": -40,
+  "sight": 8,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "radar"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "sam_site"
+  ],
+  "turret": true,
+  "requires_power": true,
+  "sprite": "sam_site"
+ },
+ "flak": {
+  "name": "Flak Cannon",
+  "factions": [
+   "dominion"
+  ],
+  "category": "defense",
+  "cost": 650,
+  "build_time": 7,
+  "hp": 500,
+  "armor": "heavy",
+  "power": -30,
+  "sight": 7,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "radar"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "flak_cannon"
+  ],
+  "turret": true,
+  "sprite": "flak_cannon"
+ }
 }

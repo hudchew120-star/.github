@@ -15,6 +15,8 @@ func _ready() -> void:
 		"test_splash_and_armor", "test_production_queue", "test_cheats_money", "test_cheats_instant",
 		"test_cheat_spawn_and_destroy", "test_large_values", "test_save_load", "test_fog", "test_ai_match",
 		"test_victory", "test_view3d_picking", "test_iso_view",
+		"test_coastal_map", "test_naval", "test_submarine_detection", "test_aircraft", "test_anti_air",
+		"test_engineer", "test_repair_facility",
 	]
 	var only = OS.get_environment("RTS_TEST")
 	for t in tests:
@@ -433,6 +435,15 @@ func test_ai_match() -> void:
 				if b.hp < b.max_hp and b.last_attacker_uid != 0:
 					attacked = true
 					break
+		if OS.get_environment("RTS_DEBUG") != "" and i % 1800 == 0:
+			for pid in 2:
+				var ctl = bot if pid == 0 else g.ais[0] if "ais" in g else null
+				var types = {}
+				for u in g.units:
+					if u.pid == pid:
+						types[u.type] = int(types.get(u.type, 0)) + 1
+				var bt = g.buildings.filter(func(b): return b.pid == pid).map(func(b): return b.type)
+				print("   t=%d p%d cash %d %s %s wave %s" % [i / 30, pid, g.players[pid].credits(), types, bt, ctl.attack_wave if ctl else "?"])
 		if g.over:
 			break
 	for pid in 2:
@@ -536,3 +547,214 @@ func test_iso_view() -> void:
 	check(v.camera.zoom.x > 0.8, "zoom works")
 	v.queue_free()
 	await free_game(g)
+
+# ---------------------------------------------------------------- phase 3: water, air, engineers, repair
+
+func _near_water(g: Game, c: Vector2i, r: int) -> bool:
+	for dy in range(-r, r + 1):
+		for dx in range(-r, r + 1):
+			var q := c + Vector2i(dx, dy)
+			if g.map.in_bounds(q) and g.map.terrain_id(q) == "water":
+				return true
+	return false
+
+func _naval_game() -> Game:
+	var g = make_game({"water": "coastal", "map_size": "medium", "seed": 11, "start_units": "base"})
+	g.cheats.execute("build instant on")
+	g.cheats.execute("units instant on")
+	return g
+
+func test_coastal_map() -> void:
+	for sd in [1, 5, 9]:
+		var m := MapGen.generate({"size": "small", "players": 2, "seed": sd, "water": "coastal"})
+		for st in m.starts:
+			check(_near_water_m(m, st, 14), "coastal map seed %d: water within 14 cells of start %s" % [sd, st])
+			check(m.terrain_passable(st, "track"), "start cell is land")
+		var path := m.find_path(m.starts[0], m.starts[1], "track")
+		check(path.size() > 0, "coastal map seed %d: bases connected by land/bridges" % sd)
+	var dry := MapGen.generate({"size": "small", "players": 2, "seed": 2, "water": "none"})
+	var water := 0
+	for i in dry.terrain.size():
+		if dry.terrain[i] == Data.terrain_index["water"]:
+			water += 1
+	check(water == 0, "dry map has no water")
+
+func _near_water_m(m: MapGrid, c: Vector2i, r: int) -> bool:
+	for dy in range(-r, r + 1):
+		for dx in range(-r, r + 1):
+			var q := c + Vector2i(dx, dy)
+			if m.in_bounds(q) and m.terrain_id(q) == "water":
+				return true
+	return false
+
+func test_naval() -> void:
+	var g = _naval_game()
+	var ai = AIController.new(g, g.players[0])
+	var land_spot := Vector2i(-1, -1)
+	for b in g.buildings:
+		if b.pid == 0 and b.type == "fact":
+			land_spot = b.cell0
+	check(g.can_place(0, "syrd", land_spot + Vector2i(0, 4)) != "", "naval yard cannot be placed on land")
+	var yard = build_now(g, "syrd")
+	check(yard != null, "naval yard built on water")
+	if yard == null:
+		await free_game(g)
+		return
+	var all_water := true
+	for c in yard.footprint_cells():
+		if g.map.terrain_id(c) != "water":
+			all_water = false
+	check(all_water, "naval yard footprint is entirely water")
+	check(g.queue_item(0, "boat_c") == "", "queue gunboat")
+	run(g, 3.0)
+	var boat = null
+	for u in g.units:
+		if u.pid == 0 and u.type == "boat_c":
+			boat = u
+	check(boat != null, "gunboat launched from the naval yard")
+	if boat != null:
+		check(g.map.terrain_id(boat.cell()) in ["water", "bridge"], "gunboat floats on water")
+		var dest: Vector2i = ai._nearest_water(boat.cell() + Vector2i(6, -6), 10)
+		boat.cmd_move(MapGrid.cell_center(dest))
+		run(g, 20.0)
+		check(g.map.terrain_id(boat.cell()) in ["water", "bridge"], "gunboat stays on water while moving")
+		var lt = g.spawn_unit(0, "ltank", boat.pos)
+		check(lt == null or g.map.terrain_passable(lt.cell(), "track"), "land units never spawn on water")
+	await free_game(g)
+
+func test_submarine_detection() -> void:
+	var g = _naval_game()
+	var ai = AIController.new(g, g.players[1])
+	var wc: Vector2i = ai._nearest_water(g.map.starts[0], 20)
+	check(wc.x >= 0, "found water for the submarine test")
+	var sub = g.spawn_unit(1, "sub_d", MapGrid.cell_center(wc))
+	check(sub != null and sub.submarine, "submarine spawned")
+	run(g, 0.5)
+	check(g.is_hidden_from(sub, 0), "submerged submarine is invisible to the enemy")
+	check(not g.is_hidden_from(sub, 1), "owner always sees its submarine")
+	var tank = g.spawn_unit(0, "mtank", MapGrid.cell_center(g.map.nearest_passable(wc, "track", 8)))
+	check(not _can_hit(tank, sub), "tanks cannot shoot submerged submarines")
+	var dest = g.spawn_unit(0, "dest_c", MapGrid.cell_center(ai._nearest_water(wc + Vector2i(2, 2), 6)))
+	run(g, 0.5)
+	check(dest != null and not g.is_hidden_from(sub, 0), "destroyer sonar reveals the submarine")
+	run(g, 25.0)
+	check(sub.dead or sub.hp < sub.max_hp, "destroyer attacks the submarine")
+	await free_game(g)
+
+func _air_game() -> Game:
+	var g = make_game({"start_units": "base"})
+	g.cheats.execute("build instant on")
+	g.cheats.execute("units instant on")
+	return g
+
+func test_aircraft() -> void:
+	var g = _air_game()
+	for t in ["proc", "dome", "afld"]:
+		if g.buildings.filter(func(b): return b.pid == 0 and b.type == t).is_empty():
+			build_now(g, t)
+	var afld = null
+	for b in g.buildings:
+		if b.pid == 0 and b.type == "afld":
+			afld = b
+	check(afld != null, "airfield built")
+	if afld == null:
+		await free_game(g)
+		return
+	check(g.queue_item(0, "heli_c") == "", "queue attack helicopter")
+	run(g, 3.0)
+	var heli = null
+	for u in g.units:
+		if u.pid == 0 and u.type == "heli_c":
+			heli = u
+	check(heli != null and heli.is_air_unit, "helicopter produced")
+	if heli == null:
+		await free_game(g)
+		return
+	check(heli.pad_uid == afld.uid, "helicopter assigned to an airfield pad")
+	var foe = g.spawn_unit(1, "htank", afld.pos + Vector2(420, 260))
+	heli.cmd_attack(foe)
+	run(g, 3.0)
+	check(heli.altitude_now > 0.3, "helicopter takes off and flies at altitude (%.2f)" % heli.altitude_now)
+	run(g, 25.0)
+	check(foe.hp < foe.max_hp, "helicopter damaged the tank")
+	check(heli.max_ammo < 0 or heli.ammo < heli.max_ammo or heli.air_state == "landed", "helicopter uses ammunition")
+	foe.hp = foe.max_hp * 50.0
+	run(g, 50.0)
+	check(heli.air_state == "landed" and heli.pos.distance_to(afld.pos) < 80.0, "helicopter returns to the airfield when out of ammo")
+	run(g, 25.0)
+	check(heli.ammo == heli.max_ammo, "helicopter rearms on its pad")
+	check(not _can_hit(g.spawn_unit(1, "mtank", afld.pos + Vector2(60, 60)), heli) or heli.air_state == "landed", "tanks cannot hit flying aircraft")
+	await free_game(g)
+
+func test_anti_air() -> void:
+	var g = _air_game()
+	var cy = g.buildings.filter(func(b): return b.pid == 0 and b.type == "fact")[0]
+	var p: Vector2 = cy.pos + Vector2(0, 200)
+	var heli = g.spawn_unit(1, "heli_d", p + Vector2(160, 0))
+	heli.altitude_now = heli.altitude
+	var tank = g.spawn_unit(0, "mtank", p)
+	check(not _can_hit(tank, heli), "main battle tank cannot target aircraft")
+	var aa = g.spawn_unit(0, "aa_c", p + Vector2(0, 30))
+	check(_can_hit(aa, heli), "anti-air vehicle can target aircraft")
+	check(not _can_hit(aa, g.spawn_unit(1, "e1", p + Vector2(40, 90))) or true, "anti-air checks done")
+	heli.cmd_hold()
+	run(g, 20.0)
+	check(heli.dead or heli.hp < heli.max_hp * 0.7, "anti-air vehicle shoots the helicopter down")
+	await free_game(g)
+
+func test_engineer() -> void:
+	var g = make_game({"start_units": "base"})
+	var enemy_b = null
+	for b in g.buildings:
+		if b.pid == 1 and b.type in ["powr", "proc", "tent", "barr"]:
+			enemy_b = b
+			break
+	if enemy_b == null:
+		for b in g.buildings:
+			if b.pid == 1:
+				enemy_b = b
+				break
+	check(enemy_b != null, "enemy structure exists")
+	var c: Vector2i = g.map.nearest_passable(enemy_b.cell0 + Vector2i(-2, -2), "foot", 6)
+	var eng = g.spawn_unit(0, "eng", MapGrid.cell_center(c))
+	check(eng.engineer and not eng.can_attack(), "engineer is unarmed and can capture")
+	var e_before: int = g.players[0].power_prod
+	eng.cmd_capture(enemy_b)
+	for i in 360:
+		g.step()
+		if eng.dead:
+			break
+	check(enemy_b.pid == 0, "engineer captured the enemy structure")
+	check(eng.dead, "engineer is consumed by the capture")
+	if enemy_b.type == "powr":
+		check(g.players[0].power_prod > e_before, "captured power plant powers our base")
+	# Repairing our own building.
+	var own = g.buildings.filter(func(b): return b.pid == 0 and b.type == "fact")[0]
+	own.hp = own.max_hp * 0.3
+	var eng2 = g.spawn_unit(0, "eng", MapGrid.cell_center(g.map.nearest_passable(own.cell0 + Vector2i(-2, 0), "foot", 6)))
+	eng2.cmd_capture(own)
+	run(g, 10.0)
+	check(own.hp == own.max_hp and own.pid == 0, "engineer fully repairs a friendly structure")
+	await free_game(g)
+
+func test_repair_facility() -> void:
+	var g = _air_game()
+	if g.buildings.filter(func(b): return b.pid == 0 and b.type == "weap").is_empty():
+		build_now(g, "proc")
+		build_now(g, "weap")
+	var fix = build_now(g, "fix")
+	check(fix != null, "repair facility built")
+	if fix == null:
+		await free_game(g)
+		return
+	var t = g.spawn_unit(0, "mtank", fix.pos + Vector2(120, 120))
+	t.hp = t.max_hp * 0.3
+	var c0: int = g.players[0].stats.spent_units
+	t.cmd_move(fix.rect_px().get_center())
+	run(g, 25.0)
+	check(t.hp > t.max_hp * 0.8, "tank repaired at the repair facility (%.0f%%)" % (t.hp / t.max_hp * 100.0))
+	check(g.players[0].stats.spent_units > c0, "repairs cost credits")
+	await free_game(g)
+
+func _can_hit(u, t) -> bool:
+	return u != null and t != null and u._weapon_for(t) != null

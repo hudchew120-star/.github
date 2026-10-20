@@ -40,7 +40,8 @@ var _attack_msg_t: float = -100.0
 var _circle_cache := {}
 var audio = null
 var objectives: Array = []
-var view3d = null                  # View3D presentation, when 3D graphics are used
+var view3d = null                  # external presentation (isometric or 3D view)
+var sub_detected := {}             # player id -> {submarine uid: true}
 
 var terrain_layer: TileMapLayer
 var ore_layer: TileMapLayer
@@ -66,7 +67,7 @@ func setup(s: Dictionary, is_headless: bool = false) -> void:
 	elif String(settings.get("map_file", "")) != "":
 		map = MapGen.load_file(settings.map_file)
 	if map == null:
-		map = MapGen.generate({"size": settings.map_size, "players": 1 + int(settings.ai_count), "seed": int(settings.seed), "resources": settings.resources})
+		map = MapGen.generate({"size": settings.map_size, "players": 1 + int(settings.ai_count), "seed": int(settings.seed), "resources": settings.resources, "water": settings.get("water", "lakes")})
 	_build_layers()
 	_create_players()
 	_spawn_start_forces()
@@ -244,6 +245,11 @@ func spawn_unit(pid: int, t: String, p: Vector2, uid: int = 0) -> Unit:
 	u.uid = uid
 	u.pos = p
 	u.setup_unit()
+	# Never drop ground units into the sea or ships onto land.
+	if not u.is_air_unit and map != null and not map.terrain_passable(u.cell(), u.move_class):
+		var c: Vector2i = map.nearest_passable(u.cell(), u.move_class, 12)
+		if c.x >= 0:
+			u.pos = MapGrid.cell_center(c)
 	_register(u)
 	units.append(u)
 	unit_layer.add_child(u)
@@ -289,6 +295,8 @@ func _push_units_out_of(b) -> void:
 
 func remove_entity(e) -> void:
 	entities.erase(e.uid)
+	if e.is_unit() and e.is_air_unit:
+		release_pad(e)
 	if e.is_unit():
 		units.erase(e)
 		for c in ore_claims.keys():
@@ -403,7 +411,7 @@ func find_target(e, radius: float):
 	var best_score := INF
 	var weapons: Array = e.weapons
 	for o in entities_near(e.pos, radius):
-		if o.dead or not e.is_enemy(o):
+		if o.dead or not e.is_enemy(o) or is_hidden_from(o, e.pid):
 			continue
 		var d: float = o.edge_distance(e.pos)
 		if d > radius:
@@ -527,26 +535,32 @@ func can_place(pid: int, t: String, c: Vector2i, ignore_radius: bool = false) ->
 	if d.is_empty() or not Data.is_building(t):
 		return "Not a structure."
 	var fp: Array = d.get("footprint", ["x"])
+	var on_water: bool = d.get("placement", "") == "water"
 	for y in fp.size():
 		var row := String(fp[y])
 		for x in row.length():
 			var cc := c + Vector2i(x, y)
 			if not map.in_bounds(cc):
 				return "Outside the map."
+			if on_water:
+				if map.terrain_id(cc) != "water" or map.occupied[map.idx(cc)] != 0:
+					return "Must be built on open water."
+				continue
 			if row[x] == "x":
 				if not map.buildable(cc):
 					return "Blocked terrain or structure."
 			elif not map.passable(cc, "track"):
 				return "Dock area blocked."
 			for u in unit_hash.query(MapGrid.cell_center(cc), T * 0.6):
-				if u.dead:
+				if u.dead or u.is_air_unit:
 					continue
 				if u.pid != pid and u.cell() == cc:
 					return "Enemy units in the way."
 	if ignore_radius or cheats.flag(pid, "build_anywhere"):
 		return ""
 	var size := Vector2i(String(fp[0]).length(), fp.size())
-	var rect := Rect2i(c - Vector2i(2, 2), size + Vector2i(4, 4))
+	var br := int(d.get("build_radius", 2))
+	var rect := Rect2i(c - Vector2i(br, br), size + Vector2i(br * 2, br * 2))
 	for b in buildings:
 		if b.pid == pid and not b.dead and rect.intersects(Rect2i(b.cell0, b.size)):
 			return ""
@@ -569,6 +583,26 @@ func place_structure(pid: int, cat: String, c: Vector2i) -> String:
 func spawn_from_factory(b, t: String) -> bool:
 	var d := Data.def(t)
 	var mc: String = d.get("move", "foot")
+	if mc == "air":
+		var au := spawn_unit(b.pid, t, b.pos)
+		if au == null:
+			return false
+		var r := reserve_pad(au, b)
+		if not r.is_empty():
+			au.pos = pad_position(b, au.pad_index)
+			au.air_state = "landed"
+			au.altitude_now = 0.0
+			au.facing = PI * 0.25
+		au.position = au.pos
+		au.reset_physics_interpolation()
+		if b.rally != Vector2.INF:
+			au.cmd_move(b.rally)
+		notify(b.pid, "%s ready." % d.name, "unit")
+		play_sound("unit_ready", au.pos)
+		for ai in ais:
+			if ai.player.id == b.pid:
+				ai.on_unit_built(au)
+		return true
 	var ex: Vector2i = b.exit_cell()
 	var c := map.nearest_passable(ex, mc, 5)
 	if c.x < 0:
@@ -659,6 +693,21 @@ func command_group(list: Array, kind: String, p: Vector2, tgt = null) -> void:
 			else:
 				u.cmd_move(tgt.pos)
 		return
+	# Aircraft fly directly with small offsets; on attack-move they strike the nearest enemy there.
+	var air := movers.filter(func(u): return u.is_air_unit)
+	for i in air.size():
+		var u = air[i]
+		var off := Vector2(cos(i * 2.4), sin(i * 2.4)) * (18.0 * sqrt(i))
+		if kind == "attack_move" and u.can_attack():
+			var t = _air_strike_target(u, p)
+			if t != null:
+				u.cmd_attack(t)
+				continue
+		if kind == "patrol":
+			u.cmd_patrol(p + off)
+		else:
+			u.cmd_move(p + off)
+	movers = movers.filter(func(u): return not u.is_air_unit)
 	# Spread destinations so units do not fight over one cell.
 	var by_class := {}
 	for u in movers:
@@ -688,6 +737,137 @@ func command_group(list: Array, kind: String, p: Vector2, tgt = null) -> void:
 					u.cmd_attack_move(dest)
 				"patrol":
 					u.cmd_patrol(dest)
+
+func _air_strike_target(u, p: Vector2):
+	var best = null
+	var best_d := INF
+	for e in entities_near(p, T * 8.0):
+		if e.dead or not u.is_enemy(e) or is_hidden_from(e, u.pid):
+			continue
+		var ok := false
+		for w in u.weapons:
+			if Combat.can_target(w.def, e):
+				ok = true
+		if not ok:
+			continue
+		var d: float = e.pos.distance_to(p)
+		if d < best_d:
+			best_d = d
+			best = e
+	return best
+
+# ---------------------------------------------------------------- aircraft pads, submarines, engineers, repair
+
+func has_airfield(pid: int) -> bool:
+	for b in buildings:
+		if b.pid == pid and not b.dead and b.completed and b.def.has("pads"):
+			return true
+	return false
+
+func pad_position(b, i: int) -> Vector2:
+	var pads: Array = b.def.get("pads", [[1.5, 1.5]])
+	var pp: Array = pads[clampi(i, 0, pads.size() - 1)]
+	return (Vector2(b.cell0) + Vector2(pp[0], pp[1])) * T
+
+## Reserves a free landing pad (optionally at a given airfield). Returns {} when none is free.
+func reserve_pad(u, prefer = null) -> Dictionary:
+	release_pad(u)
+	var cands := []
+	if prefer != null:
+		cands.append(prefer)
+	for b in buildings:
+		if b.pid == u.pid and not b.dead and b.completed and b.def.has("pads") and b != prefer:
+			cands.append(b)
+	cands.sort_custom(func(a, c): return (a == prefer) or (c != prefer and a.pos.distance_squared_to(u.pos) < c.pos.distance_squared_to(u.pos)))
+	for b in cands:
+		for i in b.pad_uids.size():
+			var occ: int = b.pad_uids[i]
+			if occ == 0 or not entities.has(occ):
+				b.pad_uids[i] = u.uid
+				u.pad_uid = b.uid
+				u.pad_index = i
+				return {"b": b, "i": i}
+	return {}
+
+func release_pad(u) -> void:
+	var b = entities.get(u.pad_uid)
+	if b != null and b.is_building() and u.pad_index >= 0 and u.pad_index < b.pad_uids.size() and b.pad_uids[u.pad_index] == u.uid:
+		b.pad_uids[u.pad_index] = 0
+	u.pad_uid = 0
+	u.pad_index = -1
+
+## True when a submerged submarine cannot be seen by the viewer.
+func is_hidden_from(e, viewer_pid: int) -> bool:
+	if not e.is_unit() or not e.submarine or e.pid == viewer_pid or viewer_pid < 0:
+		return false
+	if not e.submerged():
+		return false
+	return not sub_detected.get(viewer_pid, {}).has(e.uid)
+
+func _update_sub_detection() -> void:
+	sub_detected.clear()
+	var subs := units.filter(func(u): return u.submarine and not u.dead)
+	if subs.is_empty():
+		return
+	var detectors := []
+	for u in units:
+		if not u.dead and u.detector_px > 0.0:
+			detectors.append([u.pid, u.pos, u.detector_px])
+	for b in buildings:
+		if not b.dead and b.completed and b.def.has("detector"):
+			detectors.append([b.pid, b.pos, float(b.def.detector) * T])
+	for sub in subs:
+		for d in detectors:
+			if are_enemies(d[0], sub.pid) and sub.pos.distance_to(d[1]) <= d[2]:
+				if not sub_detected.has(d[0]):
+					sub_detected[d[0]] = {}
+				sub_detected[d[0]][sub.uid] = true
+
+func engineer_use(eng, b) -> void:
+	if eng.dead or b.dead:
+		return
+	if are_enemies(eng.pid, b.pid):
+		capture_building(b, eng.pid)
+	elif b.pid == eng.pid:
+		b.hp = b.max_hp
+		notify(eng.pid, "%s repaired by engineer." % b.def.name, "build")
+	eng.dead = true
+	remove_entity(eng)
+
+func capture_building(b, new_pid: int) -> void:
+	var old_pid: int = b.pid
+	for cat in b.queues:
+		while b.queues[cat].size() > 0:
+			b.cancel_item(cat, 0)
+	for i in b.pad_uids.size():
+		b.pad_uids[i] = 0
+	b.pid = new_pid
+	b.rally = Vector2.INF
+	b.repairing = false
+	b.target = null
+	for p in [players[old_pid], players[new_pid]]:
+		p.recompute(buildings)
+		for cat in p.primary.keys():
+			var pb = entities.get(int(p.primary[cat]))
+			if pb == null or pb.pid != p.id:
+				p.primary.erase(cat)
+	notify(new_pid, "%s captured." % b.def.name, "build")
+	notify(old_pid, "%s has been captured by the enemy!" % b.def.name, "alert")
+	b.queue_redraw()
+
+func _service_repairs() -> void:
+	for b in buildings:
+		if b.dead or not b.completed or not b.def.has("repair_rate") or not b.powered():
+			continue
+		var r: Rect2 = b.rect_px()
+		for u in unit_hash.query(r.get_center(), r.size.x * 0.75):
+			if u.dead or u.pid != b.pid or u.is_air_unit or u.hp >= u.max_hp or not r.has_point(u.pos):
+				continue
+			var amount: float = minf(u.max_hp * float(b.def.repair_rate) * DT * 4.0, u.max_hp - u.hp)
+			var cost := int(ceil(amount / u.max_hp * float(u.def.get("cost", 0)) * 0.4))
+			if players[b.pid].spend(cost, "units"):
+				u.heal(amount)
+				b.unload_anim = 0.2
 
 # ---------------------------------------------------------------- simulation loop
 
@@ -727,7 +907,10 @@ func step() -> void:
 		if pr.dead:
 			projectiles.erase(pr)
 			pr.queue_free()
+	if tick_count % 4 == 0:
+		_service_repairs()
 	if tick_count % 8 == 0:
+		_update_sub_detection()
 		update_fog()
 	if tick_count % 30 == 0:
 		_check_victory()
@@ -749,10 +932,10 @@ func _process_paths() -> void:
 
 func _separate() -> void:
 	for u in units:
-		if u.dead or u.harv_state == "unloading":
+		if u.dead or u.harv_state == "unloading" or u.is_air_unit:
 			continue
 		for o in unit_hash.query(u.pos, u.radius * 2.0):
-			if o == u or o.dead or o.uid < u.uid or o.harv_state == "unloading":
+			if o == u or o.dead or o.uid < u.uid or o.harv_state == "unloading" or o.is_air_unit:
 				continue
 			var d: Vector2 = u.pos - o.pos
 			var dist := d.length()
@@ -848,7 +1031,7 @@ func _apply_human_visibility() -> void:
 			u.visible = true
 			continue
 		var c: Vector2i = u.cell()
-		u.visible = reveal_all or (map.in_bounds(c) and hv[map.idx(c)] == 2)
+		u.visible = (reveal_all or (map.in_bounds(c) and hv[map.idx(c)] == 2)) and not is_hidden_from(u, human_pid)
 	for b in buildings:
 		if b.pid == human_pid:
 			b.visible = true
@@ -1041,6 +1224,13 @@ func load_save(d: Dictionary, is_headless: bool = false) -> void:
 	for u in units:
 		if u.target_uid != 0:
 			u.target = entities.get(u.target_uid)
+		if u.is_air_unit and u.pad_uid != 0:
+			var pb = entities.get(u.pad_uid)
+			if pb != null and pb.is_building() and u.pad_index >= 0 and u.pad_index < pb.pad_uids.size():
+				pb.pad_uids[u.pad_index] = u.uid
+			else:
+				u.pad_uid = 0
+				u.pad_index = -1
 	next_uid = maxi(next_uid, int(d.next_uid))
 	tick_count = int(d.tick)
 	sim_time = float(d.time)

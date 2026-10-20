@@ -94,6 +94,8 @@ func _update_hover() -> void:
 		shape = Input.CURSOR_CROSS
 	elif mode == "repair" or mode == "sell":
 		shape = Input.CURSOR_POINTING_HAND
+	elif hovered != null and hovered.is_building() and own_units().any(func(u): return u.engineer) and (game.are_enemies(game.human_pid, hovered.pid) or (hovered.pid == game.human_pid and hovered.hp < hovered.max_hp)):
+		shape = Input.CURSOR_POINTING_HAND
 	elif hovered != null and _has_own_units() and game.are_enemies(game.human_pid, hovered.pid):
 		shape = Input.CURSOR_CROSS
 	Input.set_default_cursor_shape(shape)
@@ -280,9 +282,36 @@ func _right_click(wp: Vector2, shift: bool, sp: Vector2) -> void:
 		else:
 			set_selection([])
 		return
-	if target != null and game.are_enemies(game.human_pid, target.pid):
+	var engineers := units.filter(func(u): return u.engineer)
+	if target != null and target.is_building() and engineers.size() > 0 and (game.are_enemies(game.human_pid, target.pid) or (target.pid == game.human_pid and target.hp < target.max_hp)):
+		# Engineers capture enemy structures or fully repair our own; one engineer is enough.
+		engineers[0].cmd_capture(target)
+		var rest := units.filter(func(u): return u != engineers[0])
+		if rest.size() > 0 and game.are_enemies(game.human_pid, target.pid):
+			game.command_group(rest.filter(func(u): return not u.engineer), "attack", wp, target)
+		_marker(target.pos, Color(1, 0.85, 0.2))
+	elif target != null and game.are_enemies(game.human_pid, target.pid):
 		game.command_group(units, "attack", wp, target)
 		_marker(target.pos, Color(1, 0.2, 0.15))
+	elif target != null and target.is_building() and target.pid == game.human_pid and target.def.has("repair_rate"):
+		# Send vehicles to the repair facility.
+		var r: Rect2 = target.rect_px()
+		var i := 0
+		for u in units:
+			if u.is_air_unit or u.is_naval:
+				u.cmd_move(wp)
+				continue
+			var off := Vector2(((i % 3) - 1) * 14.0, ((i / 3) % 3 - 1) * 14.0)
+			u.cmd_move(r.get_center() + off)
+			i += 1
+		_marker(r.get_center(), Color(0.4, 0.8, 1))
+	elif target != null and target.is_building() and target.pid == game.human_pid and target.def.has("pads") and units.any(func(u): return u.is_air_unit):
+		for u in units:
+			if u.is_air_unit:
+				u._return_to_base(target)
+			else:
+				u.cmd_move(wp)
+		_marker(target.pos, Color(0.4, 0.8, 1))
 	elif target != null and target.is_building() and target.pid == game.human_pid and target.def.has("dock"):
 		for u in units:
 			if u.is_harvester:

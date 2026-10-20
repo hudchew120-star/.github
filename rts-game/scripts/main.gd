@@ -199,6 +199,8 @@ func show_setup(mode: String) -> void:
 			map_files.append("res://maps/" + f)
 	var o_map := _opt(v, "Map", maps, 0)
 	var o_size := _opt(v, "Map size (random maps)", ["Small 64x64", "Medium 96x96", "Large 128x128", "Extra large 176x176"], 1)
+	var waters := ["lakes", "coastal", "none"]
+	var o_water := _opt(v, "Water (random maps)", ["Lakes and rivers", "Coastal (naval warfare)", "Dry land"], 0)
 	var seed_h := HBoxContainer.new()
 	var sl = UITheme.label("Map seed", 15)
 	sl.custom_minimum_size.x = 190
@@ -232,7 +234,7 @@ func show_setup(mode: String) -> void:
 	var h := HBoxContainer.new()
 	h.add_child(UITheme.button("Start", func():
 		var s := {
-			"mode": mode, "map_file": map_files[o_map.selected], "map_size": sizes[o_size.selected], "seed": int(seed_box.value),
+			"mode": mode, "map_file": map_files[o_map.selected], "map_size": sizes[o_size.selected], "water": waters[o_water.selected], "seed": int(seed_box.value),
 			"player_faction": factions[o_pf.selected], "enemy_factions": [factions[o_ef.selected]],
 			"ai_count": o_ai.selected, "difficulty": diffs[o_diff.selected], "start_credits": credits[o_cred.selected],
 			"start_units": starts[o_start.selected], "start_power_bonus": [0, 100, 500, 99999][o_power.selected],

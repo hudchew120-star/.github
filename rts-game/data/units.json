@@ -1,33 +1,545 @@
 {
-  "e1": {"name": "Rifleman", "factions": ["coalition", "dominion"], "category": "infantry", "role": "Cheap all-round infantry. Good against other infantry.",
-         "cost": 100, "build_time": 4, "hp": 50, "armor": "none", "speed": 0.95, "move": "foot", "sight": 5, "radius": 6,
-         "weapons": ["rifle"], "prereq": ["barracks"], "sprite": "infantry", "turn_rate": 0},
-  "e3": {"name": "Lancer", "factions": ["coalition"], "category": "infantry", "role": "Guided-rocket trooper. Strong against vehicles, can hit aircraft.",
-         "cost": 300, "build_time": 6, "hp": 45, "armor": "none", "speed": 0.85, "move": "foot", "sight": 5, "radius": 6,
-         "weapons": ["lancer_rkt"], "prereq": ["barracks"], "sprite": "rocket_inf", "turn_rate": 0},
-  "e4": {"name": "Breacher", "factions": ["dominion"], "category": "infantry", "role": "Heavy RPG trooper. Hits armor very hard at short range.",
-         "cost": 350, "build_time": 6, "hp": 60, "armor": "none", "speed": 0.8, "move": "foot", "sight": 5, "radius": 6,
-         "weapons": ["breacher_rkt"], "prereq": ["barracks"], "sprite": "heavy_inf", "turn_rate": 0},
-  "flm": {"name": "Pyro", "factions": ["dominion"], "category": "infantry", "role": "Flamethrower trooper. Devastating against infantry and wooden buildings.",
-         "cost": 300, "build_time": 6, "hp": 70, "armor": "none", "speed": 0.85, "move": "foot", "sight": 4, "radius": 6,
-         "weapons": ["flamer"], "prereq": ["barracks", "radar"], "sprite": "flame_inf", "turn_rate": 0},
-  "jeep": {"name": "Ranger", "factions": ["coalition"], "category": "vehicle", "role": "Fast scout with a machine gun. Long sight range.",
-         "cost": 600, "build_time": 8, "hp": 150, "armor": "light", "speed": 3.0, "move": "wheel", "sight": 7, "radius": 11,
-         "weapons": ["mg"], "prereq": ["factory"], "sprite": "jeep", "turret": true, "turn_rate": 6.0},
-  "ltank": {"name": "Viper Light Tank", "factions": ["coalition"], "category": "vehicle", "role": "Quick, cheap tank for raids and early fights.",
-         "cost": 700, "build_time": 9, "hp": 300, "armor": "heavy", "speed": 2.3, "move": "track", "sight": 5, "radius": 12,
-         "weapons": ["cannon_75"], "prereq": ["factory"], "sprite": "tank_light", "turret": true, "turn_rate": 4.0},
-  "mtank": {"name": "Warden Battle Tank", "factions": ["coalition"], "category": "vehicle", "role": "Main battle tank. Reliable armor and firepower.",
-         "cost": 900, "build_time": 11, "hp": 420, "armor": "heavy", "speed": 1.9, "move": "track", "sight": 5, "radius": 13,
-         "weapons": ["cannon_90"], "prereq": ["factory", "radar"], "sprite": "tank_medium", "turret": true, "turn_rate": 3.2},
-  "htank": {"name": "Bear Heavy Tank", "factions": ["dominion"], "category": "vehicle", "role": "Twin-cannon heavy tank. Slow but very tough.",
-         "cost": 1150, "build_time": 13, "hp": 580, "armor": "heavy", "speed": 1.55, "move": "track", "sight": 5, "radius": 14,
-         "weapons": ["cannon_120"], "prereq": ["factory"], "sprite": "tank_heavy", "turret": true, "turn_rate": 2.6},
-  "harv": {"name": "Ore Collector", "factions": ["coalition", "dominion"], "category": "vehicle", "role": "Gathers ore and brings it to a refinery.",
-         "cost": 1400, "build_time": 12, "hp": 600, "armor": "heavy", "speed": 1.35, "move": "track", "sight": 4, "radius": 14,
-         "weapons": [], "prereq": ["factory", "refinery"], "sprite": "harvester", "turn_rate": 3.0,
-         "harvester": {"capacity": 700, "scoop_time": 0.45, "unload_time": 2.0}},
-  "mcv": {"name": "Mobile Construction Vehicle", "factions": ["coalition", "dominion"], "category": "vehicle", "role": "Deploys into a Construction Yard.",
-         "cost": 2500, "build_time": 20, "hp": 600, "armor": "heavy", "speed": 1.2, "move": "track", "sight": 4, "radius": 15,
-         "weapons": [], "prereq": ["factory"], "sprite": "mcv", "turn_rate": 2.5, "deploys_to": "fact"}
+ "e1": {
+  "name": "Rifleman",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "infantry",
+  "role": "Cheap all-round infantry. Good against other infantry.",
+  "cost": 100,
+  "build_time": 4,
+  "hp": 50,
+  "armor": "none",
+  "speed": 0.95,
+  "move": "foot",
+  "sight": 5,
+  "radius": 6,
+  "weapons": [
+   "rifle"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "sprite": "infantry",
+  "turn_rate": 0
+ },
+ "e3": {
+  "name": "Lancer",
+  "factions": [
+   "coalition"
+  ],
+  "category": "infantry",
+  "role": "Guided-rocket trooper. Strong against vehicles, can hit aircraft.",
+  "cost": 300,
+  "build_time": 6,
+  "hp": 45,
+  "armor": "none",
+  "speed": 0.85,
+  "move": "foot",
+  "sight": 5,
+  "radius": 6,
+  "weapons": [
+   "lancer_rkt"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "sprite": "rocket_inf",
+  "turn_rate": 0
+ },
+ "e4": {
+  "name": "Breacher",
+  "factions": [
+   "dominion"
+  ],
+  "category": "infantry",
+  "role": "Heavy RPG trooper. Hits armor very hard at short range.",
+  "cost": 350,
+  "build_time": 6,
+  "hp": 60,
+  "armor": "none",
+  "speed": 0.8,
+  "move": "foot",
+  "sight": 5,
+  "radius": 6,
+  "weapons": [
+   "breacher_rkt"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "sprite": "heavy_inf",
+  "turn_rate": 0
+ },
+ "flm": {
+  "name": "Pyro",
+  "factions": [
+   "dominion"
+  ],
+  "category": "infantry",
+  "role": "Flamethrower trooper. Devastating against infantry and wooden buildings.",
+  "cost": 300,
+  "build_time": 6,
+  "hp": 70,
+  "armor": "none",
+  "speed": 0.85,
+  "move": "foot",
+  "sight": 4,
+  "radius": 6,
+  "weapons": [
+   "flamer"
+  ],
+  "prereq": [
+   "barracks",
+   "radar"
+  ],
+  "sprite": "flame_inf",
+  "turn_rate": 0
+ },
+ "jeep": {
+  "name": "Ranger",
+  "factions": [
+   "coalition"
+  ],
+  "category": "vehicle",
+  "role": "Fast scout with a machine gun. Long sight range.",
+  "cost": 600,
+  "build_time": 8,
+  "hp": 150,
+  "armor": "light",
+  "speed": 3.0,
+  "move": "wheel",
+  "sight": 7,
+  "radius": 11,
+  "weapons": [
+   "mg"
+  ],
+  "prereq": [
+   "factory"
+  ],
+  "sprite": "jeep",
+  "turret": true,
+  "turn_rate": 6.0
+ },
+ "ltank": {
+  "name": "Viper Light Tank",
+  "factions": [
+   "coalition"
+  ],
+  "category": "vehicle",
+  "role": "Quick, cheap tank for raids and early fights.",
+  "cost": 700,
+  "build_time": 9,
+  "hp": 300,
+  "armor": "heavy",
+  "speed": 2.3,
+  "move": "track",
+  "sight": 5,
+  "radius": 12,
+  "weapons": [
+   "cannon_75"
+  ],
+  "prereq": [
+   "factory"
+  ],
+  "sprite": "tank_light",
+  "turret": true,
+  "turn_rate": 4.0
+ },
+ "mtank": {
+  "name": "Warden Battle Tank",
+  "factions": [
+   "coalition"
+  ],
+  "category": "vehicle",
+  "role": "Main battle tank. Reliable armor and firepower.",
+  "cost": 900,
+  "build_time": 11,
+  "hp": 420,
+  "armor": "heavy",
+  "speed": 1.9,
+  "move": "track",
+  "sight": 5,
+  "radius": 13,
+  "weapons": [
+   "cannon_90"
+  ],
+  "prereq": [
+   "factory",
+   "radar"
+  ],
+  "sprite": "tank_medium",
+  "turret": true,
+  "turn_rate": 3.2
+ },
+ "htank": {
+  "name": "Bear Heavy Tank",
+  "factions": [
+   "dominion"
+  ],
+  "category": "vehicle",
+  "role": "Twin-cannon heavy tank. Slow but very tough.",
+  "cost": 1150,
+  "build_time": 13,
+  "hp": 580,
+  "armor": "heavy",
+  "speed": 1.55,
+  "move": "track",
+  "sight": 5,
+  "radius": 14,
+  "weapons": [
+   "cannon_120"
+  ],
+  "prereq": [
+   "factory"
+  ],
+  "sprite": "tank_heavy",
+  "turret": true,
+  "turn_rate": 2.6
+ },
+ "harv": {
+  "name": "Ore Collector",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "vehicle",
+  "role": "Gathers ore and brings it to a refinery.",
+  "cost": 1400,
+  "build_time": 12,
+  "hp": 600,
+  "armor": "heavy",
+  "speed": 1.35,
+  "move": "track",
+  "sight": 4,
+  "radius": 14,
+  "weapons": [],
+  "prereq": [
+   "factory",
+   "refinery"
+  ],
+  "sprite": "harvester",
+  "turn_rate": 3.0,
+  "harvester": {
+   "capacity": 700,
+   "scoop_time": 0.45,
+   "unload_time": 2.0
+  }
+ },
+ "mcv": {
+  "name": "Mobile Construction Vehicle",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "vehicle",
+  "role": "Deploys into a Construction Yard.",
+  "cost": 2500,
+  "build_time": 20,
+  "hp": 600,
+  "armor": "heavy",
+  "speed": 1.2,
+  "move": "track",
+  "sight": 4,
+  "radius": 15,
+  "weapons": [],
+  "prereq": [
+   "factory"
+  ],
+  "sprite": "mcv",
+  "turn_rate": 2.5,
+  "deploys_to": "fact"
+ },
+ "eng": {
+  "name": "Engineer",
+  "factions": [
+   "coalition",
+   "dominion"
+  ],
+  "category": "infantry",
+  "role": "Captures enemy structures or fully repairs your own. Consumed on use.",
+  "cost": 500,
+  "build_time": 8,
+  "hp": 30,
+  "armor": "none",
+  "speed": 0.9,
+  "move": "foot",
+  "sight": 4,
+  "radius": 6,
+  "weapons": [],
+  "prereq": [
+   "barracks"
+  ],
+  "sprite": "engineer",
+  "turn_rate": 0,
+  "engineer": true
+ },
+ "aa_c": {
+  "name": "Skyhawk AA",
+  "factions": [
+   "coalition"
+  ],
+  "category": "vehicle",
+  "role": "Wheeled anti-aircraft missile carrier. Cannot attack ground targets.",
+  "cost": 700,
+  "build_time": 9,
+  "hp": 220,
+  "armor": "light",
+  "speed": 2.6,
+  "move": "wheel",
+  "sight": 8,
+  "radius": 12,
+  "weapons": [
+   "aa_missiles"
+  ],
+  "prereq": [
+   "factory",
+   "radar"
+  ],
+  "sprite": "aa_coalition",
+  "turret": true,
+  "turn_rate": 5.0
+ },
+ "aa_d": {
+  "name": "Volkov SAM",
+  "factions": [
+   "dominion"
+  ],
+  "category": "vehicle",
+  "role": "Tracked surface-to-air missile launcher. Long reach against aircraft.",
+  "cost": 800,
+  "build_time": 10,
+  "hp": 280,
+  "armor": "heavy",
+  "speed": 2.0,
+  "move": "track",
+  "sight": 8,
+  "radius": 13,
+  "weapons": [
+   "sam"
+  ],
+  "prereq": [
+   "factory",
+   "radar"
+  ],
+  "sprite": "aa_dominion",
+  "turret": true,
+  "turn_rate": 3.5
+ },
+ "heli_c": {
+  "name": "Hornet Gunship",
+  "factions": [
+   "coalition"
+  ],
+  "category": "aircraft",
+  "role": "Attack helicopter with guided rockets. Rearms at an airfield.",
+  "cost": 1200,
+  "build_time": 14,
+  "hp": 220,
+  "armor": "aircraft",
+  "speed": 3.6,
+  "move": "air",
+  "altitude": 1.3,
+  "hover": true,
+  "sight": 6,
+  "radius": 14,
+  "weapons": [
+   "heli_rockets"
+  ],
+  "ammo": 8,
+  "rearm_time": 1.0,
+  "prereq": [
+   "airfield"
+  ],
+  "sprite": "heli_coalition",
+  "turn_rate": 4.0
+ },
+ "jet_c": {
+  "name": "Falcon Strike Jet",
+  "factions": [
+   "coalition"
+  ],
+  "category": "aircraft",
+  "role": "Fast jet with air-to-ground and air-to-air missiles. Returns to base after each strike.",
+  "cost": 1500,
+  "build_time": 16,
+  "hp": 180,
+  "armor": "aircraft",
+  "speed": 7.0,
+  "move": "air",
+  "altitude": 1.9,
+  "hover": false,
+  "sight": 6,
+  "radius": 14,
+  "weapons": [
+   "jet_missiles"
+  ],
+  "ammo": 4,
+  "rearm_time": 1.5,
+  "prereq": [
+   "airfield",
+   "radar"
+  ],
+  "sprite": "jet_coalition",
+  "turn_rate": 2.2
+ },
+ "heli_d": {
+  "name": "Hammerhead Gunship",
+  "factions": [
+   "dominion"
+  ],
+  "category": "aircraft",
+  "role": "Armoured assault helicopter with a heavy chin cannon.",
+  "cost": 1300,
+  "build_time": 15,
+  "hp": 320,
+  "armor": "aircraft",
+  "speed": 3.0,
+  "move": "air",
+  "altitude": 1.3,
+  "hover": true,
+  "sight": 6,
+  "radius": 16,
+  "weapons": [
+   "chin_cannon"
+  ],
+  "ammo": 24,
+  "rearm_time": 0.3,
+  "prereq": [
+   "airfield"
+  ],
+  "sprite": "heli_dominion",
+  "turn_rate": 3.2
+ },
+ "jet_d": {
+  "name": "Kestrel Bomber",
+  "factions": [
+   "dominion"
+  ],
+  "category": "aircraft",
+  "role": "Heavy bomber. Drops a stick of bombs on ground targets.",
+  "cost": 1600,
+  "build_time": 17,
+  "hp": 280,
+  "armor": "aircraft",
+  "speed": 5.5,
+  "move": "air",
+  "altitude": 2.0,
+  "hover": false,
+  "sight": 6,
+  "radius": 16,
+  "weapons": [
+   "bombs"
+  ],
+  "ammo": 4,
+  "rearm_time": 1.6,
+  "prereq": [
+   "airfield",
+   "radar"
+  ],
+  "sprite": "jet_dominion",
+  "turn_rate": 1.8
+ },
+ "boat_c": {
+  "name": "Patrol Boat",
+  "factions": [
+   "coalition"
+  ],
+  "category": "naval",
+  "role": "Fast gunboat. Good against light boats, infantry on the shore and aircraft.",
+  "cost": 600,
+  "build_time": 9,
+  "hp": 300,
+  "armor": "ship",
+  "speed": 3.2,
+  "move": "naval",
+  "sight": 7,
+  "radius": 16,
+  "weapons": [
+   "boat_gun"
+  ],
+  "prereq": [
+   "naval_yard"
+  ],
+  "sprite": "boat_coalition",
+  "turn_rate": 3.0
+ },
+ "dest_c": {
+  "name": "Sentinel Destroyer",
+  "factions": [
+   "coalition"
+  ],
+  "category": "naval",
+  "role": "Destroyer with a dual-purpose gun and depth charges. Detects submarines.",
+  "cost": 1500,
+  "build_time": 16,
+  "hp": 750,
+  "armor": "ship",
+  "speed": 2.1,
+  "move": "naval",
+  "sight": 8,
+  "radius": 22,
+  "weapons": [
+   "naval_gun",
+   "depth_charges"
+  ],
+  "detector": 7,
+  "prereq": [
+   "naval_yard",
+   "radar"
+  ],
+  "sprite": "destroyer_coalition",
+  "turn_rate": 1.8
+ },
+ "sub_d": {
+  "name": "Barracuda Submarine",
+  "factions": [
+   "dominion"
+  ],
+  "category": "naval",
+  "role": "Stealthy attack submarine. Only visible when firing or near a detector.",
+  "cost": 1000,
+  "build_time": 13,
+  "hp": 450,
+  "armor": "ship",
+  "speed": 2.3,
+  "move": "naval",
+  "sight": 6,
+  "radius": 18,
+  "weapons": [
+   "torpedo"
+  ],
+  "submarine": true,
+  "prereq": [
+   "naval_yard"
+  ],
+  "sprite": "sub_dominion",
+  "turn_rate": 2.0
+ },
+ "cruiser_d": {
+  "name": "Grozny Missile Cruiser",
+  "factions": [
+   "dominion"
+  ],
+  "category": "naval",
+  "role": "Long-range missile ship for bombarding coastal bases.",
+  "cost": 1800,
+  "build_time": 18,
+  "hp": 800,
+  "armor": "ship",
+  "speed": 1.6,
+  "move": "naval",
+  "sight": 8,
+  "radius": 24,
+  "weapons": [
+   "cruise_missiles"
+  ],
+  "prereq": [
+   "naval_yard",
+   "radar"
+  ],
+  "sprite": "cruiser_dominion",
+  "turn_rate": 1.4
+ }
 }
