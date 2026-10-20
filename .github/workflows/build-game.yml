@@ -1,0 +1,70 @@
+name: Build Iron Meridian
+
+# Builds the desktop game (Windows, Linux, macOS) with Godot 4.3 and publishes the
+# downloads as the "game-latest" GitHub Release, so anyone can download and play.
+on:
+  push:
+    branches: [main, claude/intelligent-planck-eqzuvc]
+    paths:
+      - "rts-game/**"
+      - ".github/workflows/build-game.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-game
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.3-stable
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot and export templates
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip" -O godot.zip
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
+          chmod +x godot
+          python3 rts-game/tools/fetch_templates.py "$HOME/.local/share/godot/export_templates/4.3.stable" \
+            windows_release_x86_64.exe linux_release.x86_64 macos.zip
+
+      - name: Import project
+        run: |
+          ./godot --headless --path rts-game --import || true
+          ./godot --headless --path rts-game --import || true
+
+      - name: Export
+        run: |
+          mkdir -p rts-game/export/windows rts-game/export/linux rts-game/export/macos
+          ./godot --headless --path rts-game --export-release "Windows Desktop" "$PWD/rts-game/export/windows/IronMeridian.exe"
+          ./godot --headless --path rts-game --export-release "Linux" "$PWD/rts-game/export/linux/IronMeridian.x86_64"
+          ./godot --headless --path rts-game --export-release "macOS" "$PWD/rts-game/export/macos/IronMeridian.zip"
+          ls -la rts-game/export/*
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp rts-game/release/README-PLAYERS.txt rts-game/export/windows/
+          cp rts-game/release/README-PLAYERS.txt rts-game/export/linux/
+          (cd rts-game/export/windows && zip -9 -q ../../../dist/IronMeridian-Windows.zip IronMeridian.exe README-PLAYERS.txt)
+          (cd rts-game/export/linux && chmod +x IronMeridian.x86_64 && zip -9 -q ../../../dist/IronMeridian-Linux.zip IronMeridian.x86_64 README-PLAYERS.txt)
+          cp rts-game/export/macos/IronMeridian.zip dist/IronMeridian-macOS.zip
+          ls -la dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete game-latest --cleanup-tag --yes || true
+          git push origin ":refs/tags/game-latest" || true
+          gh release create game-latest dist/*.zip \
+            --target "$GITHUB_SHA" \
+            --title "Iron Meridian - latest build" \
+            --notes-file rts-game/release/RELEASE_NOTES.md \
+            --latest
