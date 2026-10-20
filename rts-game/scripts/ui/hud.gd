@@ -81,9 +81,26 @@ func _build_box_overlay() -> void:
 			box_overlay.draw_rect(r, Color(0.6, 1.0, 0.7, 0.9), false, 1.0))
 	root.add_child(box_overlay)
 
+func _metal(name: String, margin: int) -> StyleBox:
+	var tex: Texture2D = SpriteLib._load_tex("res://assets/ui/%s.png" % name)
+	if tex == null:
+		return UITheme.box(UITheme.PANEL, UITheme.BORDER, 1, 0, 8)
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	sb.texture_margin_left = margin
+	sb.texture_margin_right = margin
+	sb.texture_margin_top = margin
+	sb.texture_margin_bottom = margin
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 8
+	sb.content_margin_bottom = 8
+	return sb
+
 func _build_sidebar() -> void:
+	var faction: String = game.players[game.human_pid].faction
 	var side := PanelContainer.new()
-	side.add_theme_stylebox_override("panel", UITheme.box(UITheme.PANEL, UITheme.BORDER, 1, 0, 8))
+	side.add_theme_stylebox_override("panel", _metal("panel_" + faction, 12))
 	side.clip_contents = true
 	side.anchor_left = 1.0
 	side.anchor_right = 1.0
@@ -94,13 +111,25 @@ func _build_sidebar() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	side.add_child(v)
-	# Credits readout.
+	# Faction insignia and credits readout.
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
+	var emb := TextureRect.new()
+	emb.texture = SpriteLib._load_tex("res://assets/ui/emblem_%s.png" % faction)
+	emb.custom_minimum_size = Vector2(52, 52)
+	emb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	emb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	head.add_child(emb)
 	var cr := PanelContainer.new()
-	cr.add_theme_stylebox_override("panel", UITheme.box(Color("#07090b"), UITheme.BORDER, 1, 2, 8))
+	cr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cr.add_theme_stylebox_override("panel", UITheme.box(Color("#050607"), Color("#000000"), 2, 3, 8))
 	credits_label = UITheme.label("$ 0", 26, UITheme.AMBER)
 	credits_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	credits_label.add_theme_color_override("font_shadow_color", Color(1, 0.6, 0.1, 0.35))
+	credits_label.add_theme_constant_override("shadow_outline_size", 4)
 	cr.add_child(credits_label)
-	v.add_child(cr)
+	head.add_child(cr)
+	v.add_child(head)
 	# Power bar.
 	var ph := HBoxContainer.new()
 	power_label = UITheme.label("Power 0/0", 13, UITheme.DIM)
@@ -168,7 +197,7 @@ func _tool_button(text: String, cb: Callable) -> Button:
 
 func _build_topbar() -> void:
 	var bar := PanelContainer.new()
-	bar.add_theme_stylebox_override("panel", UITheme.box(Color(0.06, 0.07, 0.08, 0.92), UITheme.BORDER, 1, 0, 6))
+	bar.add_theme_stylebox_override("panel", _metal("plate_" + game.players[game.human_pid].faction, 10))
 	bar.anchor_right = 1.0
 	bar.offset_right = -SIDEBAR_W
 	bar.offset_bottom = 38
@@ -206,7 +235,7 @@ func _build_topbar() -> void:
 
 func _build_selection_panel() -> void:
 	sel_panel = PanelContainer.new()
-	sel_panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.07, 0.08, 0.1, 0.94), UITheme.BORDER, 1, 2, 8))
+	sel_panel.add_theme_stylebox_override("panel", _metal("panel_" + game.players[game.human_pid].faction, 12))
 	sel_panel.anchor_top = 1.0
 	sel_panel.anchor_bottom = 1.0
 	sel_panel.offset_top = -150
@@ -386,7 +415,13 @@ func _refresh_selection() -> void:
 	var ft: String = first.type
 	var fcol: Color = first.team_color()
 	var ffac: String = first.player().faction
-	icon.draw.connect(func(): IconView.draw(icon, ft, Rect2(Vector2.ZERO, icon.size), fcol, ffac))
+	var cam_tex: Texture2D = BuildButton.cameo_for(ft, ffac)
+	icon.custom_minimum_size = Vector2(84, 66)
+	icon.draw.connect(func():
+		if cam_tex != null:
+			icon.draw_texture_rect(cam_tex, Rect2(Vector2.ZERO, icon.size), false)
+		else:
+			IconView.draw(icon, ft, Rect2(Vector2.ZERO, icon.size), fcol, ffac))
 	head.add_child(icon)
 	var tv := VBoxContainer.new()
 	var title: String = first.def.name if types.size() == 1 else "%d units selected" % sel.size()

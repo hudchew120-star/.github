@@ -32,6 +32,8 @@ func _ready() -> void:
 		Config.settings.graphics = "2d"
 	elif "--3d" in args:
 		Config.settings.graphics = "3d"
+	elif "--iso" in args:
+		Config.settings.graphics = "iso"
 	_setup_screenshot(args)
 	if "--quickstart" in args:
 		start_match({"map_size": "small", "start_units": "base", "cheats_allowed": true})
@@ -250,8 +252,9 @@ func show_settings() -> void:
 	_header(v, "Settings")
 	var S: Dictionary = Config.settings
 	v.add_child(UITheme.label("Display", 17, UITheme.AMBER))
-	var gfx := _opt(v, "Graphics", ["3D (recommended)", "Classic 2D (low-end PCs)"], 0 if use_3d() else 1)
-	gfx.item_selected.connect(func(i): S.graphics = "3d" if i == 0 else "2d")
+	var modes := ["iso", "3d", "2d"]
+	var gfx := _opt(v, "Graphics", ["Classic isometric (recommended)", "Real-time 3D", "Top-down 2D (low-end PCs)"], maxi(modes.find(graphics_mode()), 0))
+	gfx.item_selected.connect(func(i): S.graphics = modes[i])
 	_slider(v, "UI scale", 0.75, 1.75, 0.05, float(S.ui_scale), func(x):
 		S.ui_scale = x
 		Config.apply_display())
@@ -411,12 +414,20 @@ func _create_match_nodes() -> void:
 	add_child(game)
 	game.audio = audio
 
+func graphics_mode() -> String:
+	return String(Config.settings.get("graphics", "iso"))
+
+## True when an external presentation (isometric or 3D) draws the battlefield.
 func use_3d() -> bool:
-	return String(Config.settings.get("graphics", "3d")) == "3d"
+	return graphics_mode() != "2d"
 
 ## Creates the 3D (or classic 2D) presentation once the game's map exists.
 func _attach_view() -> void:
-	if use_3d():
+	if graphics_mode() == "iso":
+		view = IsoView.new()
+		add_child(view)
+		view.setup(game)
+	elif graphics_mode() == "3d":
 		view = View3D.new()
 		add_child(view)
 		view.setup(game)

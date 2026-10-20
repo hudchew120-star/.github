@@ -32,6 +32,7 @@ var scan_t: float = 0.0
 var repath_t: float = 0.0
 var anim: float = 0.0
 var rally_after_spawn := Vector2.INF
+var last_fire_time: float = -10.0   # used by the renderer for firing animations
 
 # Harvester state
 var is_harvester: bool = false
@@ -355,6 +356,7 @@ func _engage(t, dt: float) -> bool:
 
 func _fire_weapon(w: Dictionary, t) -> void:
 	Combat.fire(game, self, w.def, t)
+	last_fire_time = game.sim_time
 	if is_infantry():
 		anim += 0.05
 

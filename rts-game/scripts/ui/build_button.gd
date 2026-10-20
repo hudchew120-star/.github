@@ -11,12 +11,32 @@ var ready_state: bool = false
 var on_hold: bool = false
 var reason: String = ""
 var blink: float = 0.0
+var cameo: Texture2D = null
+static var _cameo_cache := {}
+
+static func cameo_for(t: String, faction: String) -> Texture2D:
+	var k := "%s_%s" % [t, faction]
+	if _cameo_cache.has(k):
+		return _cameo_cache[k]
+	var tex: Texture2D = null
+	for f in [faction, "coalition", "dominion"]:
+		var p := "res://assets/ui/cameos/%s_%s.png" % [t, f]
+		if ResourceLoader.exists(p):
+			tex = load(p)
+			break
+		if FileAccess.file_exists(p):
+			var img := Image.load_from_file(ProjectSettings.globalize_path(p))
+			if img != null and not img.is_empty():
+				tex = ImageTexture.create_from_image(img)
+				break
+	_cameo_cache[k] = tex
+	return tex
 
 func setup(h, t: String, c: String) -> void:
 	hud = h
 	type = t
 	cat = c
-	custom_minimum_size = Vector2(88, 78)
+	custom_minimum_size = Vector2(94, 76)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_NONE
 
@@ -65,12 +85,18 @@ func _draw() -> void:
 	if g == null:
 		return
 	var p = g.players[g.human_pid]
-	IconView.draw(self, type, Rect2(2, 2, size.x - 4, size.y - 22), p.color, p.faction)
-	draw_rect(Rect2(0, size.y - 20, size.x, 20), Color(0.06, 0.07, 0.08))
+	if cameo == null:
+		cameo = cameo_for(type, p.faction)
+	if cameo != null:
+		draw_texture_rect(cameo, Rect2(Vector2.ZERO, size), false)
+	else:
+		IconView.draw(self, type, Rect2(2, 2, size.x - 4, size.y - 22), p.color, p.faction)
+	draw_rect(Rect2(0, size.y - 18, size.x, 18), Color(0.03, 0.035, 0.04, 0.82))
 	var f := ThemeDB.fallback_font
 	var d := Data.def(type)
-	draw_string(f, Vector2(4, size.y - 6), String(d.name).substr(0, 13), HORIZONTAL_ALIGNMENT_LEFT, size.x - 8, 11, UITheme.TEXT)
-	draw_string(f, Vector2(4, 13), "$" + UITheme.fmt(g.cost_of(g.human_pid, type)), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UITheme.AMBER)
+	draw_string(f, Vector2(4, size.y - 5), String(d.name).substr(0, 14), HORIZONTAL_ALIGNMENT_LEFT, size.x - 8, 11, UITheme.TEXT)
+	draw_rect(Rect2(2, 2, 46, 15), Color(0, 0, 0, 0.6))
+	draw_string(f, Vector2(5, 14), "$" + UITheme.fmt(g.cost_of(g.human_pid, type)), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UITheme.AMBER)
 	if progress >= 0.0 and not ready_state:
 		# Clock wipe over the remaining part.
 		var c := Vector2(size.x * 0.5, (size.y - 20) * 0.5)

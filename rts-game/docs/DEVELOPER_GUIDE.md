@@ -50,7 +50,46 @@ Key rules:
 - **Production** is paid gradually while building. If money runs out the item goes "on hold".
   Cancelling refunds `paid * refund_ratio` (Settings).
 
-## Presentation layers (3D and 2D)
+## Art pipeline (pre-rendered sprites)
+
+```
+tools/art/kit.gd          Mesh kit: chamfered/convex solids from planes, lathe, extrude, tubes;
+                          painted bake shader (panel lines, grime, stripes, burn, cut-away)
+tools/art/hd_models.gd    Vehicles and infantry (posable for walk/fire/death)
+tools/art/hd_buildings.gd Structures, scaffolding, trees, rocks and props
+tools/bake_specs.gd       List of every sprite sheet: frame size, anchor, frame count, states
+tools/bake.gd/.tscn       Renders each frame 3x supersampled + team mask + projected shadow pass
+tools/finalize_sprites.py Downsamples, composites soft shadows, finishes edges -> assets/sprites
+tools/paint_assets.py     Painted terrain textures, ore, effects, HUD metal and emblems
+tools/make_cameos.py      Sidebar build icons from the baked sprites
+```
+
+Rebuild everything (needs a GPU or a software Vulkan driver):
+
+```
+godot --path . res://tools/bake.tscn            # or: -- <name filter>
+python3 tools/finalize_sprites.py
+python3 tools/paint_assets.py
+python3 tools/make_cameos.py
+godot --headless --path . --import               # refresh imported textures
+```
+
+Sheet conventions: art resolution is 2x (a cell is 128x64 px, 90.5 px per world unit, a unit of
+height is 78.4 px). Directional sheets store frame `state * dirs + dir`; direction 0 faces world +X
+(screen lower-right) and increases with `Unit.facing`. Each sheet has a JSON file with frame size,
+anchor (the model's ground origin; for structures the footprint's top corner), grid columns,
+frame count and extras (turret pivot, smoke points, structure height). `_mask.png` holds the
+team-colour mask that `SpriteLib.team_material()` uses to recolour per player.
+
+**Adding art for a new unit**: build its model in `hd_models.gd`, add a `vehicle()`/`infantry()`
+entry in `bake_specs.gd` named `u_<sprite>_<faction>` (or `i_...`), bake, finalize, and add a
+cameo mapping in `make_cameos.py`. Structures use `building()` and are named `b_<sprite>_<faction>`.
+
+## Presentation layers (isometric, 3D and 2D)
+
+`IsoView` (scripts/iso) is the default: `IsoTerrain` draws the splat-shaded ground, ore and
+decorations; entity sprites live in one Y-sorted layer (structures sort by their front corner);
+`IsoFx` plays effect sheets; a fog polygon with a shader darkens explored/unexplored areas.
 
 The simulation never depends on graphics. `Game` keeps entities as lightweight `Node2D`s holding
 logic state. A presentation is attached afterwards:

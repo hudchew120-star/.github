@@ -14,7 +14,7 @@ func _ready() -> void:
 		"test_cancel_refund", "test_power", "test_harvest_loop", "test_unit_movement", "test_combat",
 		"test_splash_and_armor", "test_production_queue", "test_cheats_money", "test_cheats_instant",
 		"test_cheat_spawn_and_destroy", "test_large_values", "test_save_load", "test_fog", "test_ai_match",
-		"test_victory", "test_view3d_picking",
+		"test_victory", "test_view3d_picking", "test_iso_view",
 	]
 	var only = OS.get_environment("RTS_TEST")
 	for t in tests:
@@ -494,5 +494,45 @@ func test_view3d_picking() -> void:
 	check(v.fx_root.get_child_count() > 0, "3D explosion effect spawned")
 	v.zoom_by(1.5, Vector2(800, 400))
 	check(absf(v.zoom - 1.5) < 0.01, "zoom works")
+	v.queue_free()
+	await free_game(g)
+
+func test_iso_view() -> void:
+	# The classic isometric renderer: sprite visuals, screen/world mapping, picking, box select.
+	var g = Game.new()
+	add_child(g)
+	g.setup({"map_size": "small", "seed": 7, "ai_count": 1, "start_units": "base", "use_3d": true, "cheats_allowed": true}, false)
+	var v = IsoView.new()
+	add_child(v)
+	v.setup(g)
+	var pc = PlayerController.new()
+	g.add_child(pc)
+	pc.setup(g, v)
+	var cy = null
+	for b in g.buildings:
+		if b.pid == 0 and b.type == "fact":
+			cy = b
+	v.set_focus(cy.pos)
+	var p: Vector2 = cy.pos + Vector2(50, 20)
+	check(v.ground_from_screen(v.world_to_screen(p)).distance_to(p) < 1.0, "iso screen/world round trip")
+	var u = g.spawn_unit(0, "mtank", cy.pos + Vector2(0, 170))
+	g.unit_hash.rebuild(g.units)
+	check(v.pick(v.world_to_screen(u.pos, 0.25)) == u, "clicking a tank picks it")
+	check(v.pick(v.world_to_screen(cy.rect_px().get_center(), 1.0)) == cy, "clicking the top of the construction yard picks it")
+	var s0: Vector2 = v.world_to_screen(u.pos) - Vector2(30, 30)
+	pc._box_select(s0, s0 + Vector2(60, 60), false)
+	check(pc.selection.has(u), "box selection works in isometric view")
+	await get_tree().process_frame
+	check(v.visuals.has(u.uid) and v.visuals[u.uid].sheet != null, "tank uses a pre-rendered sprite sheet")
+	check(v.visuals.has(cy.uid) and v.visuals[cy.uid].sheet != null, "construction yard uses a pre-rendered sprite sheet")
+	u.facing = PI * 0.5
+	await get_tree().process_frame
+	var reg: Rect2 = v.visuals[u.uid].body.region_rect
+	var sh = v.visuals[u.uid].sheet
+	check(reg == sh.region(8), "hull frame follows unit facing (dir 8 of 32)")
+	g.spawn_effect("explosion", u.pos)
+	check(v.air_fx.get_child_count() > 0, "sprite explosion spawned")
+	v.zoom_by(1.2, Vector2(800, 400))
+	check(v.camera.zoom.x > 0.8, "zoom works")
 	v.queue_free()
 	await free_game(g)
