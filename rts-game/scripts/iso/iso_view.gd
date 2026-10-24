@@ -21,6 +21,8 @@ var ghost_type: String = ""
 var overlay_layer: CanvasLayer
 var overlay: Control
 var visuals := {}
+var _pad_cells := {}                # open cells inside structure footprints (refinery dock, repair pad)
+var _pad_key := -1
 var proj_vis := {}
 var fx_sheets := {}
 var sidebar_width: float = 316.0
@@ -392,6 +394,7 @@ func _process(delta: float) -> void:
 	if game == null:
 		return
 	_sync_ground()
+	_refresh_pad_cells()
 	for uid in game.entities:
 		if not visuals.has(uid):
 			visuals[uid] = _make_visual(game.entities[uid])
@@ -418,6 +421,26 @@ func _process(delta: float) -> void:
 	_update_ghost()
 	overlay.queue_redraw()
 
+## Units standing on a structure's open pad (inside its footprint) must draw over the structure,
+## which is y-sorted by its front corner. Rebuilt only when the structure list changes.
+func _refresh_pad_cells() -> void:
+	var key := game.buildings.size()
+	for b in game.buildings:
+		key = key * 31 + b.uid
+	if key == _pad_key:
+		return
+	_pad_key = key
+	_pad_cells.clear()
+	for b in game.buildings:
+		if b.dead:
+			continue
+		var fp: Array = b.def.get("footprint", ["x"])
+		for y in fp.size():
+			var row := String(fp[y])
+			for x in row.length():
+				if row[x] != "x":
+					_pad_cells[b.cell0 + Vector2i(x, y)] = true
+
 func _free_visual(v: Dictionary) -> void:
 	v.node.queue_free()
 	if v.has("shadow"):
@@ -437,6 +460,8 @@ func _update_unit(v: Dictionary, delta: float) -> void:
 		h = sin(v.t * 1.7 + float(e.uid)) * 0.012
 	var target := SpriteLib.iso(e.pos, h)
 	n.position = target if n.position.distance_to(target) > 120.0 else n.position.lerp(target, minf(1.0, delta * 18.0))
+	if not e.is_air_unit:
+		n.z_index = 1 if _pad_cells.has(e.cell()) else 0
 	if e.is_air_unit:
 		var gp := SpriteLib.iso(e.pos)
 		if v.has("shadow"):

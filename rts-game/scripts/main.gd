@@ -99,6 +99,13 @@ func _setup_screenshot(args: PackedStringArray) -> void:
 			view.zoom_by(zoom_v, get_viewport().get_visible_rect().size * 0.5)
 	await get_tree().create_timer(at).timeout
 	for a in args:
+		if a.begins_with("--focus-type=") and game != null and controller != null:
+			# Centre on the first structure of a type (e.g. --focus-type=proc).
+			for b in game.buildings:
+				if b.type == a.substr(13) and b.pid == game.human_pid:
+					controller.center_on(b.pos)
+					await get_tree().create_timer(0.3).timeout
+					break
 		if a.begins_with("--tab=") and hud != null:
 			hud._select_tab(a.substr(6))
 			await get_tree().create_timer(0.3).timeout
