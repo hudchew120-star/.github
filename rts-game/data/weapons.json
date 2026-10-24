@@ -493,5 +493,196 @@
   ],
   "infantry_only": true,
   "sound": ""
+ },
+ "sniper_rifle": {
+  "name": "Sniper rifle",
+  "damage": [
+   200,
+   200
+  ],
+  "range": 8.0,
+  "rof": 2.6,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 1.0,
+  "targets": [
+   "ground"
+  ],
+  "infantry_only": true,
+  "sound": "rifle"
+ },
+ "ranger_rifle": {
+  "name": "Ranger carbine",
+  "damage": [
+   16,
+   20
+  ],
+  "range": 4.25,
+  "rof": 0.7,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.95,
+  "targets": [
+   "ground"
+  ],
+  "sound": "rifle"
+ },
+ "guer_rifle": {
+  "name": "Old assault rifle",
+  "damage": [
+   12,
+   16
+  ],
+  "range": 4.0,
+  "rof": 0.75,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "rifle"
+ },
+ "td_gun": {
+  "name": "128mm anti-tank gun",
+  "damage": [
+   80,
+   92
+  ],
+  "range": 5.5,
+  "rof": 2.2,
+  "warhead": "AP",
+  "projectile": "shell",
+  "speed": 700,
+  "splash": 0.2,
+  "accuracy": 0.95,
+  "targets": [
+   "ground"
+  ],
+  "sound": "cannon_heavy"
+ },
+ "mech_guns": {
+  "name": "Twin rapid guns",
+  "damage": [
+   11,
+   14
+  ],
+  "range": 4.5,
+  "rof": 0.2,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.9,
+  "targets": [
+   "ground",
+   "air"
+  ],
+  "sound": "mg"
+ },
+ "eagle_missiles": {
+  "name": "Eagle missiles",
+  "damage": [
+   95,
+   105
+  ],
+  "range": 6.5,
+  "rof": 0.4,
+  "warhead": "AP",
+  "projectile": "rocket",
+  "speed": 760,
+  "splash": 0.45,
+  "accuracy": 1.0,
+  "targets": [
+   "ground",
+   "air"
+  ],
+  "sound": "rocket"
+ },
+ "cannon_155": {
+  "name": "Twin 155mm cannon",
+  "damage": [
+   62,
+   72
+  ],
+  "range": 5.25,
+  "rof": 2.2,
+  "warhead": "AP",
+  "projectile": "shell",
+  "speed": 520,
+  "splash": 0.55,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "burst": 2,
+  "burst_delay": 0.18,
+  "sound": "cannon_heavy"
+ },
+ "tsar_missiles": {
+  "name": "Tusk missiles",
+  "damage": [
+   45,
+   55
+  ],
+  "range": 6.5,
+  "rof": 1.6,
+  "warhead": "AA",
+  "projectile": "rocket",
+  "speed": 600,
+  "splash": 0.3,
+  "accuracy": 1.0,
+  "targets": [
+   "air"
+  ],
+  "sound": "rocket"
+ },
+ "gatling": {
+  "name": "Rotary cannon",
+  "damage": [
+   9,
+   12
+  ],
+  "range": 4.75,
+  "rof": 0.42,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.9,
+  "targets": [
+   "ground",
+   "air"
+  ],
+  "spinup": {
+   "max": 3.0,
+   "gain": 0.35,
+   "decay": 1.5
+  },
+  "sound": "mg"
+ },
+ "grand_cannon": {
+  "name": "Grand Cannon 300mm",
+  "damage": [
+   150,
+   175
+  ],
+  "range": 14.0,
+  "rof": 5.5,
+  "warhead": "HE",
+  "projectile": "shell",
+  "speed": 420,
+  "splash": 1.1,
+  "accuracy": 0.85,
+  "targets": [
+   "ground"
+  ],
+  "sound": "cannon_heavy"
  }
 }

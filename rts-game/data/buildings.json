@@ -523,5 +523,38 @@
   ],
   "turret": true,
   "sprite": "flak_cannon"
+ },
+ "gcan": {
+  "name": "Grand Cannon",
+  "factions": [
+   "coalition"
+  ],
+  "countries": [
+   "france"
+  ],
+  "category": "defense",
+  "role": "Huge artillery fortress (France). Shells anything on the ground from very long range.",
+  "cost": 2000,
+  "build_time": 16,
+  "hp": 1100,
+  "armor": "concrete",
+  "power": -100,
+  "sight": 8,
+  "footprint": [
+   "xx",
+   "xx"
+  ],
+  "prereq": [
+   "radar"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "grand_cannon"
+  ],
+  "turret": true,
+  "requires_power": true,
+  "sprite": "grand_cannon"
  }
 }

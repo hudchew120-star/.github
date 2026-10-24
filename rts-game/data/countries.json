@@ -1,0 +1,52 @@
+{
+  "usa": {
+    "name": "United States", "side": "coalition", "default": true,
+    "special": "Rocketeer jetpack troopers. Free Paratrooper drops from the Airfield.",
+    "units": ["jjet"], "powers": ["paradrop"], "bonus": {}
+  },
+  "uk": {
+    "name": "United Kingdom", "side": "coalition",
+    "special": "Snipers drop infantry with one shot from long range. Spy Plane reveals any area.",
+    "units": ["snip"], "powers": ["spyplane"], "bonus": {}
+  },
+  "germany": {
+    "name": "Germany", "side": "coalition",
+    "special": "Tank Destroyers wreck armour. All vehicles take 10% less damage.",
+    "units": ["tdst"], "powers": [], "bonus": {"armor": {"vehicle": 0.9}}
+  },
+  "france": {
+    "name": "France", "side": "coalition",
+    "special": "Grand Cannon: a huge long-range artillery fortress. Defenses take 20% less damage.",
+    "units": ["gcan"], "powers": [], "bonus": {"armor": {"defense": 0.8}}
+  },
+  "thailand": {
+    "name": "Thailand", "side": "coalition",
+    "special": "Thahan Phran rangers vanish from sight when standing still. Infantry run 15% faster.",
+    "units": ["rngr"], "powers": [], "bonus": {"speed": {"infantry": 1.15}}
+  },
+  "korea": {
+    "name": "South Korea", "side": "coalition",
+    "special": "Black Eagle strike jets: faster and deadlier. Aircraft take 20% less damage.",
+    "units": ["bjet"], "powers": [], "bonus": {"armor": {"aircraft": 0.8}}
+  },
+  "japan": {
+    "name": "Japan", "side": "coalition",
+    "special": "Tengu walking mecha hunt infantry and helicopters. Vehicles build 20% faster.",
+    "units": ["mech"], "powers": [], "bonus": {"build_time": {"vehicle": 0.8}}
+  },
+  "russia": {
+    "name": "Russia", "side": "dominion", "default": true,
+    "special": "Tsar super-heavy tanks hit ground and air and repair themselves. Bomber Strike.",
+    "units": ["tsar"], "powers": ["bomber"], "bonus": {}
+  },
+  "china": {
+    "name": "China", "side": "dominion",
+    "special": "Gatling Tanks spin up against ground and air. Infantry 20% cheaper and faster to train.",
+    "units": ["gatl"], "powers": [], "bonus": {"cost": {"infantry": 0.8}, "build_time": {"infantry": 0.8}}
+  },
+  "cuba": {
+    "name": "Cuba", "side": "dominion",
+    "special": "Guerrillas are cheap, quick and heal themselves. Revolution calls in a guerrilla band anywhere.",
+    "units": ["guer"], "powers": ["revolution"], "bonus": {}
+  }
+}

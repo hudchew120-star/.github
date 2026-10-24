@@ -24,15 +24,33 @@ automatically by `.github/workflows/build-game.yml` whenever the game changes.
 | Advanced Coalition ("the good side") | Iron Dominion ("the evil side") |
 | --- | --- |
 | Modern western style: multi-tone camouflage, plate carriers, rounded combat helmets, carbines with optics; faceted armour with side skirts, sand and steel paint | Eastern-bloc style: olive field uniforms, steel helmets with red stars, chest rigs, assault rifles with wooden furniture; cast dome turrets, reactive armour, rivets, fuel drums |
-| Rifleman (press **E** to dig in behind sandbags), Lancer (anti-tank), Engineer, **Rocketeer** (jetpack, flies), **Commando** (twin pistols, C4 on structures, one at a time) | Conscript, RPG trooper, Flame trooper, Engineer, **Demolition Trooper** (timed charges on any target), **Attack Dog** (kills infantry in one bite) |
+| Rifleman (press **E** to dig in behind sandbags), Lancer (anti-tank), Engineer, **Commando** (twin pistols, C4 on structures, one at a time) | Conscript, RPG trooper, Flame trooper, Engineer, **Demolition Trooper** (timed charges on any target), **Attack Dog** (kills infantry in one bite) |
 | Ranger utility vehicle, Viper light tank, Warden battle tank, Skyhawk AA | Mammoth twin-gun heavy tank, SAM carrier |
 | Hornet attack helicopter, Falcon stealth fighter | Krait gunship, strike fighter with bombs |
 | Patrol boat, destroyer (sonar finds submarines) | Submarine (invisible while submerged), battlecruiser with cruise missiles |
 | Patriot SAM site | Flak cannon, **Minelayer** (press **E** to lay hidden mines) |
-| Support power: **Paratroopers** (6 riflemen anywhere, free, recharges in 3 min) | Support power: **Bomber Strike** (3 bombers carpet-bomb a line, recharges in 4 min) |
 
-Support powers need an Airfield; their buttons sit under the minimap in the sidebar
-(click, then click the target on the map).
+### Countries
+
+Each side has several countries, picked by **flag** in the skirmish setup (hover a flag to see
+what it brings). A country shares its side's army and adds one unique unit or structure, a
+support power or a bonus, and its own infantry uniform.
+
+| Flag | Country | Side | Unique | Power / bonus |
+| --- | --- | --- | --- | --- |
+| 🇺🇸 | United States | Coalition | **Rocketeer** (jetpack, flies) | **Paratroopers**: 6 riflemen anywhere, recharges in 3 min (needs an Airfield) |
+| 🇬🇧 | United Kingdom | Coalition | **Sniper**: one-shot kills on infantry from 8 cells | **Spy Plane**: reveals a wide area for 30 s, recharges in 2 min (needs a Radar) |
+| 🇩🇪 | Germany | Coalition | **Jagd Tank Destroyer**: fixed 128 mm gun, wrecks armour | All vehicles take 10% less damage |
+| 🇫🇷 | France | Coalition | **Grand Cannon**: 2x2 artillery fortress, 14-cell range | Defenses take 20% less damage |
+| 🇹🇭 | Thailand | Coalition | **Thahan Phran Ranger**: invisible while standing still (enemies must come within 2 cells) | Infantry run 15% faster |
+| 🇰🇷 | South Korea | Coalition | **Black Eagle**: faster, tougher strike jet | Aircraft take 20% less damage |
+| 🇯🇵 | Japan | Coalition | **Tengu Mecha**: fast walker, twin guns hit ground and air | Vehicles build 20% faster |
+| 🇷🇺 | Russia | Dominion | **Tsar Super Tank**: twin 155 mm guns, anti-air missiles, repairs itself | **Bomber Strike**: 3 bombers carpet-bomb a line, recharges in 4 min (needs an Airfield) |
+| 🇨🇳 | China | Dominion | **Gatling Tank**: fires faster the longer it shoots, hits air too | Infantry 20% cheaper and faster to train |
+| 🇨🇺 | Cuba | Dominion | **Guerrilla**: cheap, quick, heals itself | **Revolution**: 5 guerrillas rise up anywhere, recharges in 3 min 20 s |
+
+Support power buttons sit under the minimap in the sidebar (click, then click the target on
+the map). AI opponents pick a country of their side and use its specials.
 
 ### Maps
 
@@ -44,6 +62,8 @@ Both sides build airfields (landing pads; aircraft return to rearm), **naval yar
 and repair facilities. Engineers capture enemy structures or fully repair your own.
 Generated maps have a **Water** option (lakes, coastal for naval warfare, or dry land).
 
+![Country units: Thai rangers, Japanese mecha, Korean Black Eagle, German tank destroyer, French Grand Cannon, Russian Tsar tank, Chinese Gatling tank, Cuban guerrillas](docs/screenshots/iso_countries.png)
+![Choosing countries by flag](docs/screenshots/menu_countries.png)
 ![Paratroopers, dug-in riflemen, rocketeers, commando, dogs and a minelayer](docs/screenshots/iso_specials.png)
 ![Naval base on a coastal map](docs/screenshots/iso_naval.png)
 ![Armies and helicopters](docs/screenshots/iso_army.png)
@@ -145,7 +165,7 @@ All keys can be rebound in **Settings**.
 ## Game modes
 
 - **New Game**: quick skirmish on a medium random map against one Normal AI.
-- **Skirmish**: choose map, map size, water (lakes / coastal / dry), seed, factions, 0-3 AI opponents, difficulty (Easy/Normal/Hard),
+- **Skirmish**: choose map, map size, water (lakes / coastal / dry), seed, your country and the enemy's (by flag), 0-3 AI opponents, difficulty (Easy/Normal/Hard),
   starting credits, starting forces, bonus power, resource abundance, game speed, fog of war,
   power constraints, victory condition and whether cheats are allowed.
 - **Sandbox**: everything unlocked, developer tools always on, no victory condition.

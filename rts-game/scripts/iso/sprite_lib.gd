@@ -100,9 +100,10 @@ static func team_tone(col: Color) -> Color:
 ## Sprite sheet name for an entity, with fallbacks when a faction variant was not baked.
 static func entity_sheet_name(e) -> String:
 	var sprite: String = e.def.get("sprite", "")
-	var faction: String = e.player().faction
+	var pl = e.player()
 	var prefix := "b_" if e.is_building() else ("i_" if e.def.get("category", "") == "infantry" else "u_")
-	for f in [faction, "coalition", "dominion"]:
+	# Country variants first (infantry uniforms), then the side's sheet.
+	for f in [pl.country, pl.faction, "coalition", "dominion"]:
 		var n := "%s%s_%s" % [prefix, sprite, f]
 		if has(n):
 			return n

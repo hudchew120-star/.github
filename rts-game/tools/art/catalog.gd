@@ -5,6 +5,7 @@ const H := preload("res://tools/art/humans.gd")
 const V := preload("res://tools/art/vehicles.gd")
 const HB := preload("res://tools/art/hd_buildings.gd")
 const HM := preload("res://tools/art/hd_models.gd")
+const CU := preload("res://tools/art/country_units.gd")
 
 ## Model id for a unit sprite (see data/units.json) and faction.
 static func unit_model(sprite: String, f: String) -> Node3D:
@@ -12,6 +13,14 @@ static func unit_model(sprite: String, f: String) -> Node3D:
 		"infantry", "rocket_inf", "heavy_inf", "flame_inf", "engineer", "rocketeer", "commando", "demolition":
 			return H.soldier(sprite, f, {})
 		"dog": return H.dog(f, {})
+		"sniper": return H.soldier("sniper", "uk", {})
+		"ranger": return H.soldier("ranger", "thailand", {})
+		"guerrilla": return H.soldier("guerrilla", "cuba", {})
+		"tank_destroyer": return _veh(CU.tank_destroyer(), 0.0)
+		"mecha": return _veh(CU.mecha(-1.0), 0.0)
+		"jet_eagle": return _veh(CU.black_eagle(), 0.0)
+		"tank_tsar": return _veh(CU.tsar_tank(), 0.0)
+		"tank_gatling": return _veh(CU.gatling_tank(), 0.0)
 		"minelayer": return _veh(V.minelayer(), 0.0)
 		"tank_light": return _veh(V.light_tank(), 0.0)
 		"tank_medium": return _veh(V.medium_tank(), 0.0)
@@ -92,7 +101,7 @@ static func vehicle_model(id: String) -> Dictionary:
 	return {}
 
 static func showcase_cols(set_name: String) -> int:
-	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "dug": 5, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
+	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "dug": 5, "countries": 5, "country_units": 3, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
 
 static func _rot(n: Node3D, deg: float) -> Node3D:
 	var w := Node3D.new()
@@ -156,6 +165,22 @@ static func showcase_set(set_name: String) -> Array:
 				var veh: bool = e[3] == 1
 				out.append({"label": e[2], "w": 1.0, "h": 1.0, "fit": true, "margin": 1.05, "team": BLUE if ff == "coalition" else RED,
 					"build": func(): return _rot(unit_model(sp, ff), -25.0 if veh else -60.0)})
+		"countries":
+			for c in ["usa", "uk", "germany", "france", "thailand", "korea", "japan", "russia", "china", "cuba"]:
+				var cc: String = c
+				var side: String = H.side_of(c)
+				out.append({"label": c, "w": 0.5, "h": 0.6, "focus": Vector3(0, 0.2, 0), "team": BLUE if side == "coalition" else RED,
+					"build": func(): return _rot(H.soldier("infantry", "coalition" if cc == "usa" else ("dominion" if cc == "russia" else cc), {}), -60.0)})
+		"country_units":
+			for e in [["sniper", "coalition", 0], ["ranger", "coalition", 0], ["guerrilla", "dominion", 0], ["tank_destroyer", "coalition", 1], ["mecha", "coalition", 1],
+					["jet_eagle", "coalition", 1], ["tank_tsar", "dominion", 1], ["tank_gatling", "dominion", 1], ["grand_cannon", "coalition", 2]]:
+				var sp: String = e[0]
+				var ff: String = e[1]
+				var kind: int = e[2]
+				out.append({"label": sp, "w": 1.0, "h": 0.8, "fit": true, "margin": 1.06, "team": BLUE if ff == "coalition" else RED,
+					"build": func():
+						if kind == 2: return building_model(sp, ff)
+						return _rot(unit_model(sp, ff), -60.0 if kind == 0 else -25.0)})
 		"dug":
 			for d in [0.0, -45.0, -90.0, -135.0]:
 				var dd: float = d

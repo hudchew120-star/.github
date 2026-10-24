@@ -557,7 +557,7 @@
    "coalition"
   ],
   "category": "infantry",
-  "role": "Jetpack trooper. Flies over any terrain; good against infantry. Hit by anti-air and rifles.",
+  "role": "Jetpack trooper (United States). Flies over any terrain; good against infantry. Hit by anti-air and rifles.",
   "cost": 600,
   "build_time": 8,
   "hp": 110,
@@ -578,7 +578,10 @@
    "radar"
   ],
   "sprite": "rocketeer",
-  "turn_rate": 6.0
+  "turn_rate": 6.0,
+  "countries": [
+   "usa"
+  ]
  },
  "cmdo": {
   "name": "Commando",
@@ -691,5 +694,239 @@
    "damage": 380,
    "radius": 0.9
   }
+ },
+ "snip": {
+  "name": "Sniper",
+  "factions": [
+   "coalition"
+  ],
+  "countries": [
+   "uk"
+  ],
+  "category": "infantry",
+  "role": "British marksman (United Kingdom). Kills infantry with a single shot from very long range. Useless against vehicles.",
+  "cost": 700,
+  "build_time": 9,
+  "hp": 60,
+  "armor": "none",
+  "speed": 0.9,
+  "move": "foot",
+  "sight": 9,
+  "radius": 6,
+  "weapons": [
+   "sniper_rifle"
+  ],
+  "prereq": [
+   "barracks",
+   "radar"
+  ],
+  "sprite": "sniper",
+  "turn_rate": 0
+ },
+ "rngr": {
+  "name": "Thahan Phran Ranger",
+  "factions": [
+   "coalition"
+  ],
+  "countries": [
+   "thailand"
+  ],
+  "category": "infantry",
+  "role": "Thai jungle ranger (Thailand). Invisible to the enemy while standing still unless they come very close. Fires and moves to reveal itself.",
+  "cost": 400,
+  "build_time": 6,
+  "hp": 75,
+  "armor": "none",
+  "speed": 1.15,
+  "move": "foot",
+  "sight": 7,
+  "radius": 6,
+  "weapons": [
+   "ranger_rifle"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "sprite": "ranger",
+  "stealth": {
+   "radius": 2.0,
+   "delay": 1.5
+  },
+  "turn_rate": 0
+ },
+ "tdst": {
+  "name": "Jagd Tank Destroyer",
+  "factions": [
+   "coalition"
+  ],
+  "countries": [
+   "germany"
+  ],
+  "category": "vehicle",
+  "role": "Low, fixed-gun tank hunter (Germany). Devastating against vehicles, weak against infantry.",
+  "cost": 900,
+  "build_time": 10,
+  "hp": 380,
+  "armor": "heavy",
+  "speed": 2.0,
+  "move": "track",
+  "sight": 6,
+  "radius": 13,
+  "weapons": [
+   "td_gun"
+  ],
+  "prereq": [
+   "factory"
+  ],
+  "sprite": "tank_destroyer",
+  "turn_rate": 3.0
+ },
+ "mech": {
+  "name": "Tengu Mecha",
+  "factions": [
+   "coalition"
+  ],
+  "countries": [
+   "japan"
+  ],
+  "category": "vehicle",
+  "role": "Fast walking mecha (Japan). Twin rapid guns shred infantry and can shoot down aircraft. Walks over rough ground.",
+  "cost": 800,
+  "build_time": 9,
+  "hp": 300,
+  "armor": "light",
+  "speed": 2.6,
+  "move": "foot",
+  "sight": 6,
+  "radius": 11,
+  "weapons": [
+   "mech_guns"
+  ],
+  "prereq": [
+   "factory",
+   "radar"
+  ],
+  "sprite": "mecha",
+  "walker": true,
+  "turn_rate": 6.0
+ },
+ "bjet": {
+  "name": "Black Eagle",
+  "factions": [
+   "coalition"
+  ],
+  "countries": [
+   "korea"
+  ],
+  "category": "aircraft",
+  "role": "Elite strike jet (South Korea). Faster, tougher and hits harder than the Falcon.",
+  "cost": 1800,
+  "build_time": 17,
+  "hp": 240,
+  "armor": "aircraft",
+  "speed": 8.0,
+  "move": "air",
+  "altitude": 1.9,
+  "hover": false,
+  "sight": 7,
+  "radius": 14,
+  "weapons": [
+   "eagle_missiles"
+  ],
+  "ammo": 4,
+  "rearm_time": 1.2,
+  "prereq": [
+   "airfield",
+   "radar"
+  ],
+  "sprite": "jet_eagle",
+  "turn_rate": 2.6
+ },
+ "tsar": {
+  "name": "Tsar Super Tank",
+  "factions": [
+   "dominion"
+  ],
+  "countries": [
+   "russia"
+  ],
+  "category": "vehicle",
+  "role": "Super-heavy tank (Russia). Twin 155mm guns and anti-air missiles. Slowly repairs itself.",
+  "cost": 1800,
+  "build_time": 18,
+  "hp": 950,
+  "armor": "heavy",
+  "speed": 1.25,
+  "move": "track",
+  "sight": 6,
+  "radius": 16,
+  "weapons": [
+   "cannon_155",
+   "tsar_missiles"
+  ],
+  "prereq": [
+   "factory",
+   "radar"
+  ],
+  "sprite": "tank_tsar",
+  "turret": true,
+  "regen": 4.0,
+  "turn_rate": 2.0
+ },
+ "gatl": {
+  "name": "Gatling Tank",
+  "factions": [
+   "dominion"
+  ],
+  "countries": [
+   "china"
+  ],
+  "category": "vehicle",
+  "role": "Rotary-cannon tank (China). Fires faster the longer it keeps shooting. Hits ground and air.",
+  "cost": 800,
+  "build_time": 9,
+  "hp": 320,
+  "armor": "heavy",
+  "speed": 2.1,
+  "move": "track",
+  "sight": 6,
+  "radius": 13,
+  "weapons": [
+   "gatling"
+  ],
+  "prereq": [
+   "factory"
+  ],
+  "sprite": "tank_gatling",
+  "turret": true,
+  "turn_rate": 3.6
+ },
+ "guer": {
+  "name": "Guerrilla",
+  "factions": [
+   "dominion"
+  ],
+  "countries": [
+   "cuba"
+  ],
+  "category": "infantry",
+  "role": "Cuban revolutionary (Cuba). Cheap and quick, slowly heals its wounds.",
+  "cost": 150,
+  "build_time": 4,
+  "hp": 65,
+  "armor": "none",
+  "speed": 1.2,
+  "move": "foot",
+  "sight": 6,
+  "radius": 6,
+  "weapons": [
+   "guer_rifle"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "sprite": "guerrilla",
+  "regen": 1.5,
+  "turn_rate": 0
  }
 }

@@ -60,6 +60,7 @@ var deploy_t: float = 0.0          # time left to finish digging in / packing up
 var mines_left: int = 0
 var mine_regen_t: float = 0.0
 var plant_cd: float = 0.0
+var still_t: float = 0.0           # seconds without moving (stealth rangers cloak after a moment)
 
 # Harvester state
 var is_harvester: bool = false
@@ -86,7 +87,7 @@ func submerged() -> bool:
 
 func setup_unit() -> void:
 	move_class = def.get("move", "foot")
-	speed_px = float(def.get("speed", 1.0)) * MapGrid.T
+	speed_px = float(def.get("speed", 1.0)) * MapGrid.T * player().bonus("speed", def.get("category", ""))
 	turn_rate = float(def.get("turn_rate", 0.0))
 	has_turret = bool(def.get("turret", false))
 	radius = float(def.get("radius", 8))
@@ -96,7 +97,7 @@ func setup_unit() -> void:
 		var wd := Data.weapon(wid)
 		if wd.is_empty():
 			continue
-		weapons.append({"id": wid, "def": wd, "cd": 0.0, "burst_left": 0, "burst_cd": 0.0})
+		weapons.append({"id": wid, "def": wd, "cd": 0.0, "burst_left": 0, "burst_cd": 0.0, "spin": 1.0})
 		max_range_px = maxf(max_range_px, float(wd.range) * MapGrid.T)
 	if def.has("harvester"):
 		is_harvester = true
@@ -117,6 +118,13 @@ func setup_unit() -> void:
 	position = pos
 	last_pos = pos
 	guard_pos = pos
+
+## Stealth units (Thai rangers) cloak after standing still and holding fire for a moment.
+func cloaked() -> bool:
+	if not def.has("stealth") or dead:
+		return false
+	var delay := float(def.stealth.get("delay", 1.5))
+	return still_t >= delay and game.sim_time - last_fire_time >= delay
 
 func is_infantry() -> bool:
 	return def.get("category", "") == "infantry"
@@ -415,6 +423,12 @@ func tick(dt: float) -> void:
 		deploy_t -= dt
 	if plant_cd > 0.0:
 		plant_cd -= dt
+	if def.has("regen") and hp < max_hp and game.sim_time - last_damaged_time > 3.0:
+		heal(float(def.regen) * dt)
+	if moving:
+		still_t = 0.0
+	else:
+		still_t += dt
 	if def.has("minelayer") and mines_left < int(def.minelayer.max):
 		mine_regen_t += dt
 		if mine_regen_t >= float(def.minelayer.regen):
@@ -429,6 +443,8 @@ func tick(dt: float) -> void:
 	for w in weapons:
 		if w.cd > 0.0:
 			w.cd -= dt * game.rof_factor(pid)
+		if w.spin > 1.0 and game.sim_time - last_fire_time > float(w.def.spinup.get("decay", 1.5)):
+			w.spin = 1.0
 		if w.burst_left > 0:
 			w.burst_cd -= dt
 			if w.burst_cd <= 0.0 and target != null and _target_valid(target):
@@ -514,7 +530,10 @@ func _engage(t, dt: float) -> bool:
 		aligned = true
 	if aligned and w.cd <= 0.0:
 		_fire_weapon(w, t)
-		w.cd = float(w.def.rof)
+		w.cd = float(w.def.rof) / w.spin
+		if w.def.has("spinup"):
+			# Rotary guns fire faster the longer they keep shooting.
+			w.spin = minf(float(w.def.spinup.get("max", 3.0)), w.spin + float(w.def.spinup.get("gain", 0.3)))
 		var burst := int(w.def.get("burst", 1))
 		if burst > 1:
 			w.burst_left = burst - 1

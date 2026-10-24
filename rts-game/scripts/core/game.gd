@@ -114,8 +114,29 @@ func _create_players() -> void:
 		p.id = i
 		p.is_human = i == 0
 		p.faction = pf if i == 0 else String(efs[(i - 1) % maxi(efs.size(), 1)] if efs.size() > 0 else "dominion")
+		# Countries (sub-factions): an explicit country decides the side; otherwise the side's default.
+		var pc: String = String(settings.get("player_country", "")) if i == 0 else ""
+		if i > 0:
+			var ecs: Array = settings.get("enemy_countries", [])
+			if ecs.size() > 0:
+				pc = String(ecs[(i - 1) % ecs.size()])
+		if pc == "random":
+			var all := Data.countries.keys()
+			pc = all[randi() % all.size()]
 		if p.faction == "random":
 			p.faction = ["coalition", "dominion"][randi() % 2]
+		if Data.countries.has(pc):
+			p.faction = Data.countries[pc].side
+			p.country = pc
+		elif i > 0 and not settings.has("enemy_countries"):
+			# AI opponents without a chosen country pick one of their side at random.
+			# Seeded from the map seed so a given match setup always plays out the same way.
+			var opts := Data.countries_of(p.faction)
+			var rng := RandomNumberGenerator.new()
+			rng.seed = hash(str(settings.get("seed", 1)) + ":" + str(i))
+			p.country = opts[rng.randi() % opts.size()] if opts.size() > 0 else ""
+		else:
+			p.country = Data.default_country(p.faction)
 		var col := Data.faction_color(p.faction).to_html()
 		if used_colors.has(col):
 			for c in PLAYER_COLORS:
@@ -504,7 +525,8 @@ func cost_of(pid: int, t: String) -> int:
 	var is_struct := Data.is_building(t)
 	if cheats.flag(pid, "free_build" if is_struct else "free_units"):
 		return 0
-	return int(Data.def(t).get("cost", 0))
+	var d := Data.def(t)
+	return int(round(float(d.get("cost", 0)) * players[pid].bonus("cost", d.get("category", ""))))
 
 ## Returns "" when the player may build `t`, otherwise a human-readable reason.
 func availability(pid: int, t: String) -> String:
@@ -514,6 +536,8 @@ func availability(pid: int, t: String) -> String:
 		return "Unknown item."
 	if not d.get("factions", []).has(p.faction):
 		return "Not available to your faction."
+	if not Data.allowed(d, p.faction, p.country):
+		return "Not available to your country."
 	if not cheats.flag(pid, "no_prereq"):
 		var miss: Array = p.missing_tech(d.get("prereq", []))
 		if miss.size() > 0:
@@ -833,32 +857,52 @@ func release_pad(u) -> void:
 	u.pad_uid = 0
 	u.pad_index = -1
 
-## True when a submerged submarine cannot be seen by the viewer.
+## True when a submerged submarine or a cloaked stealth unit cannot be seen by the viewer.
 func is_hidden_from(e, viewer_pid: int) -> bool:
-	if not e.is_unit() or not e.submarine or e.pid == viewer_pid or viewer_pid < 0:
+	if not e.is_unit() or e.pid == viewer_pid or viewer_pid < 0:
 		return false
-	if not e.submerged():
+	if e.submarine:
+		if not e.submerged():
+			return false
+	elif not e.cloaked():
 		return false
 	return not sub_detected.get(viewer_pid, {}).has(e.uid)
 
+## Works out which hidden units each player can currently see: submarines near sonar
+## (detector) units and buildings, stealth units with any enemy right next to them.
 func _update_sub_detection() -> void:
 	sub_detected.clear()
-	var subs := units.filter(func(u): return u.submarine and not u.dead)
-	if subs.is_empty():
-		return
-	var detectors := []
+	var subs := []
+	var stealthy := []
 	for u in units:
-		if not u.dead and u.detector_px > 0.0:
-			detectors.append([u.pid, u.pos, u.detector_px])
-	for b in buildings:
-		if not b.dead and b.completed and b.def.has("detector"):
-			detectors.append([b.pid, b.pos, float(b.def.detector) * T])
-	for sub in subs:
-		for d in detectors:
-			if are_enemies(d[0], sub.pid) and sub.pos.distance_to(d[1]) <= d[2]:
-				if not sub_detected.has(d[0]):
-					sub_detected[d[0]] = {}
-				sub_detected[d[0]][sub.uid] = true
+		if u.dead:
+			continue
+		if u.submarine:
+			subs.append(u)
+		elif u.def.has("stealth"):
+			stealthy.append(u)
+	if not subs.is_empty():
+		var detectors := []
+		for u in units:
+			if not u.dead and u.detector_px > 0.0:
+				detectors.append([u.pid, u.pos, u.detector_px])
+		for b in buildings:
+			if not b.dead and b.completed and b.def.has("detector"):
+				detectors.append([b.pid, b.pos, float(b.def.detector) * T])
+		for sub in subs:
+			for d in detectors:
+				if are_enemies(d[0], sub.pid) and sub.pos.distance_to(d[1]) <= d[2]:
+					_mark_detected(d[0], sub.uid)
+	for s in stealthy:
+		var r: float = float(s.def.stealth.get("radius", 2.0)) * T
+		for o in entities_near(s.pos, r):
+			if not o.dead and are_enemies(o.pid, s.pid) and o.edge_distance(s.pos) <= r:
+				_mark_detected(o.pid, s.uid)
+
+func _mark_detected(viewer: int, uid: int) -> void:
+	if not sub_detected.has(viewer):
+		sub_detected[viewer] = {}
+	sub_detected[viewer][uid] = true
 
 func engineer_use(eng, b) -> void:
 	if eng.dead or b.dead:
@@ -1096,6 +1140,21 @@ func update_fog(force_full: bool = false) -> void:
 						if vis[i] != 2:
 							vis[i] = 2
 							now.append(i)
+		for src in specials.reveal_sources(p.id):
+			var c: Vector2i = src[0]
+			var r: int = src[1]
+			var spans: PackedInt32Array = _circle_spans(r)
+			for dy in range(-r, r + 1):
+				var y: int = c.y + dy
+				if y < 0 or y >= h:
+					continue
+				var half: int = spans[dy + r]
+				var row: int = y * w
+				for x in range(maxi(c.x - half, 0), mini(c.x + half, w - 1) + 1):
+					var i: int = row + x
+					if vis[i] != 2:
+						vis[i] = 2
+						now.append(i)
 		p.vis = vis
 		_vis_lists[p.id] = now
 		if p.id == human_pid:

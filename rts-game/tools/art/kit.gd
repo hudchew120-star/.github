@@ -42,6 +42,7 @@ uniform float camo = 0.0;
 uniform vec3 camo_a : source_color = vec3(0.5);
 uniform vec3 camo_b : source_color = vec3(0.3);
 uniform vec3 camo_c : source_color = vec3(0.2);
+uniform float camo_px = 0.0;
 uniform float fabric = 0.0;
 uniform float rivets = 0.0;
 varying vec3 lpos;
@@ -60,6 +61,7 @@ void fragment() {
 	if (camo > 0.0) {
 		// Blotchy disruptive pattern in mesh space so it stays put between frames.
 		vec3 q = lpos * camo + vec3(17.3, 5.1, 9.7);
+		if (camo_px > 0.0) { q = floor(q * camo_px) / camo_px; }   // digital (pixel) pattern
 		float a = vnoise(q) * 0.65 + vnoise(q * 2.3) * 0.35;
 		float b = vnoise(q * 1.7 + 31.0) * 0.6 + vnoise(q * 4.1) * 0.4;
 		c = mix(c, camo_a, smoothstep(0.52, 0.56, a));

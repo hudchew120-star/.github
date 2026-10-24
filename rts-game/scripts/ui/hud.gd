@@ -116,9 +116,15 @@ func _build_sidebar() -> void:
 	# Faction insignia and credits readout.
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 6)
+	# The player's country flag (falls back to the side's insignia).
 	var emb := TextureRect.new()
-	emb.texture = SpriteLib._load_tex("res://assets/ui/emblem_%s.png" % faction)
-	emb.custom_minimum_size = Vector2(52, 52)
+	var country: String = game.players[game.human_pid].country
+	var flag_path := "res://assets/ui/flags/%s.png" % country
+	emb.texture = SpriteLib._load_tex(flag_path) if ResourceLoader.exists(flag_path) else SpriteLib._load_tex("res://assets/ui/emblem_%s.png" % faction)
+	if Data.countries.has(country):
+		emb.tooltip_text = "%s\n%s" % [Data.countries[country].name, Data.countries[country].special]
+		emb.mouse_filter = Control.MOUSE_FILTER_STOP
+	emb.custom_minimum_size = Vector2(56, 52)
 	emb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	emb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	head.add_child(emb)
@@ -291,7 +297,7 @@ func _select_tab(cat: String) -> void:
 		b.queue_free()
 	buttons.clear()
 	var p = game.players[game.human_pid]
-	for t in Data.types_in_category(cat, p.faction):
+	for t in Data.types_in_category(cat, p.faction, p.country):
 		var bb = BuildButton.new()
 		bb.setup(self, t, cat)
 		grid.add_child(bb)

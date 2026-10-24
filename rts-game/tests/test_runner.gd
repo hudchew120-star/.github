@@ -18,6 +18,7 @@ func _ready() -> void:
 		"test_coastal_map", "test_naval", "test_submarine_detection", "test_aircraft", "test_anti_air",
 		"test_engineer", "test_repair_facility", "test_map_presets",
 		"test_paratroopers", "test_bomber_strike", "test_dig_in", "test_jetpack_and_dog", "test_charges", "test_mines",
+		"test_countries", "test_thai_rangers_stealth", "test_country_powers", "test_country_units",
 	]
 	var only = OS.get_environment("RTS_TEST")
 	for t in tests:
@@ -948,4 +949,108 @@ func test_mines() -> void:
 	run(g, 8.0)
 	check(foe.dead or foe.hp < foe.max_hp, "enemy tank hit the mine")
 	check(g.specials.mines.is_empty(), "the mine is used up")
+	await free_game(g)
+
+# ---------------------------------------------------------------- countries
+
+func test_countries() -> void:
+	check(Data.countries.size() == 10, "ten countries defined")
+	for c in Data.countries:
+		var d: Dictionary = Data.countries[c]
+		check(Data.factions.has(d.side), "%s belongs to a side" % c)
+		for t in d.get("units", []):
+			check(Data.exists(t) and Data.def(t).get("countries", []).has(c), "%s unique item %s is defined for it" % [c, t])
+		for pw in d.get("powers", []):
+			check(Specials.POWERS.has(pw), "%s power %s exists" % [c, pw])
+	var g = make_game({"start_units": "base", "player_country": "germany", "enemy_countries": ["china"]})
+	var me = g.players[0]
+	var foe = g.players[1]
+	check(me.faction == "coalition" and me.country == "germany", "player plays Germany on the Coalition side")
+	check(foe.faction == "dominion" and foe.country == "china", "enemy plays China on the Dominion side")
+	g.cheats.set_flag("no_prereq", true)
+	check(g.availability(0, "tdst") != "Not available to your country.", "Germany can build the tank destroyer")
+	check(g.availability(0, "snip") != "", "Germany cannot build the British sniper")
+	check(g.availability(0, "jjet") != "", "rocketeers are American only")
+	check(not Data.types_in_category("vehicle", "coalition", "germany").has("mech"), "Japanese mecha missing from the German build list")
+	check(g.cost_of(1, "e1") == 80 and g.cost_of(0, "e1") == 100, "Chinese infantry 20%% cheaper (%d)" % g.cost_of(1, "e1"))
+	var tank = g.spawn_unit(0, "ltank", MapGrid.cell_center(g.map.starts[0]) + Vector2(0, 160))
+	var hp0: float = tank.hp
+	tank.take_damage(100.0, null)
+	check(is_equal_approx(hp0 - tank.hp, 90.0), "German vehicles take 10%% less damage (%.1f)" % (hp0 - tank.hp))
+	check(g.specials.powers_for(0).is_empty() and g.specials.powers_for(1).is_empty(), "Germany and China have no support power")
+	# Old saves and quick starts without a country fall back to the side's default.
+	var g2 = make_game({"player_faction": "dominion", "enemy_factions": ["coalition"], "enemy_countries": []})
+	check(g2.players[0].country == "russia", "Dominion defaults to Russia")
+	await free_game(g2)
+	var d: Dictionary = me.to_dict()
+	var p2 := Player.new()
+	p2.from_dict(d)
+	check(p2.country == "germany", "country saved and loaded")
+	d.erase("country")
+	p2.from_dict(d)
+	check(p2.country == "usa", "save without a country loads as the side default")
+	await free_game(g)
+
+func test_thai_rangers_stealth() -> void:
+	var g = make_game({"player_country": "thailand", "enemy_countries": ["russia"]})
+	var base: Vector2 = MapGrid.cell_center(g.map.starts[0])
+	var r = g.spawn_unit(0, "rngr", base + Vector2(0, 120))
+	var foe = g.spawn_unit(1, "e1", r.pos + Vector2(MapGrid.T * 5.0, 0))
+	check(is_equal_approx(r.speed_px, float(Data.units.rngr.speed) * MapGrid.T * 1.15), "Thai infantry run 15% faster")
+	foe.cmd_hold()
+	r.cmd_hold()
+	run(g, 3.0)
+	check(r.cloaked(), "ranger cloaks after standing still")
+	check(g.is_hidden_from(r, 1), "cloaked ranger hidden from an enemy 5 cells away")
+	check(g.find_target(foe, MapGrid.T * 6.0) != r, "enemy cannot target the cloaked ranger")
+	foe.pos = r.pos + Vector2(MapGrid.T * 1.2, 0)
+	run(g, 0.5)
+	check(not g.is_hidden_from(r, 1), "enemy right next to the ranger spots it")
+	await free_game(g)
+
+func test_country_powers() -> void:
+	var g = make_game({"start_units": "base", "player_country": "uk", "enemy_countries": ["cuba"]})
+	check(g.specials.powers_for(0) == ["spyplane"], "UK has the spy plane")
+	check(g.specials.powers_for(1) == ["revolution"], "Cuba has the revolution")
+	g.specials.powers[0] = {"spyplane": g.sim_time}
+	var foe = _own_building(g, 1)
+	var c: Vector2i = foe.cell0
+	check(g.players[0].vis[g.map.idx(c)] != 2, "enemy base not visible before the spy plane")
+	check(g.specials.use_power(0, "spyplane", foe.pos) == "", "spy plane sent")
+	run(g, 10.0)
+	check(g.players[0].vis[g.map.idx(c)] == 2, "spy plane reveals the enemy base")
+	run(g, 32.0)
+	check(g.players[0].vis[g.map.idx(c)] != 2, "spy plane vision fades after 30 s")
+	g.specials.powers[1] = {"revolution": g.sim_time}
+	var target: Vector2 = MapGrid.cell_center(g.map.starts[1]) + Vector2(0, 200)
+	check(g.specials.use_power(1, "revolution", target) == "", "revolution called")
+	var band: Array = g.units.filter(func(u): return u.pid == 1 and u.type == "guer")
+	check(band.size() == 5, "five guerrillas rise up (%d)" % band.size())
+	await free_game(g)
+
+func test_country_units() -> void:
+	var g = make_game({"player_country": "russia", "enemy_countries": ["china"], "victory": "none"})
+	var base: Vector2 = MapGrid.cell_center(g.map.starts[0]) + Vector2(0, 160)
+	var tsar = g.spawn_unit(0, "tsar", base)
+	tsar.take_damage(300.0, null)
+	var hp1: float = tsar.hp
+	run(g, 6.0)
+	check(tsar.hp > hp1, "Tsar tank repairs itself (%.0f -> %.0f)" % [hp1, tsar.hp])
+	check(tsar.weapons.size() == 2 and Combat.can_target(tsar.weapons[1].def, g.spawn_unit(1, "jet_d", base + Vector2(400, 0))), "Tsar tank carries anti-air missiles")
+	for u in g.units:
+		u.take_damage(999999.0, null)   # clear the field so only the gatling and its dummy fight
+	run(g, 0.5)
+	var gat = g.spawn_unit(1, "gatl", base + Vector2(MapGrid.T * 3.0, 0))
+	var dummy = g.spawn_unit(0, "htank", base + Vector2(MapGrid.T * 5.5, 0))
+	dummy.invulnerable = true
+	gat.cmd_attack(dummy)
+	run(g, 4.0)
+	check(gat.weapons[0].spin > 2.0, "Gatling tank spins up while firing (%.2f)" % gat.weapons[0].spin)
+	dummy.invulnerable = false
+	dummy.take_damage(999999.0, null)
+	gat.cmd_stop()
+	run(g, 3.0)
+	check(gat.weapons[0].spin == 1.0, "Gatling spin resets after a pause (%.2f)" % gat.weapons[0].spin)
+	var snip_def := Data.weapon("sniper_rifle")
+	check(Combat.can_target(snip_def, g.spawn_unit(1, "e1", base)) and not Combat.can_target(snip_def, gat), "sniper rifle hits infantry only")
 	await free_game(g)

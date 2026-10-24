@@ -2,6 +2,8 @@
 
 Offline single-player RTS: **Advanced Coalition vs Iron Dominion** with base building,
 harvesting, armies, aircraft, a navy on water maps, engineers, AI opponents and developer tools.
+Pick one of **10 countries** by flag (USA, UK, Germany, France, Thailand, South Korea, Japan,
+Russia, China, Cuba), each with its own unique unit, power or bonus and infantry uniform.
 
 | System | Download |
 | --- | --- |

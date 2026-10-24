@@ -86,7 +86,12 @@
    "boat_c": 2,
    "dest_c": 2,
    "jjet": 1,
-   "cmdo": 0.3
+   "cmdo": 0.3,
+   "snip": 1.5,
+   "rngr": 3,
+   "tdst": 3,
+   "mech": 3,
+   "bjet": 2
   },
   "dominion": {
    "e1": 3,
@@ -99,7 +104,10 @@
    "sub_d": 2,
    "cruiser_d": 2,
    "dog": 1,
-   "ivan": 0.6
+   "ivan": 0.6,
+   "tsar": 2.5,
+   "gatl": 3,
+   "guer": 4
   }
  },
  "counters": {

@@ -45,7 +45,12 @@ func _ready() -> void:
 			bench = int(a.substr(8))
 	if bench > 0:
 		stage = "army"
-	if stage != "":
+	if stage == "countries":
+		start_match({"mode": "sandbox", "map_size": "medium", "water": "none", "seed": 5, "start_units": "base", "fog": false,
+			"ai_count": 3, "cheats_allowed": true, "victory": "none", "start_credits": 50000,
+			"player_country": "thailand", "enemy_countries": ["china", "germany", "cuba"]})
+		_stage_countries()
+	elif stage != "":
 		start_match({"mode": "sandbox", "map_size": "medium", "water": "coastal", "seed": 11, "start_units": "base", "fog": false,
 			"ai_count": 1, "cheats_allowed": true, "victory": "none", "start_credits": 50000, "player_faction": "coalition", "enemy_factions": ["dominion"]})
 		_stage_scene(stage)
@@ -55,6 +60,8 @@ func _ready() -> void:
 		start_match({"map_size": "small", "start_units": "base", "cheats_allowed": true})
 	elif "--sandbox" in args:
 		start_match(_sandbox_defaults())
+	elif "--setup" in args:
+		show_setup("skirmish")
 	else:
 		show_main_menu()
 
@@ -170,6 +177,41 @@ func _stage_scene(kind: String) -> void:
 			controller.center_on(MapGrid.cell_center(yard) + Vector2(2.5, 3.5) * MapGrid.T)
 		else:
 			controller.center_on(bp + Vector2(7, 7) * MapGrid.T)
+
+## Developer helper: --stage=countries lines up country uniforms and unique units for a screenshot.
+func _stage_countries() -> void:
+	await get_tree().process_frame
+	game.cheats.set_flag("ai_disabled", true)
+	for p in game.players:
+		p.team = 0               # a parade, not a battle
+		p.power_bonus = 1000
+		p.recompute(game.buildings)
+	var ai := AIController.new(game, game.players[0])
+	var bp := MapGrid.cell_center(ai._base_center()) + Vector2(5, 5) * MapGrid.T
+	# [pid, type, offset in cells, facing]
+	var rows := [
+		[0, "e1", Vector2(0, 0)], [0, "e1", Vector2(0.5, 0.4)], [0, "e3", Vector2(1.0, 0.0)], [0, "rngr", Vector2(1.5, 0.5)], [0, "rngr", Vector2(2.0, 0.1)],
+		[0, "mech", Vector2(3.2, 0.6)], [0, "bjet", Vector2(2.0, -2.5)],
+		[2, "e1", Vector2(-1.0, 2.6)], [2, "e1", Vector2(-0.5, 3.0)], [2, "e3", Vector2(0.0, 2.6)], [2, "tdst", Vector2(1.3, 3.2)],
+		[1, "e1", Vector2(4.5, 2.6)], [1, "e4", Vector2(5.0, 3.0)], [1, "flm", Vector2(5.5, 2.6)], [1, "gatl", Vector2(6.8, 3.4)], [1, "tsar", Vector2(5.2, 4.9)],
+		[3, "e1", Vector2(1.5, 5.4)], [3, "guer", Vector2(2.0, 5.8)], [3, "guer", Vector2(2.5, 5.4)], [3, "e4", Vector2(3.0, 5.8)],
+	]
+	for r in rows:
+		var u = game.spawn_unit(r[0], r[1], bp + (r[2] as Vector2) * MapGrid.T)
+		if u == null:
+			continue
+		u.facing = 0.9
+		u.turret_facing = 0.9
+		if u.is_air_unit:
+			u.air_state = "flying"
+			u.altitude_now = u.altitude
+			u.cmd_move(u.pos + Vector2(cos(u.facing), sin(u.facing)) * 160.0)
+		else:
+			u.cmd_hold()
+	var gc := MapGrid.to_cell(bp + Vector2(-3.5, 4.5) * MapGrid.T)
+	game.create_building(2, "gcan", gc, true)
+	if controller != null:
+		controller.center_on(bp + Vector2(2.2, 2.6) * MapGrid.T)
 
 ## Developer helper: --bench=<seconds> stages a large battle (AI on) and prints frame timings.
 func _run_bench(seconds: int) -> void:
@@ -322,6 +364,53 @@ func _opt(v: VBoxContainer, label: String, items: Array, sel: int) -> OptionButt
 	v.add_child(h)
 	return o
 
+## A row of flag buttons for each side plus a "random" flag. Writes the chosen country id
+## (or "random") into pick[key].
+func _flag_picker(v: VBoxContainer, label: String, pick: Dictionary, key: String) -> void:
+	var h := HBoxContainer.new()
+	var l = UITheme.label(label, 15)
+	l.custom_minimum_size.x = 190
+	h.add_child(l)
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 4)
+	h.add_child(rows)
+	v.add_child(h)
+	var frames := {}
+	var refresh := func():
+		for id in frames:
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = Color(0, 0, 0, 0)
+			sb.set_border_width_all(3)
+			sb.border_color = UITheme.AMBER if id == pick[key] else Color(0, 0, 0, 0)
+			sb.set_corner_radius_all(3)
+			frames[id].add_theme_stylebox_override("panel", sb)
+	var groups := [Data.countries_of("coalition"), Data.countries_of("dominion") + ["random"]]
+	for g in groups:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 4)
+		rows.add_child(row)
+		for id in g:
+			var frame := PanelContainer.new()
+			var b := TextureButton.new()
+			b.texture_normal = SpriteLib._load_tex("res://assets/ui/flags/%s.png" % id)
+			b.ignore_texture_size = true
+			b.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+			b.custom_minimum_size = Vector2(57, 38)
+			b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			if id == "random":
+				b.tooltip_text = "Random country"
+			else:
+				var c: Dictionary = Data.countries[id]
+				b.tooltip_text = "%s (%s)\n%s" % [c.name, Data.factions[c.side].short, c.special]
+			var cid: String = id
+			b.pressed.connect(func():
+				pick[key] = cid
+				refresh.call())
+			frame.add_child(b)
+			row.add_child(frame)
+			frames[id] = frame
+	refresh.call()
+
 func _check(v: VBoxContainer, label: String, on: bool) -> CheckBox:
 	var c := CheckBox.new()
 	c.text = label
@@ -360,9 +449,10 @@ func show_setup(mode: String) -> void:
 	seed_box.value = randi() % 100000
 	seed_h.add_child(seed_box)
 	v.add_child(seed_h)
-	var factions := ["coalition", "dominion", "random"]
-	var o_pf := _opt(v, "Your faction", ["Advanced Coalition", "Iron Dominion", "Random"], 0)
-	var o_ef := _opt(v, "Enemy faction", ["Advanced Coalition", "Iron Dominion", "Random"], 1)
+	# Countries are picked by flag (no reading needed); hovering a flag shows what it brings.
+	var pick := {"you": "usa", "enemy": "random"}
+	_flag_picker(v, "Your country", pick, "you")
+	_flag_picker(v, "Enemy country", pick, "enemy")
 	var o_ai := _opt(v, "AI opponents", ["0", "1", "2", "3"], 1)
 	var diffs := ["easy", "normal", "hard"]
 	var o_diff := _opt(v, "AI difficulty", ["Easy", "Normal", "Hard"], 1)
@@ -385,14 +475,16 @@ func show_setup(mode: String) -> void:
 	h.add_child(UITheme.button("Start", func():
 		var s := {
 			"mode": mode, "map_file": map_files[o_map.selected], "map_preset": map_presets[o_map.selected], "map_size": sizes[o_size.selected], "water": waters[o_water.selected], "seed": int(seed_box.value),
-			"player_faction": factions[o_pf.selected], "enemy_factions": [factions[o_ef.selected]],
+			"player_country": pick.you, "enemy_countries": [pick.enemy], "player_faction": "random", "enemy_factions": ["random"],
 			"ai_count": o_ai.selected, "difficulty": diffs[o_diff.selected], "start_credits": credits[o_cred.selected],
 			"start_units": starts[o_start.selected], "start_power_bonus": [0, 100, 500, 99999][o_power.selected],
 			"resources": res[o_res.selected], "speed": speeds[o_speed.selected], "victory": vict[o_vic.selected],
 			"fog": c_fog.button_pressed, "power_enabled": c_power.button_pressed, "cheats_allowed": c_cheat.button_pressed or sb,
 		}
-		if s.player_faction == "random":
-			s.player_faction = ["coalition", "dominion"][randi() % 2]
+		if s.player_country == "random":
+			var all := Data.countries.keys()
+			s.player_country = all[randi() % all.size()]
+		s.player_faction = Data.countries[s.player_country].side
 		start_match(s), 160))
 	h.add_child(UITheme.button("Back", show_main_menu, 120))
 	v.add_child(h)

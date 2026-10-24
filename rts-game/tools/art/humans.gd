@@ -22,8 +22,53 @@ const ANKLE_H := 0.085
 static func _m(col: Color, rough: float = 0.85, extra: Dictionary = {}) -> ShaderMaterial:
 	return K.paint(col, 0.0, rough, extra)
 
+## Countries map onto a side's body geometry (gear, boots, rifle); only colours and headgear change.
+const COUNTRY_SIDE := {"usa": "coalition", "uk": "coalition", "germany": "coalition", "france": "coalition",
+	"thailand": "coalition", "korea": "coalition", "japan": "coalition",
+	"russia": "dominion", "china": "dominion", "cuba": "dominion"}
+
+## Camouflage per country: [base, a, b, c, scale, pixel size (0 = blotches), boot colour].
+const CAMO := {
+	"uk":       [Color(0.5, 0.5, 0.35), Color(0.3, 0.37, 0.2), Color(0.42, 0.3, 0.19), Color(0.66, 0.62, 0.46), 13.0, 0.0, Color(0.42, 0.32, 0.22)],
+	"germany":  [Color(0.43, 0.46, 0.32), Color(0.29, 0.36, 0.21), Color(0.37, 0.28, 0.18), Color(0.12, 0.13, 0.1), 24.0, 0.0, Color(0.08, 0.075, 0.07)],
+	"france":   [Color(0.4, 0.43, 0.3), Color(0.26, 0.32, 0.19), Color(0.42, 0.31, 0.2), Color(0.12, 0.12, 0.1), 10.0, 0.0, Color(0.08, 0.075, 0.07)],
+	"thailand": [Color(0.36, 0.43, 0.27), Color(0.23, 0.3, 0.17), Color(0.44, 0.37, 0.24), Color(0.13, 0.15, 0.11), 15.0, 2.5, Color(0.08, 0.075, 0.07)],
+	"korea":    [Color(0.5, 0.5, 0.42), Color(0.35, 0.38, 0.29), Color(0.33, 0.28, 0.22), Color(0.17, 0.17, 0.15), 15.0, 2.5, Color(0.08, 0.075, 0.07)],
+	"japan":    [Color(0.5, 0.56, 0.38), Color(0.29, 0.4, 0.23), Color(0.41, 0.32, 0.21), Color(0.64, 0.62, 0.47), 12.0, 0.0, Color(0.08, 0.075, 0.07)],
+	"china":    [Color(0.36, 0.41, 0.27), Color(0.25, 0.3, 0.19), Color(0.46, 0.41, 0.27), Color(0.15, 0.17, 0.12), 15.0, 2.5, Color(0.08, 0.075, 0.07)],
+}
+
+static func side_of(f: String) -> String:
+	return COUNTRY_SIDE.get(f, f)
+
 static func kit(faction: String, kind: String) -> Dictionary:
-	var k := _kit(faction, kind)
+	var k := _kit(side_of(faction), kind)
+	if CAMO.has(faction) and kind != "engineer":
+		var c: Array = CAMO[faction]
+		var ex := {"camo": c[4], "camo_a": c[1], "camo_b": c[2], "camo_c": c[3], "camo_px": c[5], "noise_amt": 0.15, "fabric": 0.0}
+		k.uni = _m(c[0], 0.9, ex)
+		var dk: Color = c[0].darkened(0.15)
+		k.uni_dark = _m(dk, 0.9, {"camo": c[4], "camo_a": c[1].darkened(0.15), "camo_b": c[2].darkened(0.15), "camo_c": c[3].darkened(0.1), "camo_px": c[5]})
+		k.helmet = K.paint(c[0], 0.1, 0.75, {"camo": c[4] * 1.1, "camo_a": c[1], "camo_b": c[2], "camo_c": c[3], "camo_px": c[5]})
+		k.boot = _m(c[6], 0.6)
+		k.gear2 = _m(c[1].lerp(c[0], 0.5), 0.85)
+	elif faction == "cuba" and kind != "engineer":
+		k.uni = _m(Color(0.32, 0.36, 0.22), 0.9, {"noise_amt": 0.25, "fabric": 0.0})     # plain verde olivo fatigues
+		k.uni_dark = _m(Color(0.26, 0.29, 0.18), 0.9, {"noise_amt": 0.25})
+		k.helmet = _m(Color(0.3, 0.34, 0.2), 0.85)
+	if kind == "ranger":
+		# Thahan Phran: black fatigues and beret.
+		k.uni = _m(Color(0.12, 0.12, 0.13), 0.85, {"noise_amt": 0.2})
+		k.uni_dark = _m(Color(0.09, 0.09, 0.1), 0.85, {"noise_amt": 0.2})
+		k.gear2 = _m(Color(0.2, 0.21, 0.17), 0.85)
+		k.boot = _m(Color(0.06, 0.06, 0.06), 0.5)
+		k.glove = k.skin
+	elif kind == "guerrilla":
+		k.uni = _m(Color(0.37, 0.39, 0.25), 0.9, {"noise_amt": 0.35})
+		k.uni_dark = _m(Color(0.3, 0.3, 0.21), 0.9, {"noise_amt": 0.35})
+		k.glove = k.skin
+	elif kind == "sniper":
+		k.glove = _m(Color(0.32, 0.3, 0.22), 0.8)
 	if kind == "commando":
 		k.uni = _m(Color(0.16, 0.17, 0.18), 0.85, {"noise_amt": 0.25})
 		k.uni_dark = _m(Color(0.11, 0.12, 0.13), 0.85, {"noise_amt": 0.25})
@@ -74,6 +119,8 @@ static func _kit(faction: String, kind: String) -> Dictionary:
 ## pose: {"walk": 0..1 phase or -1, "fire": 0 none / 1 aim / 2 recoil, "dead": 0..1}
 static func soldier(kind: String, faction: String, pose: Dictionary) -> Node3D:
 	var C := kit(faction, kind)
+	var country := faction
+	faction = side_of(faction)
 	var root := Node3D.new()
 	var body := Node3D.new()
 	body.scale = Vector3.ONE * (HEIGHT / 1.8)
@@ -176,7 +223,7 @@ static func soldier(kind: String, faction: String, pose: Dictionary) -> Node3D:
 	var neck := Vector3(0.01, 0.57, 0)
 	K.limb(torso, neck, neck + Vector3(0.01, 0.08, 0), 0.05, 0.048, C.skin, 10)
 	var head_c := Vector3(0.02, 0.73, 0)
-	_head(torso, head_c, kind, faction, C)
+	_head(torso, head_c, kind, faction, C, country)
 	# ---- arms and weapon
 	var sh := [Vector3(0.0, 0.47, -0.2 * tw), Vector3(0.0, 0.47, 0.2 * tw)]
 	if kind == "demolition":
@@ -261,6 +308,11 @@ static func _upper_gear(torso: Node3D, kind: String, faction: String, C: Diction
 		K.tube(torso, Vector3(0.14, 0.48, -0.15), Vector3(0.12, 0.05, 0.16), 0.022, K.paint(Color(0.35, 0.3, 0.2), 0.3, 0.6), 6)  # bandolier
 		for i in 5:
 			K.add(torso, K.bevel_box(Vector3(0.03, 0.04, 0.02), 0.005), K.paint(Color(0.8, 0.65, 0.25), 0.8, 0.3), Vector3(0.15, 0.4 - i * 0.08, -0.1 + i * 0.06))
+	if kind == "guerrilla":
+		# Ammunition bandolier across the chest.
+		K.tube(torso, Vector3(0.15, 0.5, -0.15), Vector3(0.13, 0.06, 0.16), 0.02, K.paint(Color(0.35, 0.28, 0.17), 0.2, 0.7), 6)
+		for i in 5:
+			K.add(torso, K.bevel_box(Vector3(0.03, 0.04, 0.02), 0.005), K.paint(Color(0.8, 0.65, 0.25), 0.8, 0.3), Vector3(0.16, 0.42 - i * 0.08, -0.11 + i * 0.06))
 	if kind == "demolition":
 		# Dynamite bandoliers across the chest and a satchel of charges.
 		var red := K.paint(Color(0.75, 0.16, 0.1), 0.1, 0.6)
@@ -278,7 +330,7 @@ static func _upper_gear(torso: Node3D, kind: String, faction: String, C: Diction
 		K.add(torso, K.lathe([Vector2(0.06, -0.02), Vector2(0.08, 0.0), Vector2(0.06, 0.02)], 14, true, false, false), K.paint(Color(0.85, 0.35, 0.08), 0.0, 0.6), Vector3(-0.32, 0.35, 0), Vector3(0, 0, 90))
 		K.add(torso, K.bevel_box(Vector3(0.05, 0.03, 0.4), 0.01), K.paint(Color(0.95, 0.75, 0.1), 0.0, 0.5, {"emit": 0.15}), Vector3(0.0, 0.31, 0))
 
-static func _head(torso: Node3D, c: Vector3, kind: String, faction: String, C: Dictionary) -> void:
+static func _head(torso: Node3D, c: Vector3, kind: String, faction: String, C: Dictionary, country: String = "") -> void:
 	K.ellipsoid(torso, c, Vector3(0.1, 0.12, 0.085), C.skin)
 	K.ellipsoid(torso, c + Vector3(0.095, -0.015, 0), Vector3(0.02, 0.03, 0.018), C.skin)      # nose
 	K.ellipsoid(torso, c + Vector3(0.06, -0.075, 0), Vector3(0.045, 0.035, 0.06), C.skin)     # jaw
@@ -298,6 +350,23 @@ static func _head(torso: Node3D, c: Vector3, kind: String, faction: String, C: D
 		for z in [-0.035, 0.035]:
 			K.add(torso, K.cylinder(0.028, 0.02, 12), K.paint(Color(0.55, 0.42, 0.2), 0.7, 0.2), c + Vector3(0.095, 0.075, z), Vector3(0, 0, 70))
 			K.add(torso, K.cylinder(0.022, 0.022, 12), K.paint(Color(0.2, 0.45, 0.4), 0.9, 0.05), c + Vector3(0.1, 0.077, z), Vector3(0, 0, 70))
+		return
+	if kind == "sniper":
+		_boonie(torso, c, C.helmet)
+		K.add(torso, K.bevel_box(Vector3(0.012, 0.025, 0.13), 0.006), K.paint(Color(0.08, 0.1, 0.12), 0.8, 0.15), c + Vector3(0.098, 0.015, 0))
+		return
+	if kind == "ranger":
+		_beret(torso, c, K.paint(Color(0.08, 0.08, 0.09), 0.0, 0.9))
+		# Team-coloured neck scarf.
+		K.add(torso, K.lathe([Vector2(0.06, -0.025), Vector2(0.075, 0.0), Vector2(0.062, 0.025)], 16, true, false, false), C.gear, c + Vector3(-0.01, -0.16, 0), Vector3(0, 0, -10), true)
+		return
+	if kind == "guerrilla":
+		_beret(torso, c, K.paint(Color(0.1, 0.1, 0.1), 0.0, 0.9))
+		K.add(torso, K.cylinder(0.014, 0.004, 5), C.star, c + Vector3(0.075, 0.115, 0.03), Vector3(0, 0, 60))
+		_beard(torso, c)
+		return
+	if country == "cuba" and kind != "engineer" and kind != "flame_inf":
+		_patrol_cap(torso, c, C.helmet)
 		return
 	if kind == "rocketeer":
 		_helmet(torso, c, K.paint(Color(0.85, 0.85, 0.82), 0.2, 0.4), 1.04, 0.0)
@@ -332,6 +401,26 @@ static func _head(torso: Node3D, c: Vector3, kind: String, faction: String, C: D
 				K.tube(torso, c + Vector3(0.0, 0.03, z * 0.1), c + Vector3(0.04, -0.09, z * 0.06), 0.006, C.strap, 4)
 		else:
 			_helmet(torso, c, C.helmet, 1.02, 0.0)
+
+## Soft wide-brimmed bush hat.
+static func _boonie(parent: Node3D, c: Vector3, mat: Material) -> void:
+	K.add(parent, K.lathe([Vector2(0.105, 0.0), Vector2(0.1, 0.06), Vector2(0.075, 0.1), Vector2(0.0, 0.11)], 18), mat, c + Vector3(-0.005, 0.04, 0))
+	K.add(parent, K.lathe([Vector2(0.17, -0.012), Vector2(0.165, 0.0), Vector2(0.1, 0.012), Vector2(0.0, 0.012)], 20), mat, c + Vector3(-0.005, 0.04, 0))
+
+## Beret pulled to one side.
+static func _beret(parent: Node3D, c: Vector3, mat: Material) -> void:
+	K.ellipsoid(parent, c + Vector3(-0.005, 0.095, 0.02), Vector3(0.115, 0.04, 0.105), mat, Vector3(14, 0, -10))
+	K.add(parent, K.lathe([Vector2(0.104, -0.008), Vector2(0.106, 0.0), Vector2(0.104, 0.008)], 18, true, false, false), K.paint(Color(0.15, 0.1, 0.07), 0.0, 0.7), c + Vector3(0.0, 0.065, 0))
+
+static func _beard(parent: Node3D, c: Vector3) -> void:
+	var hair := K.paint(Color(0.12, 0.09, 0.07), 0.0, 0.95, {"noise_amt": 0.5})
+	K.ellipsoid(parent, c + Vector3(0.055, -0.08, 0), Vector3(0.055, 0.05, 0.07), hair)
+	K.ellipsoid(parent, c + Vector3(0.085, -0.035, 0), Vector3(0.02, 0.012, 0.04), hair)
+
+## Soft patrol cap with a short peak (Cuban fatigues).
+static func _patrol_cap(parent: Node3D, c: Vector3, mat: Material) -> void:
+	K.add(parent, K.lathe([Vector2(0.108, 0.0), Vector2(0.106, 0.07), Vector2(0.1, 0.09), Vector2(0.0, 0.092)], 18), mat, c + Vector3(-0.01, 0.04, 0))
+	K.add(parent, K.bevel_box(Vector3(0.08, 0.012, 0.15), 0.005), mat, c + Vector3(0.1, 0.045, 0), Vector3(0, 0, -12))
 
 ## Rounded combat helmet: domed shell with a slight brim. flare > 0 widens the rim (steel helmet look).
 static func _helmet(parent: Node3D, c: Vector3, mat: Material, s: float, flare: float) -> void:
@@ -385,6 +474,8 @@ static func _armed(torso: Node3D, sh: Array, kind: String, faction: String, C: D
 		if kind == "flame_inf":
 			_flamer(g, C)
 			K.tube(torso, Vector3(-0.2, 0.15, 0.08), g.position + Vector3(0.0, -0.08, 0.0), 0.016, K.paint(Color(0.1, 0.1, 0.1), 0.0, 0.7), 6)
+		elif kind == "sniper":
+			_sniper_rifle(g, C)
 		elif faction == "dominion":
 			_ak(g, C)
 		else:
@@ -405,6 +496,21 @@ static func _carbine(g: Node3D, C: Dictionary) -> void:
 	K.add(g, K.cylinder(0.022, 0.1, 12), m, Vector3(0.07, 0.065, 0), Vector3(0, 0, 90))                # optic
 	K.add(g, K.cylinder(0.018, 0.004, 12), K.paint(Color(0.5, 0.15, 0.1), 0.6, 0.1, {"emit": 0.6}), Vector3(0.122, 0.065, 0), Vector3(0, 0, 90))
 	K.add(g, K.bevel_box(Vector3(0.04, 0.02, 0.025), 0.006), K.paint(Color(0.5, 0.45, 0.33), 0.0, 0.7), Vector3(0.3, -0.035, 0))  # foregrip
+
+## Long bolt-action rifle with a big telescopic sight and bipod.
+static func _sniper_rifle(g: Node3D, C: Dictionary) -> void:
+	var m: Material = C.metal
+	var furn := K.paint(Color(0.34, 0.36, 0.26), 0.1, 0.7)
+	K.add(g, K.bevel_box(Vector3(0.24, 0.06, 0.04), 0.008), m, Vector3(0.06, 0.0, 0))
+	K.add(g, K.loft([[0.16, 0.026, 0.026, -0.03, 3.0], [0.4, 0.022, 0.022, -0.026, 3.0]], 10), furn, Vector3.ZERO)
+	K.add(g, K.cylinder(0.009, 0.34, 8), m, Vector3(0.55, 0.0, 0), Vector3(0, 0, 90))
+	K.add(g, K.cylinder(0.015, 0.05, 8), m, Vector3(0.73, 0.0, 0), Vector3(0, 0, 90))
+	K.add(g, K.cylinder(0.022, 0.2, 12), m, Vector3(0.08, 0.07, 0), Vector3(0, 0, 90))            # scope
+	K.add(g, K.cylinder(0.03, 0.04, 12), m, Vector3(0.19, 0.07, 0), Vector3(0, 0, 90))
+	K.add(g, K.bevel_box(Vector3(0.035, 0.09, 0.03), 0.01), furn, Vector3(-0.005, -0.065, 0), Vector3(0, 0, 18))
+	K.add(g, K.loft([[-0.3, 0.022, 0.035, -0.075, 3.0], [-0.12, 0.02, 0.03, -0.035, 3.0], [-0.06, 0.016, 0.02, -0.02]], 10), furn, Vector3.ZERO)
+	for z in [-0.02, 0.02]:
+		K.tube(g, Vector3(0.36, -0.02, z), Vector3(0.4, -0.13, z * 3.0), 0.005, m, 4)
 
 static func _ak(g: Node3D, C: Dictionary) -> void:
 	var m: Material = C.metal

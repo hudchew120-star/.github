@@ -145,7 +145,7 @@ func _manage_construction() -> void:
 	var dq: Array = cy.queues.get("defense", [])
 	if dq.is_empty() and int(cfg.defenses) > 0 and _count_tag("defense") < int(cfg.defenses) and _count_tag("factory", false) > 0 and (_count_tag("refinery", false) >= mini(2, int(cfg.max_refineries)) or threat_time > 0.0):
 		if cfg.parallel or q.is_empty():
-			var options := Data.types_in_category("defense", player.faction).filter(func(t): return game.availability(player.id, t) == "")
+			var options := Data.types_in_category("defense", player.faction, player.country).filter(func(t): return game.availability(player.id, t) == "")
 			var aa := options.filter(func(t): return _hits_air(Data.def(t)))
 			if seen_air >= 2 and aa.size() > 0 and _count_aa_defenses() < 2 + seen_air / 6:
 				options = aa
@@ -155,7 +155,7 @@ func _manage_construction() -> void:
 				game.queue_item(player.id, options[randi() % options.size()])
 	# Extra anti-air defenses once enemy aircraft have shown up (beyond the normal defense cap).
 	if dq.is_empty() and seen_air >= 4 and _count_aa_defenses() < mini(1 + seen_air / 4, 4) and player.credits() > 1000:
-		for t in Data.types_in_category("defense", player.faction):
+		for t in Data.types_in_category("defense", player.faction, player.country):
 			if _hits_air(Data.def(t)) and game.availability(player.id, t) == "":
 				game.queue_item(player.id, t)
 				break
@@ -569,12 +569,13 @@ func _manage_specials() -> void:
 		if best != null:
 			u.cmd_plant(best)
 
-## Paratroopers land next to an enemy refinery or power plant; bombers hit the densest cluster of structures.
+## Paratroopers and guerrillas land next to an enemy refinery or power plant; bombers (and spy
+## planes) go for the densest cluster of structures.
 func _power_target(id: String) -> Vector2:
 	var enemy_b: Array = game.buildings.filter(func(b): return not b.dead and game.are_enemies(player.id, b.pid) and (cfg.counter or player.vis.size() == 0 or player.vis[game.map.idx(b.cell0)] != 0))
 	if enemy_b.is_empty():
 		return Vector2.INF
-	if id == "paradrop":
+	if id == "paradrop" or id == "revolution":
 		for b in enemy_b:
 			var prov: Array = b.def.get("provides", [])
 			if prov.has("refinery") or prov.has("power"):

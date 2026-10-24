@@ -63,12 +63,17 @@ def plate(faction):
     rng = np.random.default_rng(3)
     base *= (0.94 + 0.08 * rng.random((H, W, 1)))
     img = Image.fromarray((np.clip(base, 0, 1) * 255).astype(np.uint8)).convert("RGBA")
-    d = ImageDraw.Draw(img)
+    # Faint grid and a soft floor shadow, blended on top (ImageDraw alone would overwrite pixels).
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
     for gx in range(0, W, 16):
-        d.line([(gx, 0), (gx, H)], fill=(255, 255, 255, 10))
+        d.line([(gx, 0), (gx, H)], fill=(255, 255, 255, 14))
     for gy in range(0, H, 16):
-        d.line([(0, gy), (W, gy)], fill=(255, 255, 255, 10))
-    d.ellipse([W * 0.1, H * 0.55, W * 0.9, H * 1.05], fill=(0, 0, 0, 60))
+        d.line([(0, gy), (W, gy)], fill=(255, 255, 255, 14))
+    img.alpha_composite(ov)
+    sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(sh).ellipse([W * 0.14, H * 0.62, W * 0.86, H * 1.0], fill=(0, 0, 0, 90))
+    img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(8)))
     return img
 
 def frame_border(img, faction):

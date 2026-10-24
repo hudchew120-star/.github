@@ -6,6 +6,7 @@ extends RefCounted
 const K := preload("res://tools/art/kit.gd")
 const M := preload("res://tools/art/hd_models.gd")
 const B2 := preload("res://tools/art/buildings2.gd")
+const CU := preload("res://tools/art/country_units.gd")
 
 # ---------------------------------------------------------------- shared details
 
@@ -152,6 +153,7 @@ static func build(sprite: String, faction: String, anim_t: float = 0.0) -> Dicti
 		"repair": return B2.repair(P, faction)
 		"sam_site": return B2.sam_base(P, faction)
 		"flak_cannon": return B2.flak_base(P, faction)
+		"grand_cannon": return CU.grand_cannon_base(P, faction)
 	return {"root": Node3D.new(), "height": 0.5}
 
 static func conyard(P: Dictionary, f: String, t: float) -> Dictionary:

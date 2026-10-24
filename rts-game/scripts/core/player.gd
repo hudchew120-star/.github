@@ -7,6 +7,7 @@ const MAX_VALUE := 999_999_999_999   # hard ceiling for all balances; never over
 var id: int = 0
 var name: String = ""
 var faction: String = "coalition"
+var country: String = "usa"          # sub-faction: unique units, powers, uniforms and bonuses
 var color: Color = Color.WHITE
 var team: int = 0
 var is_human: bool = false
@@ -123,7 +124,7 @@ func recompute(buildings: Array) -> void:
 
 func to_dict() -> Dictionary:
 	return {
-		"id": id, "name": name, "faction": faction, "color": color.to_html(), "team": team,
+		"id": id, "name": name, "faction": faction, "country": country, "color": color.to_html(), "team": team,
 		"is_human": is_human, "difficulty": difficulty, "defeated": defeated,
 		"cash": cash, "resources": resources.duplicate(), "power_bonus": power_bonus,
 		"primary": primary.duplicate(), "stats": stats.duplicate(),
@@ -134,6 +135,7 @@ func from_dict(d: Dictionary) -> void:
 	id = int(d.id)
 	name = d.name
 	faction = d.faction
+	country = d.get("country", Data.default_country(faction))
 	color = Color(d.color)
 	team = int(d.team)
 	is_human = bool(d.is_human)
@@ -150,3 +152,7 @@ func from_dict(d: Dictionary) -> void:
 	for k in d.get("stats", {}):
 		stats[k] = int(d.stats[k])
 	vis = Marshalls.base64_to_raw(d.get("vis", ""))
+
+## Country bonus multiplier for an item category (armor, speed, cost, build_time).
+func bonus(kind: String, category: String) -> float:
+	return Data.country_bonus(country, kind, category)

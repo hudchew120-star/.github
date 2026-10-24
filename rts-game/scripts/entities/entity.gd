@@ -67,6 +67,7 @@ func take_damage(amount: float, attacker) -> void:
 		return
 	if invulnerable:
 		return
+	amount *= player().bonus("armor", def.get("category", ""))
 	hp -= amount
 	hit_flash = 0.12
 	last_damaged_time = game.sim_time

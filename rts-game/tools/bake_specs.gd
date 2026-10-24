@@ -7,6 +7,13 @@ const M := preload("res://tools/art/hd_models.gd")
 const B := preload("res://tools/art/hd_buildings.gd")
 const H := preload("res://tools/art/humans.gd")
 const V := preload("res://tools/art/vehicles.gd")
+const CU := preload("res://tools/art/country_units.gd")
+## Country uniforms: extra infantry sheets per country (the side's default country keeps the base sheet).
+const COUNTRY_INFANTRY := {
+	"uk": ["infantry", "rocket_inf"], "germany": ["infantry", "rocket_inf"], "france": ["infantry", "rocket_inf"],
+	"thailand": ["infantry", "rocket_inf"], "korea": ["infantry", "rocket_inf"], "japan": ["infantry", "rocket_inf"],
+	"china": ["infantry", "heavy_inf", "flame_inf"], "cuba": ["infantry", "heavy_inf", "flame_inf"],
+}
 const DIRS := 32
 const PXU := 90.509668      # pixels per world unit at 2x
 const COS30 := 0.8660254
@@ -105,7 +112,8 @@ static func building(sprite: String, faction: String, sx: int, sz: int) -> Array
 	if probe.has("pivot"):
 		var P := M.pal(faction)
 		var pv: Vector3 = probe.pivot
-		out.append({"name": key + "_turret", "fw": 192, "fh": 160, "anchor": Vector2(96, 100), "count": DIRS, "scale": 1.0, "shadow": false,
+		var tf: Vector2i = probe.get("top_frame", Vector2i(192, 160))
+		out.append({"name": key + "_turret", "fw": tf.x, "fh": tf.y, "anchor": Vector2(tf.x * 0.5, tf.y * 0.625), "count": DIRS, "scale": 1.0, "shadow": false,
 			"extra": {"dirs": DIRS, "pivot": [pv.x, pv.y, pv.z]},
 			"build": func(i):
 				var t: Node3D
@@ -123,7 +131,7 @@ static func decor(name: String, count: int, fw: int, fh: int, anchor: Vector2, b
 const BUILDINGS := {
 	"coalition": [["conyard", 3, 3], ["power", 2, 2], ["adv_power", 3, 3], ["refinery", 3, 3], ["silo", 1, 1], ["barracks", 2, 2],
 		["factory", 3, 3], ["radar", 2, 2], ["pillbox", 1, 1], ["gun_turret", 1, 1],
-		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["sam_site", 1, 1]],
+		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["sam_site", 1, 1], ["grand_cannon", 2, 2]],
 	"dominion": [["conyard", 3, 3], ["power", 2, 2], ["adv_power", 3, 3], ["refinery", 3, 3], ["silo", 1, 1], ["barracks_dom", 2, 2],
 		["factory", 3, 3], ["radar", 2, 2], ["flame_tower", 1, 1], ["arc_coil", 1, 2],
 		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["flak_cannon", 1, 1]],
@@ -162,6 +170,20 @@ static func all() -> Array:
 	out += vehicle("u_bomber_dominion", func(_s): return V.bomber_plane(), 1.0, 1, Vector2i(336, 240), true)
 	out += infantry("i_heavy_inf_dominion", "heavy_inf", "dominion")
 	out += infantry("i_flame_inf_dominion", "flame_inf", "dominion")
+	# Country units.
+	out += infantry("i_sniper_coalition", "sniper", "uk")
+	out += infantry("i_ranger_coalition", "ranger", "thailand")
+	out += infantry("i_guerrilla_dominion", "guerrilla", "cuba")
+	out += vehicle("u_tank_destroyer_coalition", func(_s): return CU.tank_destroyer(), 1.3, 1, Vector2i(208, 176))
+	out += vehicle("u_mecha_coalition", func(s): return CU.mecha(-1.0 if s == 0 else float(s - 1) / 4.0), 1.3, 5, Vector2i(192, 176))
+	out += vehicle("u_jet_eagle_coalition", func(_s): return CU.black_eagle(), 1.0, 1, Vector2i(240, 176), true)
+	out += vehicle("u_tank_tsar_dominion", func(_s): return CU.tsar_tank(), 1.25, 1, Vector2i(272, 224))
+	out += vehicle("u_tank_gatling_dominion", func(_s): return CU.gatling_tank(), 1.3, 1, Vector2i(208, 176))
+	for c in COUNTRY_INFANTRY:
+		for kind in COUNTRY_INFANTRY[c]:
+			out += infantry("i_%s_%s" % [kind, c], kind, c)
+			if kind == "infantry" and H.side_of(c) == "coalition":
+				out.append(dug_in("i_%s_%s" % [kind, c], kind, c))
 	for f in BUILDINGS:
 		for b in BUILDINGS[f]:
 			out += building(b[0], f, b[1], b[2])

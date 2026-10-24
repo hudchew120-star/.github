@@ -161,11 +161,11 @@ func _process_queue(cat: String, dt: float) -> void:
 		return
 	var d := Data.def(it.type)
 	var is_struct := cat == "building" or cat == "defense"
-	var cost := 0 if game.cheats.flag(pid, "free_build" if is_struct else "free_units") else int(d.get("cost", 0))
+	var cost: int = game.cost_of(pid, it.type)
 	var instant: bool = game.cheats.flag(pid, "instant_build" if is_struct else "instant_units")
 	var new_prog: float = 1.0
 	if not instant:
-		var t := maxf(0.1, float(d.get("build_time", 5)))
+		var t := maxf(0.1, float(d.get("build_time", 5)) * player().bonus("build_time", d.get("category", "")))
 		new_prog = minf(1.0, float(it.progress) + dt / t * _production_speed(cat))
 	var target_paid := int(round(cost * new_prog)) if cost > 0 else int(it.paid)
 	var delta := target_paid - int(it.paid)

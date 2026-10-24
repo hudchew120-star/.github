@@ -1,9 +1,9 @@
-# Test Report - Phases 1-3 and graphics overhaul
+# Test Report - Phases 1-3, graphics overhaul, faction specials and countries
 
 Environment: Godot 4.3 stable, Linux, headless run and software-rendered (Mesa llvmpipe)
 screenshots. Command: `godot --headless --path . res://tests/test_runner.tscn`
 
-**Result: 28 tests, 239 checks passed, 0 failed.**
+**Result: 39 tests, 390 checks passed, 0 failed.**
 
 | Test | What it verifies |
 | --- | --- |
@@ -35,6 +35,17 @@ screenshots. Command: `godot --headless --path . res://tests/test_runner.tscn`
 | test_engineer | Engineer captures an enemy structure (consumed, ownership and power change) and fully repairs a friendly one |
 | test_repair_facility | Damaged tank is repaired at the repair facility and repairs cost credits |
 | test_view3d_picking | 3D view builds models; screen/world round trip; clicking units and the top of tall structures; box selection; 3D effects; zoom |
+| test_map_presets | Every named map generates with its water layout, start positions and connected bases |
+| test_paratroopers | US paratroopers need an Airfield, recharge, drop six riflemen near the target |
+| test_bomber_strike | Russian bomber strike sends three bombers that damage the target and leave the map |
+| test_dig_in | Dug-in riflemen hit harder, take less damage and cannot move until packed up |
+| test_jetpack_and_dog | Rocketeers fly over water and are hit by anti-air; attack dogs kill infantry |
+| test_charges | Commando C4 destroys structures; demolition charges damage an area |
+| test_mines | Minelayer mines stay hidden from enemies and blow up enemy vehicles |
+| test_countries | Ten countries with valid sides, unique items and powers; country picks set the side; unique units only for their country; Chinese infantry discount; German vehicle armour; default countries; country saved and loaded |
+| test_thai_rangers_stealth | Thai infantry speed bonus; rangers cloak when still, cannot be targeted from range, are spotted up close |
+| test_country_powers | UK spy plane reveals the enemy base for 30 s, then the fog returns; Cuban revolution raises five guerrillas |
+| test_country_units | Tsar tank repairs itself and carries anti-air missiles; Gatling spin-up and reset; sniper rifle hits infantry only |
 
 Manual checks (1920x1080 screenshots, Forward+ renderer on a software Vulkan driver): isometric
 battle and base views with painted terrain, ore, decorations, shroud, sprite effects, metallic HUD

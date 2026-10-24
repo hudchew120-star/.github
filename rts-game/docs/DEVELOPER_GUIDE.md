@@ -207,6 +207,20 @@ from `hd_buildings.gd build()`) and an entry in `BUILDINGS` in `bake_specs.gd`.
 **A new faction**: add it to `factions.json`, list it in the `factions` arrays of the units and
 buildings it may use, and add an `army` entry in `ai.json`.
 
+**A new country** (sub-faction): add it to `data/countries.json` with its `side`, the
+`units` it unlocks, its `powers` and a `bonus` table (`armor` / `speed` / `cost` / `build_time`
+multipliers per category, e.g. `{"armor": {"vehicle": 0.9}}`). Mark country-only units and
+buildings with `"countries": ["<id>"]` next to their `factions`; `Data.allowed()` and
+`Game.availability()` filter on both. Support powers live in `Specials.POWERS` (`countries` list).
+Draw a flag in `tools/make_flags.py` (output `assets/ui/flags/<id>.png`) and, for a uniform, a
+`CAMO` row in `humans.gd` plus a `COUNTRY_INFANTRY` entry in `bake_specs.gd`: infantry sheets
+named `i_<sprite>_<country>` are picked before the side's `i_<sprite>_<faction>` sheet.
+
+Unit mechanics available from data: `regen` (hp/s after 3 s without damage), `stealth`
+(`{"radius", "delay"}`: hidden while still and not firing, spotted by enemies within radius),
+`walker` (stride frames from vehicle sheet states), weapon `spinup` (`{"max", "gain", "decay"}`),
+weapon `infantry_only`.
+
 **A new weapon**: add to `weapons.json` and reference it from a unit or building.
 
 ## Maps

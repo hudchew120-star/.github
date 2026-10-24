@@ -1,16 +1,21 @@
 class_name Specials
 extends RefCounted
 ## Faction special abilities in the spirit of the classic RTS games:
-## - Support powers that recharge for free: Coalition paratroopers, Dominion bomber strike.
+## - Country support powers that recharge for free: US paratroopers, UK spy plane,
+##   Russian bomber strike, Cuban revolution.
 ## - Fly-over aircraft that deliver them (not controllable, drawn by the renderer).
 ## - Timed bombs planted by the Commando (C4) and the Demolition Trooper.
 ## - Hidden mines laid by the Dominion Minelayer.
 
 const POWERS := {
-	"paradrop": {"name": "Paratroopers", "faction": "coalition", "prereq": ["airfield"], "cooldown": 180.0,
+	"paradrop": {"name": "Paratroopers", "faction": "coalition", "countries": ["usa"], "prereq": ["airfield"], "cooldown": 180.0,
 		"desc": "A transport drops six riflemen anywhere you can see or have explored.", "drop": "e1", "count": 6},
-	"bomber": {"name": "Bomber Strike", "faction": "dominion", "prereq": ["airfield"], "cooldown": 240.0,
+	"spyplane": {"name": "Spy Plane", "faction": "coalition", "countries": ["uk"], "prereq": ["radar"], "cooldown": 120.0,
+		"desc": "A reconnaissance jet reveals a wide area for 30 seconds.", "radius": 8, "duration": 30.0},
+	"bomber": {"name": "Bomber Strike", "faction": "dominion", "countries": ["russia"], "prereq": ["airfield"], "cooldown": 240.0,
 		"desc": "Three bombers carpet-bomb a line through the target.", "planes": 3, "damage": 140.0, "radius": 1.1},
+	"revolution": {"name": "Revolution", "faction": "dominion", "countries": ["cuba"], "prereq": ["barracks"], "cooldown": 200.0,
+		"desc": "A band of five guerrillas rises up anywhere you can see or have explored.", "drop": "guer", "count": 5},
 }
 const PLANE_SPEED := 300.0          # pixels per second (10 cells/s)
 
@@ -19,6 +24,7 @@ var powers := {}                    # pid -> {power id -> ready_at sim time, or 
 var flyovers: Array = []            # active delivery planes
 var bombs: Array = []               # planted charges
 var mines := {}                     # map cell index -> owner pid
+var reveals: Array = []             # spy plane vision: {pid, pos, r (cells), until}
 
 func _init(g) -> void:
 	game = g
@@ -27,9 +33,9 @@ func _init(g) -> void:
 
 func powers_for(pid: int) -> Array:
 	var out := []
-	var f: String = game.players[pid].faction
+	var p = game.players[pid]
 	for id in POWERS:
-		if POWERS[id].faction == f:
+		if POWERS[id].faction == p.faction and POWERS[id].countries.has(p.country):
 			out.append(id)
 	return out
 
@@ -44,10 +50,10 @@ func power_state(pid: int, id: String) -> Dictionary:
 
 func use_power(pid: int, id: String, target: Vector2) -> String:
 	if not POWERS.has(id) or not powers_for(pid).has(id):
-		return "Not available to your faction."
+		return "Not available to your country."
 	var st := power_state(pid, id)
 	if not st.available:
-		return "Requires an Airfield."
+		return "Requires: " + ", ".join(POWERS[id].prereq.map(func(t): return Data.def(Data.building_for_tag(game.players[pid].faction, t)).get("name", t)))
 	if not st.ready:
 		return "Recharging: %d s left." % int(ceil(st.remaining))
 	target = Vector2(clampf(target.x, 16.0, game.map.w * MapGrid.T - 16.0), clampf(target.y, 16.0, game.map.h * MapGrid.T - 16.0))
@@ -60,8 +66,16 @@ func use_power(pid: int, id: String, target: Vector2) -> String:
 	if dir == Vector2.ZERO:
 		dir = Vector2.RIGHT
 	var start: Vector2 = target - dir * (game.map.w * MapGrid.T * 0.75)
+	if id == "revolution":
+		_raise_guerrillas(pid, target)
+		game.notify(pid, "The people rise up!", "unit")
+		return ""
 	if id == "paradrop":
 		flyovers.append({"kind": "transport", "power": id, "pid": pid, "pos": start, "dir": dir, "target": target, "dropped": false, "faction": p.faction})
+	elif id == "spyplane":
+		flyovers.append({"kind": "spy", "power": id, "pid": pid, "pos": start, "dir": dir, "target": target, "dropped": false, "faction": p.faction})
+		game.notify(pid, "Spy Plane on the way.", "unit")
+		return ""
 	else:
 		var side := Vector2(-dir.y, dir.x)
 		for i in int(POWERS[id].planes):
@@ -96,6 +110,11 @@ func _tick_flyovers(dt: float) -> void:
 		if f.kind == "transport" and not f.dropped and along <= 0.0:
 			f.dropped = true
 			_drop_paratroopers(f)
+		elif f.kind == "spy" and not f.dropped and along <= 0.0:
+			f.dropped = true
+			var pd: Dictionary = POWERS[f.power]
+			reveals.append({"pid": f.pid, "pos": f.target, "r": int(pd.radius), "until": game.sim_time + float(pd.duration)})
+			game.update_fog()
 		elif f.kind == "bomber" and absf(along) < MapGrid.T * 3.0:
 			f.bomb_t -= dt
 			if f.bomb_t <= 0.0:
@@ -123,6 +142,33 @@ func _drop_paratroopers(f: Dictionary) -> void:
 		u.altitude_now = 1.6
 		placed += 1
 	game.play_sound("unit_ready", f.target)
+
+## Cuban Revolution: guerrillas spring up around the target point.
+func _raise_guerrillas(pid: int, target: Vector2) -> void:
+	var def: Dictionary = POWERS.revolution
+	var c: Vector2i = MapGrid.to_cell(target)
+	var placed := 0
+	for k in 40:
+		if placed >= int(def.count):
+			break
+		var cc: Vector2i = game.map.nearest_passable(c + Vector2i(k % 3 - 1, (k / 3) % 3 - 1), "foot", 6)
+		if cc.x < 0:
+			continue
+		var p := MapGrid.cell_center(cc) + Vector2(randf_range(-8, 8), randf_range(-8, 8))
+		var u = game.spawn_unit(pid, def.drop, p)
+		if u == null:
+			break
+		game.spawn_effect("smoke", p)
+		placed += 1
+	game.play_sound("unit_ready", target)
+
+## Spy plane vision sources for a player: [[cell, radius], ...].
+func reveal_sources(pid: int) -> Array:
+	var out := []
+	for r in reveals:
+		if int(r.pid) == pid:
+			out.append([MapGrid.to_cell(r.pos), int(r.r)])
+	return out
 
 func _bomb_at(p: Vector2, pid: int) -> void:
 	var def: Dictionary = POWERS.bomber
@@ -235,6 +281,8 @@ func tick(dt: float) -> void:
 		_tick_powers()
 	_tick_flyovers(dt)
 	_tick_bombs(dt)
+	if not reveals.is_empty() and game.tick_count % 15 == 0:
+		reveals = reveals.filter(func(r): return game.sim_time < float(r.until))
 	if game.tick_count % 3 == 0:
 		_tick_mines()
 
@@ -257,7 +305,10 @@ func to_dict() -> Dictionary:
 	var mn := {}
 	for i in mines:
 		mn[str(i)] = mines[i]
-	return {"powers": pw, "flyovers": fl, "bombs": bm, "mines": mn}
+	var rv := []
+	for r in reveals:
+		rv.append({"pid": r.pid, "pos": [r.pos.x, r.pos.y], "r": r.r, "until": r.until})
+	return {"powers": pw, "flyovers": fl, "bombs": bm, "mines": mn, "reveals": rv}
 
 func from_dict(d: Dictionary) -> void:
 	powers = {}
@@ -280,3 +331,6 @@ func from_dict(d: Dictionary) -> void:
 	mines = {}
 	for k in d.get("mines", {}):
 		mines[int(k)] = int(d.mines[k])
+	reveals = []
+	for r in d.get("reveals", []):
+		reveals.append({"pid": int(r.pid), "pos": Vector2(r.pos[0], r.pos[1]), "r": int(r.r), "until": float(r.until)})

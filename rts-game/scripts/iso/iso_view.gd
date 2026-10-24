@@ -112,17 +112,21 @@ func _sync_ground() -> void:
 ## Loads every sprite sheet the factions in this match can use, so nothing is read from
 ## disk in the middle of a battle (that caused a freeze whenever a new unit type appeared).
 func _preload_sheets() -> void:
-	var factions := {}
+	var sides := {}
 	for p in game.players:
-		factions[p.faction] = true
-	for f in factions:
+		sides[p.faction + ":" + p.country] = true
+	for key in sides:
+		var f: String = key.get_slice(":", 0)
+		var country: String = key.get_slice(":", 1)
 		for src in [Data.units, Data.buildings]:
 			for t in src:
 				var d: Dictionary = src[t]
-				if not d.get("factions", []).has(f):
+				if not Data.allowed(d, f, country):
 					continue
 				var prefix := "b_" if src == Data.buildings else ("i_" if d.get("category", "") == "infantry" else "u_")
-				var n := "%s%s_%s" % [prefix, d.get("sprite", ""), f]
+				var n := "%s%s_%s" % [prefix, d.get("sprite", ""), country]
+				if not SpriteLib.has(n):
+					n = "%s%s_%s" % [prefix, d.get("sprite", ""), f]
 				if not SpriteLib.has(n):
 					continue
 				for suffix in ["_turret", "_die", "_anim", "_dug"]:
@@ -289,7 +293,7 @@ func _make_visual(e) -> Dictionary:
 			n.add_child(tur)
 			v["turret"] = tur
 			v["tsheet"] = ts
-		n.position = SpriteLib.iso(e.pos)
+		n.position = SpriteLib.iso(e.pos, e.altitude_now)   # start at flight height (no slide-up on spawn)
 		if e.is_infantry():
 			v["dug"] = SpriteLib.sheet(name + "_dug")
 			var extras := Node2D.new()
@@ -453,6 +457,9 @@ func _update_unit(v: Dictionary, delta: float) -> void:
 	# Submarines: own submerged boats show as a dark translucent shape.
 	if e.submarine:
 		n.modulate = Color(0.55, 0.65, 0.75, 0.45) if e.submerged() else Color.WHITE
+	elif e.def.has("stealth"):
+		# Cloaked rangers: the owner sees a faint outline, enemies see nothing (unless detected).
+		n.modulate = Color(0.75, 0.9, 0.75, 0.4) if e.cloaked() and e.pid == game.human_pid else Color.WHITE
 	elif e.is_naval and e.moving and not game.headless:
 		v.wake_t -= delta
 		if v.wake_t <= 0.0:
@@ -487,8 +494,12 @@ func _update_unit(v: Dictionary, delta: float) -> void:
 	else:
 		var d := SpriteLib.dir_index(e.facing, dirs)
 		var state := 0
-		if int(s.extra.get("states", 1)) > 1 and e.is_harvester and e.cargo > e.capacity * 0.35:
+		var states := int(s.extra.get("states", 1))
+		if states > 1 and e.is_harvester and e.cargo > e.capacity * 0.35:
 			state = 1
+		elif states > 1 and e.def.get("walker", false) and e.moving:
+			# Walking mecha: stride frames follow the movement.
+			state = 1 + int(v.t * 7.0) % (states - 1)
 		body.region_rect = s.region(state * dirs + d)
 		if v.has("turret"):
 			var ts: SpriteLib.Sheet = v.tsheet
