@@ -51,8 +51,13 @@ func _ready() -> void:
 			"player_country": "thailand", "enemy_countries": ["china", "germany", "cuba"]})
 		_stage_countries()
 	elif stage != "":
+		var stage_country := "usa"
+		for a in args:
+			if a.begins_with("--country="):
+				stage_country = a.substr(10)
 		start_match({"mode": "sandbox", "map_size": "medium", "water": "coastal", "seed": 11, "start_units": "base", "fog": false,
-			"ai_count": 1, "cheats_allowed": true, "victory": "none", "start_credits": 50000, "player_faction": "coalition", "enemy_factions": ["dominion"]})
+			"ai_count": 1, "cheats_allowed": true, "victory": "none", "start_credits": 50000, "player_faction": "coalition", "enemy_factions": ["dominion"],
+			"player_country": stage_country, "enemy_countries": ["russia"]})
 		_stage_scene(stage)
 		if bench > 0:
 			_run_bench(bench)
@@ -93,6 +98,10 @@ func _setup_screenshot(args: PackedStringArray) -> void:
 		if zoom_v > 0.0 and view != null:
 			view.zoom_by(zoom_v, get_viewport().get_visible_rect().size * 0.5)
 	await get_tree().create_timer(at).timeout
+	for a in args:
+		if a.begins_with("--tab=") and hud != null:
+			hud._select_tab(a.substr(6))
+			await get_tree().create_timer(0.3).timeout
 	if hud != null and "--open-cheats" in args:
 		hud.toggle_cheats()
 		await get_tree().create_timer(0.3).timeout
