@@ -861,9 +861,16 @@ func test_dig_in() -> void:
 	check(gi.deployed and gi.range_mult() > r0 and gi.damage_mult() > 1.0, "dug-in rifleman gets more range and damage")
 	var hp0: float = gi.hp
 	gi.take_damage(20.0, null)
-	check(absf((hp0 - gi.hp) - 10.0) < 0.01, "dug-in rifleman takes half damage")
+	check(absf((hp0 - gi.hp) - 7.0) < 0.01, "dug-in rifleman takes about a third of the damage")
+	var p0: Vector2 = gi.pos
 	gi.cmd_move(gi.pos + Vector2(64, 0))
-	check(not gi.deployed, "moving packs up the sandbags")
+	run(g, 2.0)
+	check(gi.deployed and gi.pos.distance_to(p0) < 1.0, "dug-in rifleman cannot move")
+	gi.cmd_deploy()
+	check(not gi.deployed, "pressing E again packs up the sandbags")
+	gi.cmd_move(gi.pos + Vector2(64, 0))
+	run(g, 3.0)
+	check(gi.pos.distance_to(p0) > 20.0, "rifleman walks again after packing up")
 	var con = g.spawn_unit(1, "e1", m.pos + Vector2(400, 400))
 	check(not con.can_dig_in(), "Dominion conscripts cannot dig in")
 	await free_game(g)

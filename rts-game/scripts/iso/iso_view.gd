@@ -125,7 +125,7 @@ func _preload_sheets() -> void:
 				var n := "%s%s_%s" % [prefix, d.get("sprite", ""), f]
 				if not SpriteLib.has(n):
 					continue
-				for suffix in ["_turret", "_die", "_anim"]:
+				for suffix in ["_turret", "_die", "_anim", "_dug"]:
 					SpriteLib.sheet(n + suffix)
 				var s := SpriteLib.sheet(n)
 				for p in game.players:
@@ -291,6 +291,7 @@ func _make_visual(e) -> Dictionary:
 			v["tsheet"] = ts
 		n.position = SpriteLib.iso(e.pos)
 		if e.is_infantry():
+			v["dug"] = SpriteLib.sheet(name + "_dug")
 			var extras := Node2D.new()
 			extras.draw.connect(_draw_unit_extras.bind(extras, v))
 			n.add_child(extras)
@@ -340,7 +341,7 @@ func _make_visual(e) -> Dictionary:
 ## Sandbag ring for dug-in riflemen (drawn behind the soldier) and parachute canopies.
 func _draw_unit_extras(node: Node2D, v: Dictionary) -> void:
 	var e = v.e
-	if e.deployed:
+	if e.deployed and v.get("dug") == null:
 		var k: float = 1.0 if e.deploy_t <= 0.0 else 1.0 - e.deploy_t
 		for i in 10:
 			var a := TAU * i / 10.0
@@ -461,7 +462,21 @@ func _update_unit(v: Dictionary, delta: float) -> void:
 	var s: SpriteLib.Sheet = v.sheet
 	var body: Sprite2D = v.body
 	var dirs: int = int(s.extra.get("dirs", 32))
-	if e.is_infantry():
+	if e.is_infantry() and e.deployed and v.get("dug") != null:
+		# Dug-in emplacement sheet: aim pose, two firing frames.
+		var dg: SpriteLib.Sheet = v.dug
+		body.texture = dg.tex
+		body.material = SpriteLib.team_material(e.team_color(), dg.mask)
+		var dfr := 0
+		if game.sim_time - e.last_fire_time < 0.18:
+			dfr = 1 if game.sim_time - e.last_fire_time < 0.09 else 2
+		body.region_rect = dg.region(dfr * 8 + SpriteLib.dir_index(e.facing, 8))
+		v["showing_dug"] = true
+	elif e.is_infantry():
+		if v.get("showing_dug", false):
+			body.texture = s.tex
+			body.material = SpriteLib.team_material(e.team_color(), s.mask)
+			v["showing_dug"] = false
 		var d := SpriteLib.dir_index(e.facing, 8)
 		var fr := 0
 		if game.sim_time - e.last_fire_time < 0.18:

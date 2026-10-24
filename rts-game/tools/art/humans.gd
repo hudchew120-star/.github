@@ -106,6 +106,14 @@ static func soldier(kind: String, faction: String, pose: Dictionary) -> Node3D:
 		kn_l = 0.32
 		kn_r = 0.08
 		lean = 0.1
+	var kneel: bool = pose.get("kneel", false)
+	if kneel:
+		# Firing position: front knee up, rear knee on the ground, body upright behind the wall.
+		th_l = 1.35
+		kn_l = 1.45
+		th_r = 0.15
+		kn_r = 1.75
+		lean = 0.06
 	if flying:
 		# Hanging under the jetpack: legs trail back, knees bent, body leaning into the flight.
 		var bob := sin(phase * TAU) * 0.08 if walking else 0.0
@@ -127,6 +135,8 @@ static func soldier(kind: String, faction: String, pose: Dictionary) -> Node3D:
 		knees.append(knee)
 		ankles.append(ank)
 		low = minf(low, ank.y)
+		if kneel:
+			low = minf(low, knee.y - 0.06 + ANKLE_H)
 	var drop := low - ANKLE_H
 	var pel_y := 0.95 - drop
 	for i in 2:
@@ -173,10 +183,14 @@ static func soldier(kind: String, faction: String, pose: Dictionary) -> Node3D:
 		_demolition_arms(torso, sh, phase, fire, C)
 	elif unarmed:
 		_engineer_arms(torso, sh, phase, fire, C, faction)
+	elif kneel:
+		_armed(torso, sh, kind, faction, C, maxi(fire, 1), false, 0.0)
 	elif kind == "commando":
 		_commando_arms(torso, sh, fire, walking, phase, C)
 	else:
 		_armed(torso, sh, kind, faction, C, fire, walking, phase)
+	if pose.get("sandbags", false):
+		sandbag_wall(body)
 	if dead > 0.0:
 		# Knees give way, then the body falls backwards.
 		var fall := clampf(dead * 1.25, 0.0, 1.0)
@@ -544,3 +558,25 @@ static func dog(faction: String, pose: Dictionary) -> Node3D:
 		trunk.rotation.x = fall * 1.45
 		trunk.position.y = 0.55 - fall * 0.42
 	return root
+
+# ---------------------------------------------------------------- dug-in emplacement
+
+## Horseshoe of sandbags around a kneeling soldier (open at the back), two staggered layers.
+static func sandbag_wall(body: Node3D) -> void:
+	var bag := _m(Color(0.66, 0.58, 0.41), 0.95, {"noise_amt": 0.45})
+	var bag2 := _m(Color(0.58, 0.5, 0.35), 0.95, {"noise_amt": 0.45})
+	var r := 0.62
+	var n := 11
+	for layer in 3:
+		var y := 0.08 + layer * 0.15
+		var rr := r - layer * 0.025
+		var cnt := n - layer
+		for i in cnt:
+			var t := (float(i) + (0.5 if layer % 2 == 1 else 0.0)) / float(n - 1)
+			var a := lerpf(-PI * 0.78, PI * 0.78, t)
+			var p := Vector3(cos(a) * rr, y, sin(a) * rr)
+			var m := K.add(body, K.loft([[-0.14, 0.0, 0.03, 0.03], [-0.12, 0.085, 0.07, -0.07, 2.4], [0.12, 0.085, 0.07, -0.07, 2.4], [0.14, 0.0, 0.03, 0.03]], 12, 2.4),
+				bag if (i + layer) % 2 == 0 else bag2, p, Vector3(0, -rad_to_deg(a) - 90.0, 0))
+			m.scale = Vector3(1.0, 1.0, 1.0)
+	# A few loose bags and an ammo crate at the back.
+	K.add(body, K.bevel_box(Vector3(0.22, 0.12, 0.16), 0.02), _m(Color(0.32, 0.36, 0.25), 0.7), Vector3(-0.55, 0.06, 0.25))

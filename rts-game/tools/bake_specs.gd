@@ -66,6 +66,13 @@ static func infantry(name: String, kind: String, faction: String, air: bool = fa
 		"build": func(i):
 			return _rot(_person(kind, faction, {"dead": float(i) / 4.0}), 12)}]
 
+## Dug-in emplacement (Coalition riflemen): 8 directions x 3 frames (aim, fire 1, fire 2).
+static func dug_in(name: String, kind: String, faction: String) -> Dictionary:
+	return {"name": name + "_dug", "fw": 112, "fh": 112, "anchor": Vector2(56, 80), "count": 24, "scale": 1.45, "extra": {"dirs": 8, "frames": 3},
+		"build": func(i):
+			var fr: int = i / 8
+			return _rot(H.soldier(kind, faction, {"kneel": true, "sandbags": true, "fire": fr}), (i % 8) * 4)}
+
 static func building_frame(sx: int, sz: int, h: float) -> Dictionary:
 	var top := int(h * PXU * COS30) + 70
 	var left := sz * 64 + 120
@@ -142,6 +149,8 @@ static func all() -> Array:
 		out += vehicle("u_harvester_" + f, func(s): return V.harvester(f, float(s)), 1.2, 2, Vector2i(208, 176))
 		out += vehicle("u_mcv_" + f, func(_s): return V.mcv(f), 1.15, 1, Vector2i(224, 192))
 		out += infantry("i_infantry_" + f, "infantry", f)
+		if f == "coalition":
+			out.append(dug_in("i_infantry_" + f, "infantry", f))
 		out += infantry("i_engineer_" + f, "engineer", f)
 	out += infantry("i_rocket_inf_coalition", "rocket_inf", "coalition")
 	out += infantry("i_rocketeer_coalition", "rocketeer", "coalition", true)

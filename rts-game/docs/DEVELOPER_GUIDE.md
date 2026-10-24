@@ -75,10 +75,11 @@ tools/make_cameos.py      Sidebar build icons (from showcase renders, else from 
 Rebuild everything (needs a GPU or a software Vulkan driver):
 
 ```
-godot --path . res://tools/bake.tscn            # or: -- "<filter1,filter2>" [--resume]
+godot --path . res://tools/bake.tscn -- "_" --toon   # all sheets, hand-drawn style; or "<filter1,filter2>" [--resume]
 python3 tools/finalize_sprites.py
 python3 tools/paint_assets.py
-godot --path . res://tools/showcase.tscn -- cameos <absolute path>/tools/_bake_out/cameos/ 400
+godot --path . res://tools/showcase.tscn -- cameos <absolute path>/tools/_bake_out/cameos/ 400 --toon
+for f in tools/_bake_out/cameos/*.png; do python3 tools/stylize.py "$f" "$f" 3; done
 python3 tools/make_cameos.py
 python3 tools/make_catalog.py
 godot --headless --path . --import               # refresh imported textures
@@ -90,6 +91,12 @@ height is 78.4 px). Directional sheets store frame `state * dirs + dir`; directi
 anchor (the model's ground origin; for structures the footprint's top corner), grid columns,
 frame count and extras (turret pivot, smoke points, structure height). `_mask.png` holds the
 team-colour mask that `SpriteLib.team_material()` uses to recolour per player.
+
+**Hand-drawn style** (the game's look): `--toon` switches the paint shader to cel shading
+(`ArtKit.toon_mode`, three flat light bands and a crisp highlight) and marks the sheets;
+`finalize_sprites.py` then runs `tools/stylize.py` on the 3x supersampled frames: an ink line
+around each silhouette, thinner ink where colour bands meet (computed on a median-smoothed copy
+so camouflage and panel texture stay clean), slightly richer colours and pencil grain.
 
 Aircraft sheets set `extra.air` and write a separate `_shadow.png` (drawn on the ground while the
 body is lifted by `Unit.altitude_now`); helicopters carry `extra.rotor` (hub position, radius,

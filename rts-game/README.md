@@ -53,7 +53,8 @@ Generated maps have a **Water** option (lakes, coastal for naval warfare, or dry
 
 ## Graphics
 
-The default presentation is **classic isometric**, in the style of late-90s pre-rendered RTS games:
+The default presentation is **classic isometric**, in the style of late-90s pre-rendered RTS games,
+with a **hand-drawn finish**: cel-painted colour bands and ink outlines, like illustrated unit art.
 
 - Units and structures are **pre-rendered sprites**: detailed 3D models (sloped armour, road wheels,
   hatches, antennas, pipes, ladders, windows, cranes, dishes) and anatomically proportioned soldiers

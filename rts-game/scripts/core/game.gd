@@ -995,10 +995,10 @@ func _process_paths() -> void:
 
 func _separate() -> void:
 	for u in units:
-		if u.dead or u.harv_state == "unloading" or u.is_air_unit:
+		if u.dead or u.harv_state == "unloading" or u.is_air_unit or u.deployed:
 			continue
 		for o in unit_hash.query(u.pos, u.radius * 2.0):
-			if o == u or o.dead or o.uid < u.uid or o.harv_state == "unloading" or o.is_air_unit:
+			if o == u or o.dead or o.uid < u.uid or o.harv_state == "unloading" or o.is_air_unit or o.deployed:
 				continue
 			var d: Vector2 = u.pos - o.pos
 			var dist := d.length()

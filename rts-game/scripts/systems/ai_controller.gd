@@ -408,6 +408,8 @@ func _known_target() -> Vector2:
 func _manage_army() -> void:
 	attack_group = attack_group.filter(func(uid): return game.entities.has(uid))
 	var army := _combat_units()
+	_dig_in_defenders(army)
+	army = army.filter(func(u): return not u.deployed)
 	var idle := army.filter(func(u): return not attack_group.has(u.uid) and u.uid != scout_uid)
 	# Defend the base.
 	if threat_pos != Vector2.INF and game.sim_time - threat_time < 12.0 and game.sim_time >= respond_at:
@@ -456,6 +458,21 @@ func _manage_army() -> void:
 		var u = game.entities.get(uid)
 		if u != null and (u.order == "guard" or u.order == "idle") and u.target == null:
 			u.cmd_attack_move(tgt + Vector2(randf_range(-48, 48), randf_range(-48, 48)))
+
+## Coalition AI keeps a few riflemen dug in behind sandbags between its base and the enemy.
+func _dig_in_defenders(army: Array) -> void:
+	var dug := army.filter(func(u): return u.deployed).size()
+	if dug >= 4:
+		return
+	var rp := _rally_point()
+	for u in army:
+		if dug >= 4:
+			break
+		if u.deployed or not u.can_dig_in() or attack_group.has(u.uid) or u.uid == scout_uid:
+			continue
+		if (u.order == "guard" or u.order == "idle") and not u.moving and u.pos.distance_to(rp) < MapGrid.T * 6.0:
+			u.cmd_deploy()
+			dug += 1
 
 # ---------------------------------------------------------------- navy and air force
 

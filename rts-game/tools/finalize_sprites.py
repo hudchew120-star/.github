@@ -2,6 +2,8 @@
 """Downsamples supersampled bake output (premultiplied box filter), gives sprites a light
 painted finish, and writes final sheets + metadata into assets/sprites/."""
 import json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from stylize import stylize
 import numpy as np
 from PIL import Image, ImageFilter
 
@@ -47,6 +49,8 @@ def finish(img):
     rgb = rgb * (1 - 0.18 * edge[..., None])
     return np.clip(np.concatenate([rgb, al[..., None]], axis=2), 0, 1)
 
+INK_PX = 5   # ink line width at the 3x supersampled resolution
+
 def to_img(a):
     return Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8), "RGBA")
 
@@ -59,7 +63,12 @@ def main():
         name = fn[:-5]
         meta = json.load(open(os.path.join(SRC, fn)))
         ss = meta["ss"]
-        col = finish(down(np.array(Image.open(os.path.join(SRC, name + ".png")).convert("RGBA")), ss))
+        raw = np.array(Image.open(os.path.join(SRC, name + ".png")).convert("RGBA"))
+        if meta.get("toon"):
+            # Hand-drawn style: ink the supersampled cel render before downsampling.
+            small = name.startswith("i_") or name.startswith("d_bush")
+            raw = stylize(raw, 3 if small else INK_PX, 0.3 if small else 0.2)
+        col = finish(down(raw, ss))
         if meta.get("shadow") and meta.get("separate_shadow"):
             # Aircraft: the shadow is drawn on the ground while the body flies above it.
             sil = down(np.array(Image.open(os.path.join(SRC, name + "_shadow.png")).convert("RGBA")), ss)[..., 3]

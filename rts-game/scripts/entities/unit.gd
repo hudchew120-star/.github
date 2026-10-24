@@ -141,7 +141,7 @@ func cmd_stop() -> void:
 
 func cmd_move(p: Vector2, keep_order: bool = false) -> void:
 	if deployed:
-		_set_deployed(false)
+		return      # dug in: press E (Deploy) to pack up before moving
 	if is_air_unit:
 		order = "move"
 		clear_target()
@@ -157,6 +157,13 @@ func cmd_move(p: Vector2, keep_order: bool = false) -> void:
 	_request_path()
 
 func cmd_attack(t) -> void:
+	if deployed:
+		# Dug in: fire at the target from the emplacement, never chase it.
+		target = t
+		target_uid = t.uid
+		forced_target = true
+		order = "hold"
+		return
 	if t == null:
 		return
 	if engineer and t.is_building():
@@ -172,6 +179,8 @@ func cmd_attack(t) -> void:
 	_request_path_to_target()
 
 func cmd_attack_move(p: Vector2) -> void:
+	if deployed:
+		return
 	order = "attack_move"
 	clear_target()
 	goal = p
@@ -205,6 +214,8 @@ func cmd_hold() -> void:
 	_stop_moving()
 
 func cmd_patrol(p: Vector2) -> void:
+	if deployed:
+		return
 	order = "patrol"
 	clear_target()
 	patrol_a = pos
@@ -213,6 +224,8 @@ func cmd_patrol(p: Vector2) -> void:
 	_request_path()
 
 func cmd_scatter() -> void:
+	if deployed:
+		return
 	var dir := Vector2.RIGHT.rotated(randf() * TAU)
 	var dest := pos + dir * MapGrid.T * randf_range(1.5, 3.0)
 	var prev := order

@@ -92,7 +92,7 @@ static func vehicle_model(id: String) -> Dictionary:
 	return {}
 
 static func showcase_cols(set_name: String) -> int:
-	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
+	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "dug": 5, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
 
 static func _rot(n: Node3D, deg: float) -> Node3D:
 	var w := Node3D.new()
@@ -156,6 +156,13 @@ static func showcase_set(set_name: String) -> Array:
 				var veh: bool = e[3] == 1
 				out.append({"label": e[2], "w": 1.0, "h": 1.0, "fit": true, "margin": 1.05, "team": BLUE if ff == "coalition" else RED,
 					"build": func(): return _rot(unit_model(sp, ff), -25.0 if veh else -60.0)})
+		"dug":
+			for d in [0.0, -45.0, -90.0, -135.0]:
+				var dd: float = d
+				out.append({"label": "", "w": 0.8, "h": 0.8, "fit": true, "margin": 1.1, "team": BLUE,
+					"build": func(): return _rot(H.soldier("infantry", "coalition", {"kneel": true, "sandbags": true}), dd)})
+			out.append({"label": "", "w": 0.8, "h": 0.8, "fit": true, "margin": 1.1, "team": BLUE,
+				"build": func(): return _rot(H.soldier("infantry", "coalition", {"kneel": true, "sandbags": true, "fire": 2}), -60.0)})
 		"closeup":
 			for f in ["coalition", "dominion"]:
 				for ang in [0.0, -45.0, -90.0, -135.0, 180.0]:

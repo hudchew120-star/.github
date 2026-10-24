@@ -6,7 +6,7 @@
    "dominion"
   ],
   "category": "infantry",
-  "role": "Cheap all-round infantry. Good against other infantry. Coalition riflemen press E to dig in behind sandbags (more range and damage, less damage taken).",
+  "role": "Cheap all-round infantry. Good against other infantry. Coalition riflemen press E to dig in behind sandbags: double damage, longer range, take about a third of the damage, but cannot move until E is pressed again.",
   "cost": 100,
   "build_time": 4,
   "hp": 50,
@@ -28,8 +28,8 @@
     "coalition"
    ],
    "range_mult": 1.5,
-   "damage_mult": 1.75,
-   "armor_mult": 0.5,
+   "damage_mult": 2.0,
+   "armor_mult": 0.35,
    "time": 1.0
   }
  },

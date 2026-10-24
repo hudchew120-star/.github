@@ -28,6 +28,7 @@ func _ready() -> void:
 	# Filters: comma-separated substrings; add "--resume" to skip sheets already in _bake_out.
 	var filters: PackedStringArray = (args[0] if args.size() > 0 else "").split(",", false)
 	var resume := args.has("--resume")
+	K.toon_mode = args.has("--toon")     # hand-drawn look: cel shading (ink lines are added by finalize_sprites.py)
 	await get_tree().process_frame
 	var specs: Array = SPECS.all()
 	var n := 0
@@ -202,6 +203,6 @@ func bake_sheet(spec: Dictionary) -> void:
 	if want_shadow:
 		ssheet.save_png(out_dir + "/" + spec.name + "_shadow.png")
 	var meta := {"res": R, "fw": fw, "fh": fh, "ax": spec.anchor.x, "ay": spec.anchor.y, "cols": cols, "rows": rows, "count": count,
-		"ss": SS, "mask": want_mask, "shadow": want_shadow, "separate_shadow": spec.get("separate_shadow", false), "extra": spec.get("extra", {})}
+		"ss": SS, "mask": want_mask, "shadow": want_shadow, "separate_shadow": spec.get("separate_shadow", false), "toon": K.toon_mode, "extra": spec.get("extra", {})}
 	var f := FileAccess.open(out_dir + "/" + spec.name + ".json", FileAccess.WRITE)
 	f.store_string(JSON.stringify(meta))

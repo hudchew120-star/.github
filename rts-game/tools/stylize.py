@@ -14,16 +14,20 @@ def _dilate(mask, r):
     img = Image.fromarray((mask * 255).astype(np.uint8))
     return np.array(img.filter(ImageFilter.MaxFilter(r * 2 + 1))).astype(np.float32) / 255.0
 
-def stylize(rgba, line_px=2):
+def stylize(rgba, line_px=2, threshold=0.16):
     a = rgba.astype(np.float32) / 255.0
     rgb, al = a[..., :3], a[..., 3]
     solid = (al > 0.5).astype(np.float32)
     # Interior lines: colour discontinuities between neighbouring pixels (cel band edges).
     lum = rgb @ np.array([0.3, 0.59, 0.11], dtype=np.float32)
-    feat = np.concatenate([rgb, lum[..., None] * 1.5], axis=2)
+    # Edges come from a smoothed copy so fine texture (camouflage, panels, noise) is not inked.
+    smooth_px = max(3, line_px + 1) | 1
+    sm = np.array(Image.fromarray((np.clip(rgb, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.MedianFilter(smooth_px))).astype(np.float32) / 255.0
+    sm_l = sm @ np.array([0.3, 0.59, 0.11], dtype=np.float32)
+    feat = np.concatenate([sm, sm_l[..., None] * 1.5], axis=2)
     gx = np.abs(np.diff(feat, axis=1, append=feat[:, -1:])).sum(axis=2)
     gy = np.abs(np.diff(feat, axis=0, append=feat[-1:])).sum(axis=2)
-    edge = np.clip((np.maximum(gx, gy) - 0.16) * 4.0, 0, 1) * solid
+    edge = np.clip((np.maximum(gx, gy) - threshold) * 4.0, 0, 1) * solid
     if line_px > 1:
         edge = _dilate(edge, max(1, line_px // 2))
     edge = np.array(Image.fromarray((edge * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6))).astype(np.float32) / 255.0
