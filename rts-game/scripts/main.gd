@@ -151,6 +151,9 @@ func _run_bench(seconds: int) -> void:
 		if u != null: u.cmd_attack_move(ep)
 		var v = game.spawn_unit(1, etypes[i % etypes.size()], ep - Vector2(randf_range(80, 400), randf_range(80, 400)))
 		if v != null: v.cmd_attack_move(bp)
+	var spd := OS.get_environment("BENCH_SPEED")
+	if spd != "":
+		game.set_speed(float(spd))
 	await get_tree().create_timer(4.0).timeout   # warm-up
 	for n in OS.get_environment("BENCH_HIDE").split(",", false):
 		var node = view.get(n)
@@ -300,10 +303,17 @@ func show_setup(mode: String) -> void:
 	var sizes := ["small", "medium", "large", "xlarge"]
 	var maps := ["Random (generated)"]
 	var map_files := [""]
+	var map_presets := [""]
+	for id in MapGen.PRESETS:
+		var pr: Dictionary = MapGen.PRESETS[id]
+		maps.append("%s  (%s, up to %d players)" % [pr.name, str(pr.size).capitalize(), int(pr.max_players)])
+		map_files.append("")
+		map_presets.append(id)
 	for f in DirAccess.get_files_at("res://maps"):
 		if f.ends_with(".json"):
 			maps.append(f.get_basename().capitalize())
 			map_files.append("res://maps/" + f)
+			map_presets.append("")
 	var o_map := _opt(v, "Map", maps, 0)
 	var o_size := _opt(v, "Map size (random maps)", ["Small 64x64", "Medium 96x96", "Large 128x128", "Extra large 176x176"], 1)
 	var waters := ["lakes", "coastal", "none"]
@@ -341,7 +351,7 @@ func show_setup(mode: String) -> void:
 	var h := HBoxContainer.new()
 	h.add_child(UITheme.button("Start", func():
 		var s := {
-			"mode": mode, "map_file": map_files[o_map.selected], "map_size": sizes[o_size.selected], "water": waters[o_water.selected], "seed": int(seed_box.value),
+			"mode": mode, "map_file": map_files[o_map.selected], "map_preset": map_presets[o_map.selected], "map_size": sizes[o_size.selected], "water": waters[o_water.selected], "seed": int(seed_box.value),
 			"player_faction": factions[o_pf.selected], "enemy_factions": [factions[o_ef.selected]],
 			"ai_count": o_ai.selected, "difficulty": diffs[o_diff.selected], "start_credits": credits[o_cred.selected],
 			"start_units": starts[o_start.selected], "start_power_bonus": [0, 100, 500, 99999][o_power.selected],
@@ -361,8 +371,8 @@ func show_settings() -> void:
 	_header(v, "Settings")
 	var S: Dictionary = Config.settings
 	v.add_child(UITheme.label("Display", 17, UITheme.AMBER))
-	var modes := ["iso", "3d", "2d"]
-	var gfx := _opt(v, "Graphics", ["Classic isometric (recommended)", "Real-time 3D", "Top-down 2D (low-end PCs)"], maxi(modes.find(graphics_mode()), 0))
+	var modes := ["iso", "2d"]
+	var gfx := _opt(v, "Graphics", ["Classic isometric (recommended)", "Top-down 2D (very old PCs)"], maxi(modes.find(graphics_mode()), 0))
 	gfx.item_selected.connect(func(i): S.graphics = modes[i])
 	_slider(v, "UI scale", 0.75, 1.75, 0.05, float(S.ui_scale), func(x):
 		S.ui_scale = x

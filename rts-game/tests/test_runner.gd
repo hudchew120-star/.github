@@ -16,7 +16,7 @@ func _ready() -> void:
 		"test_cheat_spawn_and_destroy", "test_large_values", "test_save_load", "test_fog", "test_ai_match",
 		"test_victory", "test_view3d_picking", "test_iso_view",
 		"test_coastal_map", "test_naval", "test_submarine_detection", "test_aircraft", "test_anti_air",
-		"test_engineer", "test_repair_facility",
+		"test_engineer", "test_repair_facility", "test_map_presets",
 	]
 	var only = OS.get_environment("RTS_TEST")
 	for t in tests:
@@ -771,3 +771,31 @@ func test_repair_facility() -> void:
 
 func _can_hit(u, t) -> bool:
 	return u != null and t != null and u._weapon_for(t) != null
+
+func test_map_presets() -> void:
+	for id in MapGen.PRESETS:
+		var t0 := Time.get_ticks_msec()
+		var m := MapGen.generate(MapGen.preset_opts(id, 4))
+		var pr: Dictionary = MapGen.PRESETS[id]
+		check(m.starts.size() == int(pr.max_players), "%s has %d start positions" % [id, pr.max_players])
+		check(m.name == pr.name, "%s is named %s" % [id, pr.name])
+		for i in range(1, m.starts.size()):
+			check(m.find_path(m.starts[0], m.starts[i], "track").size() > 0, "%s: base %d reachable by land" % [id, i])
+		for st in m.starts:
+			check(m.buildable(st), "%s: start %s is buildable" % [id, st])
+		if OS.get_environment("RTS_MAP_PREVIEW") != "":
+			var img := Image.create(m.w, m.h, false, Image.FORMAT_RGB8)
+			for y in m.h:
+				for x in m.w:
+					var c := Color(m.terrain_def(Vector2i(x, y)).get("color", "#777"))
+					if m.ore[m.idx(Vector2i(x, y))] > 0:
+						c = Color(0.9, 0.7, 0.2)
+					img.set_pixel(x, y, c)
+			for st in m.starts:
+				for dy in range(-2, 3):
+					for dx in range(-2, 3):
+						img.set_pixel(clampi(st.x + dx, 0, m.w - 1), clampi(st.y + dy, 0, m.h - 1), Color(1, 0, 1))
+			img.resize(256, 256, Image.INTERPOLATE_NEAREST)
+			img.save_png(OS.get_environment("RTS_MAP_PREVIEW") + "/map_%s.png" % id)
+		print("   %s %dx%d in %d ms" % [id, m.w, m.h, Time.get_ticks_msec() - t0])
+		await get_tree().process_frame

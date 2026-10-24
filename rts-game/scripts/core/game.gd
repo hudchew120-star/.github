@@ -8,6 +8,7 @@ signal entity_removed(e)
 
 const T := MapGrid.T
 const DT := 1.0 / 30.0
+const PHYS_HZ := 30.0
 const PATH_BUDGET := 60
 const PLAYER_COLORS := ["#3f7fd9", "#c8352c", "#d9b43f", "#4fae4f"]
 
@@ -65,6 +66,8 @@ func setup(s: Dictionary, is_headless: bool = false) -> void:
 		cheats.load_persisted()
 	if settings.has("map_data"):
 		map = MapGen.from_text_dict(settings.map_data)
+	elif String(settings.get("map_preset", "")) != "":
+		map = MapGen.generate(MapGen.preset_opts(settings.map_preset, 1 + int(settings.ai_count), settings.resources))
 	elif String(settings.get("map_file", "")) != "":
 		map = MapGen.load_file(settings.map_file)
 	if map == null:
@@ -98,6 +101,8 @@ func _victory_text() -> String:
 
 func _create_players() -> void:
 	var pf: String = settings.player_faction
+	# A map has a fixed number of start positions; extra AI opponents are dropped.
+	settings.ai_count = clampi(int(settings.ai_count), 0, maxi(map.starts.size() - 1, 0))
 	var n := 1 + int(settings.ai_count)
 	var efs: Array = settings.enemy_factions
 	var used_colors := []
@@ -883,15 +888,22 @@ func _service_repairs() -> void:
 
 # ---------------------------------------------------------------- simulation loop
 
-func _physics_process(_delta: float) -> void:
-	if paused or over:
+const STEP_BUDGET_USEC := 9000
+
+## The simulation runs at a fixed 30 ticks per second of game time. Ticks are spread over the
+## rendered frames (instead of bursts on physics frames) and capped by a time budget, so a fast
+## game speed stays smooth: if a PC cannot keep up, the game slows slightly instead of stuttering.
+func _process(delta: float) -> void:
+	if paused or over or headless:
 		return
-	accumulator += speed
-	var n := 0
-	while accumulator >= 1.0 and n < 8:
+	accumulator = minf(accumulator + delta * PHYS_HZ * speed, 4.0)
+	var t0 := Time.get_ticks_usec()
+	while accumulator >= 1.0:
 		accumulator -= 1.0
 		step()
-		n += 1
+		if Time.get_ticks_usec() - t0 > STEP_BUDGET_USEC:
+			accumulator = minf(accumulator, 1.0)
+			break
 
 func set_speed(v: float) -> void:
 	speed = clampf(v, 0.25, 8.0)

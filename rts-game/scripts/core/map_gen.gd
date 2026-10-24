@@ -5,8 +5,37 @@ extends RefCounted
 const SIZES := {"small": 64, "medium": 96, "large": 128, "xlarge": 176}
 const LEGEND := {".": "grass", "d": "dirt", "s": "sand", "w": "water", "~": "shore", "=": "road", "r": "rock", "#": "cliff", "b": "bridge", "f": "forest"}
 
+## Named battlefields shown in the skirmish map list. Each is generated deterministically.
+const PRESETS := {
+	"coastal_clash": {"name": "Coastal Clash", "size": "medium", "water": "coastal", "style": "temperate", "seed": 11, "max_players": 4,
+		"desc": "Bases on the coast with a central lake. Navies matter."},
+	"river_crossing": {"name": "River Crossing", "size": "medium", "water": "river", "style": "temperate", "seed": 23, "max_players": 2,
+		"desc": "A wide river splits the map; fight over the bridges."},
+	"twin_islands": {"name": "Twin Islands", "size": "large", "water": "islands", "style": "temperate", "seed": 31, "max_players": 2,
+		"desc": "Each side holds an island joined by a single long bridge."},
+	"desert_canyon": {"name": "Desert Canyon", "size": "medium", "water": "none", "style": "desert", "seed": 47, "max_players": 2,
+		"desc": "Sun-baked sand cut by canyon walls and narrow passes."},
+	"four_corners": {"name": "Four Corners", "size": "large", "water": "lakes", "style": "temperate", "seed": 5, "max_players": 4,
+		"desc": "Classic four-player map with lakes and forests."},
+	"green_valley": {"name": "Green Valley", "size": "small", "water": "none", "style": "temperate", "seed": 8, "max_players": 2,
+		"desc": "Small and fast: rich ore, open fields, no water."},
+	"archipelago": {"name": "Archipelago", "size": "xlarge", "water": "islands", "style": "temperate", "seed": 77, "max_players": 4,
+		"desc": "Four islands around a central hub. Air and sea power win here."},
+	"highland_pass": {"name": "Highland Pass", "size": "large", "water": "none", "style": "highland", "seed": 61, "max_players": 2,
+		"desc": "Rocky highlands with cliff ridges and narrow passes."},
+}
+
+static func preset_opts(id: String, players: int, resources: String = "normal") -> Dictionary:
+	var p: Dictionary = PRESETS.get(id, PRESETS.coastal_clash)
+	var o := p.duplicate()
+	o["players"] = clampi(players, 2, int(p.max_players))
+	o["resources"] = resources
+	return o
+
 ## opts: size (key of SIZES or int), players (2-4), seed, resources ("low","normal","high"),
-## water ("none", "lakes", "coastal": a sea ring along the map edges plus a central lake, so every base has a shore for a naval yard)
+## style ("temperate", "desert", "highland"),
+## water ("none", "lakes", "coastal": a sea ring along the map edges plus a central lake, so every base has a shore
+## for a naval yard; "river": a winding river between the sides; "islands": every base on its own island)
 static func generate(opts: Dictionary) -> MapGrid:
 	var size_v = opts.get("size", "medium")
 	var n: int = SIZES.get(size_v, 96) if typeof(size_v) == TYPE_STRING else int(size_v)
@@ -15,7 +44,10 @@ static func generate(opts: Dictionary) -> MapGrid:
 	rng.seed = int(opts.get("seed", 1))
 	var m := MapGrid.new()
 	m.setup(n, n)
-	m.name = "Generated %s (%d)" % [str(size_v), int(opts.get("seed", 1))]
+	m.name = str(opts.get("name", "Generated %s (%d)" % [str(size_v), int(opts.get("seed", 1))]))
+	var style: String = str(opts.get("style", "temperate"))
+	var inset0 := maxi(8, n / 8)
+	var start_pts := [Vector2(inset0, inset0), Vector2(n - 1 - inset0, n - 1 - inset0), Vector2(n - 1 - inset0, inset0), Vector2(inset0, n - 1 - inset0)]
 
 	var elev := FastNoiseLite.new()
 	elev.seed = rng.randi()
@@ -48,6 +80,42 @@ static func generate(opts: Dictionary) -> MapGrid:
 				var lake_r := float(n) * 0.09 + shore_noise.get_noise_2d(x * 2, y * 2) * 3.0
 				if dc < lake_r:
 					e = minf(e, -0.42)
+			if water_mode == "river":
+				# Winding river along the anti-diagonal, between players 1 and 2.
+				var dd := (float(x + y) - float(n - 1)) / sqrt(2.0)
+				var wob := shore_noise.get_noise_2d(x * 0.6, y * 0.6) * float(n) * 0.08
+				var dist := absf(dd + wob)
+				var width := float(n) * 0.035 + 1.5
+				if dist < width:
+					e = minf(e, -0.42)
+				elif dist < width + 1.5:
+					e = minf(e, -0.33)
+				elif dist < width + 3.0:
+					e = clampf(e, -0.3, -0.24)
+				else:
+					e = maxf(e, -0.24)
+			elif water_mode == "islands":
+				# Sea everywhere except an island around every start position and a central hub.
+				var best := 1e9
+				for k in players:
+					best = minf(best, Vector2(x, y).distance_to(start_pts[k]) / (float(n) * 0.24))
+				best = minf(best, Vector2(x, y).distance_to(Vector2(n / 2, n / 2)) / (float(n) * 0.12))
+				var land := best + shore_noise.get_noise_2d(x, y) * 0.25
+				if land > 1.0:
+					e = minf(e, -0.4 - (land - 1.0) * 0.3)
+				elif land > 0.9:
+					e = minf(e, -0.33)
+				elif land > 0.82:
+					e = clampf(e, -0.3, -0.24)
+				else:
+					e = maxf(e, -0.24)
+			if style == "desert" or style == "highland":
+				# Canyon walls: thin ridges where a second noise crosses zero.
+				var ridge := absf(moist.get_noise_2d(x * 1.3 + 500.0, y * 1.3))
+				if ridge < 0.035 and e > -0.24:
+					e = 0.5
+				elif ridge < 0.07 and e > -0.24:
+					e = maxf(e, 0.38)
 			var mo := moist.get_noise_2d(x, y)
 			var id := "grass"
 			if e < -0.38:
@@ -64,6 +132,14 @@ static func generate(opts: Dictionary) -> MapGrid:
 				id = "forest"
 			elif mo < -0.32:
 				id = "dirt"
+			if style == "desert":
+				if id == "grass":
+					id = "sand" if mo > -0.05 else "dirt"
+				elif id == "forest":
+					id = "rock" if rng.randf() < 0.5 else "sand"
+			elif style == "highland":
+				if id == "grass" and (e > 0.18 or mo < -0.15):
+					id = "dirt" if e < 0.28 else "rock"
 			m.set_terrain(Vector2i(x, y), id)
 
 	# Start positions in corners (inset), ordered so player 1 and 2 are opposite.
@@ -80,8 +156,13 @@ static func generate(opts: Dictionary) -> MapGrid:
 	# Roads from every start to the centre and around (guarantees land connectivity).
 	for s in m.starts:
 		_carve_road(m, s, center, rng)
-	for i in m.starts.size():
-		_carve_road(m, m.starts[i], m.starts[(i + 1) % m.starts.size()], rng)
+	if water_mode == "river" and m.starts.size() >= 2:
+		# Two more crossings up and down the river.
+		_carve_road(m, m.starts[0], Vector2i(int(n * 0.72), int(n * 0.42)), rng)
+		_carve_road(m, m.starts[1], Vector2i(int(n * 0.28), int(n * 0.58)), rng)
+	if water_mode != "islands":
+		for i in m.starts.size():
+			_carve_road(m, m.starts[i], m.starts[(i + 1) % m.starts.size()], rng)
 
 	# Ore fields: one rich field near every start, plus contested fields.
 	var richness: float = {"low": 0.6, "normal": 1.0, "high": 1.6}.get(opts.get("resources", "normal"), 1.0)

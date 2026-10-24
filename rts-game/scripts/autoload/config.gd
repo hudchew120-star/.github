@@ -43,6 +43,9 @@ func load_settings() -> void:
 		return
 	for k in settings.keys():
 		settings[k] = cf.get_value("settings", k, settings[k])
+	# The real-time 3D view lacks the newer units and structures; the isometric view has all the art.
+	if settings.graphics == "3d":
+		settings.graphics = "iso"
 	for k in keymap.keys():
 		var v = cf.get_value("keys", k, keymap[k])
 		if v is Array and v.size() > 0:
