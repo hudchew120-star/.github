@@ -16,6 +16,7 @@ func _ready() -> void:
 	var set_name: String = args[0] if args.size() > 0 else "infantry"
 	var out: String = args[1] if args.size() > 1 else "/tmp/showcase.png"
 	var ppu: float = float(args[2]) if args.size() > 2 else 400.0
+	K.toon_mode = args.has("--toon")
 	_setup()
 	await get_tree().process_frame
 	var items: Array = CAT.showcase_set(set_name)

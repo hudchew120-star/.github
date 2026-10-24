@@ -116,7 +116,7 @@ func _stage_scene(kind: String) -> void:
 			var u = game.spawn_unit(ships[i][1], ships[i][0], MapGrid.cell_center(c))
 			if u != null:
 				u.facing = randf() * TAU
-	var land := [["mtank", 0, Vector2(4, 5)], ["mtank", 0, Vector2(5, 4)], ["ltank", 0, Vector2(6, 6)], ["aa_c", 0, Vector2(3, 6)], ["jeep", 0, Vector2(7, 4)],
+	var land := [] if kind == "specials" else [["mtank", 0, Vector2(4, 5)], ["mtank", 0, Vector2(5, 4)], ["ltank", 0, Vector2(6, 6)], ["aa_c", 0, Vector2(3, 6)], ["jeep", 0, Vector2(7, 4)],
 		["e1", 0, Vector2(6, 2)], ["e1", 0, Vector2(6.4, 2.5)], ["e1", 0, Vector2(6.8, 2.1)], ["e3", 0, Vector2(7.2, 2.6)], ["eng", 0, Vector2(5.6, 2.8)],
 		["htank", 1, Vector2(10, 9)], ["aa_d", 1, Vector2(11, 8)], ["e1", 1, Vector2(9, 10.5)], ["e4", 1, Vector2(9.5, 11)], ["flm", 1, Vector2(10, 11.2)], ["e1", 1, Vector2(10.5, 10.6)]]
 	for e in land:
@@ -132,8 +132,41 @@ func _stage_scene(kind: String) -> void:
 			u.altitude_now = u.altitude
 			u.facing = 0.8 if e[1] == 0 else 3.9
 			u.cmd_move(u.pos + Vector2(cos(u.facing), sin(u.facing)) * 160.0)
+	if kind == "specials":
+		var c0: Vector2 = bp + Vector2(6, 6) * MapGrid.T
+		for i in 4:
+			var gi = game.spawn_unit(0, "e1", c0 + Vector2(-90 + i * 34, -40))
+			if gi != null:
+				gi.facing = 0.8
+				gi.cmd_deploy()
+				gi.deploy_t = 0.0
+		for i in 3:
+			var rj = game.spawn_unit(0, "jjet", c0 + Vector2(40 + i * 40, -110))
+			if rj != null:
+				rj.facing = 0.8
+		var cm = game.spawn_unit(0, "cmdo", c0 + Vector2(-30, 30))
+		if cm != null:
+			cm.facing = 0.8
+		for i in 3:
+			var dg = game.spawn_unit(1, "dog", c0 + Vector2(150 + i * 30, 120))
+			if dg != null:
+				dg.facing = 3.9
+		var ml = game.spawn_unit(1, "mnly", c0 + Vector2(220, 40))
+		if ml != null:
+			ml.facing = 3.9
+		var iv = game.spawn_unit(1, "ivan", c0 + Vector2(190, 170))
+		if iv != null:
+			iv.facing = 3.9
+		game.specials.powers[0] = {"paradrop": game.sim_time}
+		game.specials.use_power(0, "paradrop", c0 + Vector2(-140, 120))
+		game.specials.powers[1] = {"bomber": game.sim_time}
+		game.specials.use_power(1, "bomber", c0 + Vector2(-260, -200))
+		for f in game.specials.flyovers:
+			f.pos = f.target - f.dir * MapGrid.T * (5.0 if f.kind == "transport" else 9.0)
 	if controller != null:
-		if kind == "naval" and yard.x >= 0:
+		if kind == "specials":
+			controller.center_on(bp + Vector2(5, 6) * MapGrid.T)
+		elif kind == "naval" and yard.x >= 0:
 			controller.center_on(MapGrid.cell_center(yard) + Vector2(2.5, 3.5) * MapGrid.T)
 		else:
 			controller.center_on(bp + Vector2(7, 7) * MapGrid.T)

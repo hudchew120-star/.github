@@ -7,6 +7,20 @@ extends RefCounted
 static var _mats := {}
 static var shader: Shader
 static var mask_mode: bool = false     # true while rendering team-colour masks
+static var toon_mode: bool = false     # hand-drawn look: flat cel-shaded colour bands (used with ink outlines)
+
+## Cel lighting: three flat tones per light plus a crisp highlight, like painted animation cels.
+const TOON_LIGHT := """
+void light() {
+	float ndl = dot(NORMAL, LIGHT);
+	float band = ndl > 0.45 ? 0.9 : (ndl > -0.05 ? 0.64 : 0.42);
+	DIFFUSE_LIGHT += band * ATTENUATION * LIGHT_COLOR / PI;
+	vec3 hv = normalize(LIGHT + VIEW);
+	float spec = step(0.965, dot(NORMAL, hv)) * (1.0 - ROUGHNESS) * 0.8;
+	SPECULAR_LIGHT += spec * ATTENUATION * LIGHT_COLOR / PI;
+}
+"""
+static var _toon_shader: Shader
 
 const PAINT := """
 shader_type spatial;
@@ -105,6 +119,11 @@ void fragment() { if (wpos.y > cut_y) { discard; } ALBEDO = vec3(value); }
 """
 
 static func _shader() -> Shader:
+	if toon_mode:
+		if _toon_shader == null:
+			_toon_shader = Shader.new()
+			_toon_shader.code = PAINT.replace("render_mode diffuse_lambert_wrap, specular_schlick_ggx, cull_disabled;", "render_mode cull_disabled;") + TOON_LIGHT
+		return _toon_shader
 	if shader == null:
 		shader = Shader.new()
 		shader.code = PAINT
@@ -125,7 +144,7 @@ static func mask_material(team: bool) -> ShaderMaterial:
 
 ## Painted material. Extra params: panel, grime, stripes, tread, corrugate, noise_amt, emit.
 static func paint(col: Color, metal: float = 0.0, rough: float = 0.75, extra: Dictionary = {}) -> ShaderMaterial:
-	var k := "%s_%.2f_%.2f_%s" % [col.to_html(), metal, rough, str(extra)]
+	var k := "%s_%.2f_%.2f_%s_%s" % [col.to_html(), metal, rough, str(extra), toon_mode]
 	if _mats.has(k):
 		return _mats[k]
 	var m := ShaderMaterial.new()

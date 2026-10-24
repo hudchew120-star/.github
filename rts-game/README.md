@@ -24,16 +24,27 @@ automatically by `.github/workflows/build-game.yml` whenever the game changes.
 | Advanced Coalition ("the good side") | Iron Dominion ("the evil side") |
 | --- | --- |
 | Modern western style: multi-tone camouflage, plate carriers, rounded combat helmets, carbines with optics; faceted armour with side skirts, sand and steel paint | Eastern-bloc style: olive field uniforms, steel helmets with red stars, chest rigs, assault rifles with wooden furniture; cast dome turrets, reactive armour, rivets, fuel drums |
-| Rifleman, Lancer (anti-tank), Engineer | Conscript, RPG trooper, Flame trooper, Engineer |
+| Rifleman (press **E** to dig in behind sandbags), Lancer (anti-tank), Engineer, **Rocketeer** (jetpack, flies), **Commando** (twin pistols, C4 on structures, one at a time) | Conscript, RPG trooper, Flame trooper, Engineer, **Demolition Trooper** (timed charges on any target), **Attack Dog** (kills infantry in one bite) |
 | Ranger utility vehicle, Viper light tank, Warden battle tank, Skyhawk AA | Mammoth twin-gun heavy tank, SAM carrier |
 | Hornet attack helicopter, Falcon stealth fighter | Krait gunship, strike fighter with bombs |
 | Patrol boat, destroyer (sonar finds submarines) | Submarine (invisible while submerged), battlecruiser with cruise missiles |
-| Patriot SAM site | Flak cannon |
+| Patriot SAM site | Flak cannon, **Minelayer** (press **E** to lay hidden mines) |
+| Support power: **Paratroopers** (6 riflemen anywhere, free, recharges in 3 min) | Support power: **Bomber Strike** (3 bombers carpet-bomb a line, recharges in 4 min) |
+
+Support powers need an Airfield; their buttons sit under the minimap in the sidebar
+(click, then click the target on the map).
+
+### Maps
+
+Skirmish offers eight named maps besides random generation: **Coastal Clash**, **River Crossing**
+(three bridges), **Twin Islands** (one long bridge), **Desert Canyon**, **Four Corners** (4 players),
+**Green Valley** (small), **Archipelago** (4 islands, extra large) and **Highland Pass**.
 
 Both sides build airfields (landing pads; aircraft return to rearm), **naval yards on water**,
 and repair facilities. Engineers capture enemy structures or fully repair your own.
 Generated maps have a **Water** option (lakes, coastal for naval warfare, or dry land).
 
+![Paratroopers, dug-in riflemen, rocketeers, commando, dogs and a minelayer](docs/screenshots/iso_specials.png)
 ![Naval base on a coastal map](docs/screenshots/iso_naval.png)
 ![Armies and helicopters](docs/screenshots/iso_army.png)
 ![Infantry of both sides](docs/screenshots/infantry_closeup.png)

@@ -9,8 +9,10 @@ const HM := preload("res://tools/art/hd_models.gd")
 ## Model id for a unit sprite (see data/units.json) and faction.
 static func unit_model(sprite: String, f: String) -> Node3D:
 	match sprite:
-		"infantry", "rocket_inf", "heavy_inf", "flame_inf", "engineer":
+		"infantry", "rocket_inf", "heavy_inf", "flame_inf", "engineer", "rocketeer", "commando", "demolition":
 			return H.soldier(sprite, f, {})
+		"dog": return H.dog(f, {})
+		"minelayer": return _veh(V.minelayer(), 0.0)
 		"tank_light": return _veh(V.light_tank(), 0.0)
 		"tank_medium": return _veh(V.medium_tank(), 0.0)
 		"tank_heavy": return _veh(V.heavy_tank(), 0.0)
@@ -90,7 +92,7 @@ static func vehicle_model(id: String) -> Dictionary:
 	return {}
 
 static func showcase_cols(set_name: String) -> int:
-	return {"infantry": 7, "poses": 7, "closeup": 5, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
+	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
 
 static func _rot(n: Node3D, deg: float) -> Node3D:
 	var w := Node3D.new()
@@ -136,6 +138,24 @@ static func showcase_set(set_name: String) -> Array:
 					var ff: String = f
 					out.append({"label": "%s_%s" % [t, f], "w": 0.96, "h": 0.76, "fit": true, "margin": 1.04, "team": BLUE if f == "coalition" else RED,
 						"build": func(): return building_model(sp, ff)})
+		"new":
+			for e in [["rocketeer", "coalition", "Rocketeer", 0.6], ["commando", "coalition", "Commando", 0.6], ["demolition", "dominion", "Demolition Trooper", 0.6],
+					["dog", "dominion", "Attack Dog", 0.6], ["minelayer", "dominion", "Minelayer", 1.0], ["transport", "coalition", "Paratrooper transport", 1.8], ["bomber", "dominion", "Bomber", 1.9]]:
+				var sp: String = e[0]
+				var ff: String = e[1]
+				out.append({"label": e[2], "w": 1.0, "h": 0.8, "fit": true, "margin": 1.06, "team": BLUE if ff == "coalition" else RED,
+					"build": func():
+						if sp == "transport": return _veh(V.transport_plane(), -25.0)
+						if sp == "bomber": return _veh(V.bomber_plane(), -25.0)
+						return _rot(unit_model(sp, ff), -60.0 if sp != "minelayer" else -25.0)})
+		"style":
+			for e in [["infantry", "coalition", "Rifleman", 0], ["infantry", "dominion", "Conscript", 0], ["commando", "coalition", "Commando", 0], ["demolition", "dominion", "Demolition Trooper", 0],
+					["tank_medium", "coalition", "Warden Battle Tank", 1], ["tank_heavy", "dominion", "Mammoth Tank", 1], ["heli", "coalition", "Hornet Gunship", 1], ["dog", "dominion", "Attack Dog", 0]]:
+				var sp: String = e[0]
+				var ff: String = e[1]
+				var veh: bool = e[3] == 1
+				out.append({"label": e[2], "w": 1.0, "h": 1.0, "fit": true, "margin": 1.05, "team": BLUE if ff == "coalition" else RED,
+					"build": func(): return _rot(unit_model(sp, ff), -25.0 if veh else -60.0)})
 		"closeup":
 			for f in ["coalition", "dominion"]:
 				for ang in [0.0, -45.0, -90.0, -135.0, 180.0]:

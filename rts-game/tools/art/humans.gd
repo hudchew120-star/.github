@@ -23,6 +23,21 @@ static func _m(col: Color, rough: float = 0.85, extra: Dictionary = {}) -> Shade
 	return K.paint(col, 0.0, rough, extra)
 
 static func kit(faction: String, kind: String) -> Dictionary:
+	var k := _kit(faction, kind)
+	if kind == "commando":
+		k.uni = _m(Color(0.16, 0.17, 0.18), 0.85, {"noise_amt": 0.25})
+		k.uni_dark = _m(Color(0.11, 0.12, 0.13), 0.85, {"noise_amt": 0.25})
+		k.boot = _m(Color(0.06, 0.06, 0.06), 0.5)
+		k.glove = _m(Color(0.08, 0.08, 0.08), 0.6)
+	elif kind == "demolition":
+		k.uni = _m(Color(0.36, 0.25, 0.17), 0.7, {"noise_amt": 0.35})          # leather jacket
+		k.uni_dark = _m(Color(0.27, 0.27, 0.22), 0.9, {"noise_amt": 0.3})
+	elif kind == "rocketeer":
+		k.uni = _m(Color(0.44, 0.47, 0.5), 0.8, {"noise_amt": 0.2})            # flight suit
+		k.uni_dark = _m(Color(0.36, 0.39, 0.42), 0.8, {"noise_amt": 0.2})
+	return k
+
+static func _kit(faction: String, kind: String) -> Dictionary:
 	if faction == "dominion":
 		var uni := _m(Color(0.45, 0.43, 0.3), 0.9, {"noise_amt": 0.3, "fabric": 0.0})
 		if kind == "engineer":
@@ -69,7 +84,8 @@ static func soldier(kind: String, faction: String, pose: Dictionary) -> Node3D:
 	var fire: int = int(pose.get("fire", 0))
 	var dead: float = pose.get("dead", 0.0)
 	var walking := phase >= 0.0
-	var unarmed := kind == "engineer"
+	var unarmed := kind == "engineer" or kind == "demolition"
+	var flying := kind == "rocketeer"
 	# ---- legs (FK in the sagittal plane)
 	var th_l := 0.03
 	var th_r := 0.03
@@ -90,6 +106,14 @@ static func soldier(kind: String, faction: String, pose: Dictionary) -> Node3D:
 		kn_l = 0.32
 		kn_r = 0.08
 		lean = 0.1
+	if flying:
+		# Hanging under the jetpack: legs trail back, knees bent, body leaning into the flight.
+		var bob := sin(phase * TAU) * 0.08 if walking else 0.0
+		th_l = -0.25 + bob
+		th_r = -0.12 - bob
+		kn_l = 0.5
+		kn_r = 0.35
+		lean = 0.28 if walking else 0.12
 	var hips := [Vector3(0, 0.95, -0.095 * wide), Vector3(0, 0.95, 0.095 * wide)]
 	var legs := [[th_l, kn_l], [th_r, kn_r]]
 	var ankles := []
@@ -145,8 +169,12 @@ static func soldier(kind: String, faction: String, pose: Dictionary) -> Node3D:
 	_head(torso, head_c, kind, faction, C)
 	# ---- arms and weapon
 	var sh := [Vector3(0.0, 0.47, -0.2 * tw), Vector3(0.0, 0.47, 0.2 * tw)]
-	if unarmed:
+	if kind == "demolition":
+		_demolition_arms(torso, sh, phase, fire, C)
+	elif unarmed:
 		_engineer_arms(torso, sh, phase, fire, C, faction)
+	elif kind == "commando":
+		_commando_arms(torso, sh, fire, walking, phase, C)
 	else:
 		_armed(torso, sh, kind, faction, C, fire, walking, phase)
 	if dead > 0.0:
@@ -204,6 +232,31 @@ static func _upper_gear(torso: Node3D, kind: String, faction: String, C: Diction
 			K.add(torso, K.lathe([Vector2(0.0, -0.2), Vector2(0.07, -0.18), Vector2(0.075, 0.15), Vector2(0.05, 0.2), Vector2(0.0, 0.21)], 16), K.paint(Color(0.62, 0.24, 0.12), 0.35, 0.45), Vector3(-0.22, 0.3, z))
 		K.add(torso, K.bevel_box(Vector3(0.04, 0.4, 0.24), 0.01), C.strap, Vector3(-0.16, 0.3, 0))
 		K.add(torso, K.cylinder(0.03, 0.05, 10), C.metal, Vector3(-0.22, 0.53, 0))
+	if kind == "rocketeer":
+		# Twin-nozzle jetpack with exhaust flames.
+		K.add(torso, K.bevel_box(Vector3(0.12, 0.34, 0.3), 0.04), C.gear2, Vector3(-0.2, 0.32, 0))
+		for z in [-0.09, 0.09]:
+			K.add(torso, K.lathe([Vector2(0.0, -0.22), Vector2(0.065, -0.2), Vector2(0.07, 0.12), Vector2(0.05, 0.18), Vector2(0.0, 0.19)], 14), K.paint(Color(0.7, 0.72, 0.74), 0.7, 0.3), Vector3(-0.29, 0.3, z))
+			K.add(torso, K.lathe([Vector2(0.05, 0.0), Vector2(0.06, -0.05)], 12, true, false, false), C.metal, Vector3(-0.29, 0.08, z))
+			K.add(torso, K.lathe([Vector2(0.05, 0.0), Vector2(0.03, -0.2), Vector2(0.0, -0.36)], 12), K.paint(Color(1.0, 0.62, 0.2), 0.0, 0.4, {"emit": 3.5, "noise_amt": 0.4}), Vector3(-0.29, 0.03, z))
+		for z in [-1.0, 1.0]:
+			K.add(torso, K.bevel_box(Vector3(0.05, 0.05, 0.18), 0.01), C.metal, Vector3(-0.08, 0.2, z * 0.24))   # control grips
+	if kind == "commando":
+		for z in [-0.12, 0.12]:
+			K.add(torso, K.bevel_box(Vector3(0.06, 0.1, 0.05), 0.012), C.metal, Vector3(0.02, -0.02, z * 1.2), Vector3(0, 0, 10))  # holsters
+		K.tube(torso, Vector3(0.14, 0.48, -0.15), Vector3(0.12, 0.05, 0.16), 0.022, K.paint(Color(0.35, 0.3, 0.2), 0.3, 0.6), 6)  # bandolier
+		for i in 5:
+			K.add(torso, K.bevel_box(Vector3(0.03, 0.04, 0.02), 0.005), K.paint(Color(0.8, 0.65, 0.25), 0.8, 0.3), Vector3(0.15, 0.4 - i * 0.08, -0.1 + i * 0.06))
+	if kind == "demolition":
+		# Dynamite bandoliers across the chest and a satchel of charges.
+		var red := K.paint(Color(0.75, 0.16, 0.1), 0.1, 0.6)
+		for side in [-1.0, 1.0]:
+			for i in 6:
+				var t := float(i) / 5.0
+				var p := Vector3(0.14, 0.5 - t * 0.42, side * (-0.14 + t * 0.26))
+				K.add(torso, K.cylinder(0.022, 0.1, 8), red, p, Vector3(0, 0, 90))
+		K.add(torso, K.bevel_box(Vector3(0.12, 0.18, 0.2), 0.03), C.gear2, Vector3(-0.17, 0.25, 0))
+		K.add(torso, K.cylinder(0.03, 0.04, 10), K.paint(Color(0.9, 0.85, 0.2), 0.0, 0.5, {"emit": 0.6}), Vector3(-0.1, 0.36, 0.08), Vector3(90, 0, 0))   # timer light
 	if kind == "engineer":
 		# Large tool pack with a coiled cable and a hi-vis band.
 		K.add(torso, K.bevel_box(Vector3(0.18, 0.36, 0.3), 0.04), C.gear2, Vector3(-0.22, 0.3, 0))
@@ -222,6 +275,21 @@ static func _head(torso: Node3D, c: Vector3, kind: String, faction: String, C: D
 		for z in [-0.035, 0.035]:
 			K.add(torso, K.cylinder(0.025, 0.012, 12), K.paint(Color(0.3, 0.42, 0.45), 0.6, 0.2), c + Vector3(0.11, 0.015, z), Vector3(0, 0, 90))
 		K.add(torso, K.cylinder(0.035, 0.06, 12), K.paint(Color(0.2, 0.22, 0.2), 0.4, 0.5), c + Vector3(0.13, -0.07, 0), Vector3(0, 0, 70))
+	if kind == "commando":
+		K.ellipsoid(torso, c + Vector3(-0.01, 0.1, 0.0), Vector3(0.11, 0.045, 0.1), K.paint(Color(0.55, 0.08, 0.08), 0.0, 0.9), Vector3(0, 0, -12))   # beret
+		K.add(torso, K.bevel_box(Vector3(0.015, 0.03, 0.15), 0.008), K.paint(Color(0.04, 0.04, 0.05), 0.9, 0.08), c + Vector3(0.098, 0.018, 0))   # sunglasses
+		return
+	if kind == "demolition":
+		K.ellipsoid(torso, c + Vector3(-0.005, 0.05, 0), Vector3(0.115, 0.08, 0.1), K.paint(Color(0.3, 0.2, 0.13), 0.1, 0.6))   # leather aviator cap
+		for z in [-0.035, 0.035]:
+			K.add(torso, K.cylinder(0.028, 0.02, 12), K.paint(Color(0.55, 0.42, 0.2), 0.7, 0.2), c + Vector3(0.095, 0.075, z), Vector3(0, 0, 70))
+			K.add(torso, K.cylinder(0.022, 0.022, 12), K.paint(Color(0.2, 0.45, 0.4), 0.9, 0.05), c + Vector3(0.1, 0.077, z), Vector3(0, 0, 70))
+		return
+	if kind == "rocketeer":
+		_helmet(torso, c, K.paint(Color(0.85, 0.85, 0.82), 0.2, 0.4), 1.04, 0.0)
+		K.add(torso, K.bevel_box(Vector3(0.03, 0.06, 0.17), 0.015), K.paint(Color(0.9, 0.6, 0.15), 0.9, 0.05), c + Vector3(0.1, 0.02, 0))   # visor
+		K.add(torso, K.lathe([Vector2(0.123, -0.012), Vector2(0.125, 0.0), Vector2(0.123, 0.012)], 20, true, false, false), C.gear, c + Vector3(0.0, 0.075, 0), Vector3.ZERO, true)
+		return
 	if faction == "coalition":
 		if kind == "engineer":
 			# Bump cap with head lamp and safety glasses.
@@ -364,6 +432,38 @@ static func _flamer(g: Node3D, C: Dictionary) -> void:
 	K.add(g, K.bevel_box(Vector3(0.035, 0.09, 0.03), 0.01), C.metal, Vector3(0.0, -0.06, 0), Vector3(0, 0, 15))
 	K.add(g, K.bevel_box(Vector3(0.03, 0.08, 0.03), 0.008), C.metal, Vector3(0.27, -0.05, 0))
 
+## Commando: a pistol in each hand, raised and aimed when firing.
+static func _commando_arms(torso: Node3D, sh: Array, fire: int, walking: bool, phase: float, C: Dictionary) -> void:
+	var hands := []
+	for i in 2:
+		var side := -1.0 if i == 0 else 1.0
+		var h: Vector3
+		if fire > 0:
+			h = sh[i] + Vector3(0.5 - (0.03 if fire == 2 else 0.0), 0.02 + (0.03 if fire == 2 else 0.0), -side * 0.06)
+		else:
+			var sw := sin(phase * TAU) * 0.25 * side if walking else 0.0
+			h = sh[i] + Vector3(0.18 + sw, -0.38, side * 0.04)
+		_arm(torso, sh[i], h, Vector3(-0.3, -1.0, side * 0.7), C)
+		var g := Node3D.new()
+		g.position = h
+		g.rotation.z = 0.0 if fire > 0 else -1.0
+		torso.add_child(g)
+		K.add(g, K.bevel_box(Vector3(0.13, 0.035, 0.025), 0.006), C.metal, Vector3(0.06, 0.02, 0))
+		K.add(g, K.bevel_box(Vector3(0.03, 0.06, 0.022), 0.006), C.metal, Vector3(0.0, -0.02, 0), Vector3(0, 0, 15))
+
+## Demolition trooper: a round charge with a lit fuse in one hand, the other free.
+static func _demolition_arms(torso: Node3D, sh: Array, phase: float, work: int, C: Dictionary) -> void:
+	var swing := sin(phase * TAU) * 0.45 if phase >= 0.0 else 0.0
+	var r_hand: Vector3 = sh[1] + Vector3(0.2 + sin(swing) * 0.3, -0.3, 0.08)
+	var l_hand: Vector3 = sh[0] + Vector3(sin(-swing) * 0.45, -0.48, -0.04)
+	if work > 0:
+		r_hand = sh[1] + Vector3(0.42, -0.05 if work == 1 else -0.25, -0.06)
+	_arm(torso, sh[1], r_hand, Vector3(-0.4, -1.0, 0.5), C)
+	_arm(torso, sh[0], l_hand, Vector3(-0.4, -1.0, -0.5), C)
+	K.ellipsoid(torso, r_hand + Vector3(0.05, 0.06, 0), Vector3(0.075, 0.075, 0.075), K.paint(Color(0.1, 0.1, 0.1), 0.4, 0.4))
+	K.tube(torso, r_hand + Vector3(0.05, 0.13, 0), r_hand + Vector3(0.09, 0.2, 0.02), 0.006, K.paint(Color(0.6, 0.55, 0.4), 0.0, 0.8), 4)
+	K.add(torso, K.cylinder(0.014, 0.01, 8), K.paint(Color(1, 0.7, 0.2), 0.0, 0.3, {"emit": 4.0}), r_hand + Vector3(0.09, 0.21, 0.02))
+
 static func _engineer_arms(torso: Node3D, sh: Array, phase: float, work: int, C: Dictionary, faction: String) -> void:
 	var swing := sin(phase * TAU) * 0.5 if phase >= 0.0 else 0.0
 	var r_hand: Vector3 = sh[1] + Vector3(sin(swing) * 0.5, -0.5 * cos(swing) + 0.02, 0.06)
@@ -383,3 +483,64 @@ static func _engineer_arms(torso: Node3D, sh: Array, phase: float, work: int, C:
 	torso.add_child(w)
 	K.add(w, K.bevel_box(Vector3(0.3, 0.025, 0.018), 0.006), K.paint(Color(0.6, 0.62, 0.64), 0.8, 0.3), Vector3(0.1, 0, 0))
 	K.add(w, K.lathe([Vector2(0.035, -0.01), Vector2(0.04, 0.0), Vector2(0.035, 0.01)], 10), K.paint(Color(0.6, 0.62, 0.64), 0.8, 0.3), Vector3(0.26, 0, 0), Vector3(90, 0, 0))
+
+# ---------------------------------------------------------------- attack dog
+
+## A lean guard dog (Doberman-like) with a team-coloured collar. pose: walk / fire (leap-bite) / dead.
+static func dog(faction: String, pose: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	var body := Node3D.new()
+	body.scale = Vector3.ONE * (HEIGHT / 1.35)    # a touch larger than life so it reads at game scale
+	root.add_child(body)
+	var fur := _m(Color(0.13, 0.1, 0.08), 0.6, {"noise_amt": 0.25})
+	var tan := _m(Color(0.55, 0.33, 0.16), 0.7, {"noise_amt": 0.25})
+	var phase: float = pose.get("walk", -1.0)
+	var fire: int = int(pose.get("fire", 0))
+	var dead: float = pose.get("dead", 0.0)
+	var s := sin(phase * TAU) if phase >= 0.0 else 0.0
+	var c := cos(phase * TAU) if phase >= 0.0 else 0.0
+	var lift := 0.0
+	var pitch := 0.0
+	if fire > 0:
+		lift = 0.12 if fire == 1 else 0.05
+		pitch = 0.25 if fire == 1 else 0.05
+	var trunk := Node3D.new()
+	trunk.position = Vector3(0, 0.55 + lift + absf(s) * 0.03, 0)
+	trunk.rotation.z = pitch
+	body.add_child(trunk)
+	K.add(trunk, K.loft([[-0.42, 0.09, 0.08, -0.1, 2.2], [-0.25, 0.11, 0.1, -0.1, 2.2], [0.05, 0.12, 0.12, -0.14, 2.2], [0.25, 0.13, 0.14, -0.16, 2.2], [0.36, 0.09, 0.12, -0.08, 2.2]], 16), fur, Vector3.ZERO)
+	K.add(trunk, K.loft([[0.1, 0.08, -0.02, -0.15, 2.2], [0.3, 0.085, 0.02, -0.17, 2.2]], 12), tan, Vector3.ZERO)
+	# Neck, head, snout, ears.
+	K.limb(trunk, Vector3(0.3, 0.06, 0), Vector3(0.48, 0.28, 0), 0.08, 0.065, fur, 12)
+	var head := Vector3(0.52, 0.32, 0)
+	K.ellipsoid(trunk, head, Vector3(0.11, 0.09, 0.085), fur)
+	K.limb(trunk, head + Vector3(0.05, -0.02, 0), head + Vector3(0.22, -0.05, 0), 0.05, 0.035, fur, 10)
+	K.ellipsoid(trunk, head + Vector3(0.12, -0.06, 0), Vector3(0.08, 0.03, 0.045), tan)
+	K.ellipsoid(trunk, head + Vector3(0.23, -0.04, 0), Vector3(0.02, 0.018, 0.02), _m(Color(0.02, 0.02, 0.02), 0.3))
+	for z in [-1.0, 1.0]:
+		K.add(trunk, K.lathe([Vector2(0.03, 0.0), Vector2(0.0, 0.12)], 6), fur, head + Vector3(-0.03, 0.08, z * 0.045), Vector3(z * 12.0, 0, -15))
+		K.ellipsoid(trunk, head + Vector3(0.06, 0.02, z * 0.06), Vector3(0.012, 0.012, 0.008), tan)
+	if fire > 0:
+		K.ellipsoid(trunk, head + Vector3(0.18, -0.09, 0), Vector3(0.06, 0.015, 0.035), _m(Color(0.6, 0.12, 0.12), 0.5))  # open jaw
+	# Team collar.
+	K.add(trunk, K.lathe([Vector2(0.075, -0.02), Vector2(0.078, 0.0), Vector2(0.075, 0.02)], 14, true, false, false), K.paint(Color(0.62, 0.62, 0.62), 0.3, 0.5), Vector3(0.43, 0.2, 0), Vector3(0, 0, -50), true)
+	# Tail.
+	K.limb(trunk, Vector3(-0.4, 0.05, 0), Vector3(-0.52, -0.06 + s * 0.03, s * 0.04), 0.022, 0.01, fur, 8)
+	# Legs: gallop cycle, front and back pairs out of phase.
+	for leg in [[0.25, -0.07, 0.0], [0.25, 0.07, 0.5], [-0.33, -0.07, 0.25], [-0.33, 0.07, 0.75]]:
+		var ph: float = phase + float(leg[2]) if phase >= 0.0 else 0.0
+		var sw := sin(ph * TAU) * 0.55 if phase >= 0.0 else 0.0
+		if fire == 1:
+			sw = 0.7 if float(leg[0]) > 0.0 else -0.6
+		var hip := Vector3(float(leg[0]), -0.05, float(leg[1]))
+		var knee := hip + Vector3(sin(sw) * 0.22, -cos(sw) * 0.22, 0)
+		var bend := 0.5 if float(leg[0]) < 0.0 else -0.35
+		var foot := knee + Vector3(sin(sw + bend) * 0.24, -cos(sw + bend) * 0.24, 0)
+		K.limb(trunk, hip, knee, 0.05, 0.035, fur, 10)
+		K.limb(trunk, knee, foot, 0.032, 0.024, tan if foot.y < -0.45 else fur, 10)
+		K.ellipsoid(trunk, foot + Vector3(0.025, -0.01, 0), Vector3(0.04, 0.022, 0.03), tan)
+	if dead > 0.0:
+		var fall := clampf(dead * 1.3, 0.0, 1.0)
+		trunk.rotation.x = fall * 1.45
+		trunk.position.y = 0.55 - fall * 0.42
+	return root

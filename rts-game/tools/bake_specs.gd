@@ -45,9 +45,15 @@ static func vehicle(name: String, builder: Callable, scale: float, states: int =
 				return _rot(_wrap(d.turret), i)})
 	return out
 
-static func infantry(name: String, kind: String, faction: String) -> Array:
+static func _person(kind: String, faction: String, pose: Dictionary) -> Node3D:
+	return H.dog(faction, pose) if kind == "dog" else H.soldier(kind, faction, pose)
+
+static func infantry(name: String, kind: String, faction: String, air: bool = false) -> Array:
 	# 9 frames x 8 directions: idle, walk 1-6, fire 1-2. Plus a 5-frame death sheet.
-	return [{"name": name, "fw": 112, "fh": 112, "anchor": Vector2(56, 80), "count": 72, "scale": 1.45, "extra": {"dirs": 8, "frames": 9},
+	var extra := {"dirs": 8, "frames": 9}
+	if air:
+		extra["air"] = true
+	return [{"name": name, "fw": 112, "fh": 112, "anchor": Vector2(56, 80), "count": 72, "scale": 1.45, "extra": extra, "separate_shadow": air,
 		"build": func(i):
 			var fr: int = i / 8
 			var pose := {}
@@ -55,10 +61,10 @@ static func infantry(name: String, kind: String, faction: String) -> Array:
 				pose["walk"] = float(fr - 1) / 6.0
 			elif fr >= 7:
 				pose["fire"] = fr - 6
-			return _rot(H.soldier(kind, faction, pose), (i % 8) * 4)},
+			return _rot(_person(kind, faction, pose), (i % 8) * 4)},
 		{"name": name + "_die", "fw": 112, "fh": 112, "anchor": Vector2(56, 80), "count": 5, "scale": 1.45, "extra": {"frames": 5},
 		"build": func(i):
-			return _rot(H.soldier(kind, faction, {"dead": float(i) / 4.0}), 12)}]
+			return _rot(_person(kind, faction, {"dead": float(i) / 4.0}), 12)}]
 
 static func building_frame(sx: int, sz: int, h: float) -> Dictionary:
 	var top := int(h * PXU * COS30) + 70
@@ -138,6 +144,13 @@ static func all() -> Array:
 		out += infantry("i_infantry_" + f, "infantry", f)
 		out += infantry("i_engineer_" + f, "engineer", f)
 	out += infantry("i_rocket_inf_coalition", "rocket_inf", "coalition")
+	out += infantry("i_rocketeer_coalition", "rocketeer", "coalition", true)
+	out += infantry("i_commando_coalition", "commando", "coalition")
+	out += infantry("i_demolition_dominion", "demolition", "dominion")
+	out += infantry("i_dog_dominion", "dog", "dominion")
+	out += vehicle("u_minelayer_dominion", func(_s): return V.minelayer(), 1.25)
+	out += vehicle("u_transport_coalition", func(_s): return V.transport_plane(), 1.0, 1, Vector2i(320, 240), true)
+	out += vehicle("u_bomber_dominion", func(_s): return V.bomber_plane(), 1.0, 1, Vector2i(336, 240), true)
 	out += infantry("i_heavy_inf_dominion", "heavy_inf", "dominion")
 	out += infantry("i_flame_inf_dominion", "flame_inf", "dominion")
 	for f in BUILDINGS:

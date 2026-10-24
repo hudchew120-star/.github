@@ -669,3 +669,72 @@ static func cruiser_dominion() -> Dictionary:
 	red_star(root, Vector3(0.6, 0.09, 0.2), 0.05, Vector3.ZERO)
 	red_star(root, Vector3(0.6, 0.09, -0.2), 0.05, Vector3.ZERO)
 	return {"root": root, "turret": null, "pivot": Vector3.ZERO, "naval": true}
+
+# ---------------------------------------------------------------- special-ability vehicles
+
+## Dominion minelayer: armoured tracked carrier with a mine hopper and rear dispenser chute.
+static func minelayer() -> Dictionary:
+	var C := mats("dominion")
+	var root := Node3D.new()
+	var L := 0.82
+	var W := 0.56
+	tracks(root, L, W, 0.14, 5, 0.05, "dominion", null)
+	K.add(root, armor_hull(L * 1.02, W * 0.8, 0.11, 0.25, 1.4, 0.05), C.team_rivet, Vector3.ZERO, Vector3.ZERO, true)
+	var hop := [K.plane_at(Vector3.DOWN, Vector3(0, 0.25, 0)), K.plane_at(Vector3.UP, Vector3(0, 0.42, 0)),
+		K.plane_at(Vector3(-1, 0.4, 0), Vector3(-0.38, 0.3, 0)), K.plane_at(Vector3(1, 0.4, 0), Vector3(0.05, 0.3, 0)),
+		K.plane_at(Vector3(0, 0.3, 1), Vector3(0, 0.3, 0.2)), K.plane_at(Vector3(0, 0.3, -1), Vector3(0, 0.3, -0.2))]
+	K.add(root, K.convex(hop), C.sec_rivet, Vector3.ZERO)
+	for i in 6:
+		K.add(root, K.cylinder(0.035, 0.025, 12), K.paint(Color(0.2, 0.22, 0.18), 0.4, 0.5), Vector3(-0.3 + (i % 3) * 0.1, 0.43, -0.07 + (i / 3) * 0.14))
+		K.add(root, K.cylinder(0.01, 0.01, 6), K.paint(Color(0.85, 0.15, 0.1), 0.0, 0.5, {"emit": 0.6}), Vector3(-0.3 + (i % 3) * 0.1, 0.45, -0.07 + (i / 3) * 0.14))
+	K.add(root, K.bevel_box(Vector3(0.12, 0.08, 0.16), 0.01), M.hazard(), Vector3(-L * 0.52, 0.16, 0), Vector3(0, 0, -25))
+	K.add(root, K.loft([[0.12, 0.16, 0.38, 0.24, 8.0], [0.3, 0.16, 0.38, 0.24, 8.0], [0.36, 0.13, 0.32, 0.24, 8.0]], 14), C.team_rivet, Vector3.ZERO, Vector3.ZERO, true)
+	K.add(root, K.bevel_box(Vector3(0.006, 0.04, 0.2), 0.003), C.glass, Vector3(0.355, 0.33, 0), Vector3(0, 0, -35))
+	for z in [-0.16, 0.16]:
+		K.add(root, K.cylinder(0.018, 0.01, 12), lamp(Color(1, 0.85, 0.55)), Vector3(L * 0.5, 0.18, z), Vector3(0, 0, 90))
+	antenna(root, Vector3(0.2, 0.38, 0.1), 0.3)
+	red_star(root, Vector3(0.0, 0.19, W * 0.405), 0.04, Vector3.ZERO)
+	return {"root": root, "turret": null, "pivot": Vector3.ZERO}
+
+## Coalition four-engine transport (paratroopers), modelled at the ground; drawn high in the sky.
+static func transport_plane() -> Dictionary:
+	var C := mats("coalition")
+	var root := Node3D.new()
+	var y0 := 0.2
+	K.add(root, K.loft([[-0.75, 0.03, y0 + 0.16, y0 + 0.1], [-0.45, 0.1, y0 + 0.17, y0 - 0.04], [0.35, 0.12, y0 + 0.14, y0 - 0.08, 2.4], [0.6, 0.08, y0 + 0.08, y0 - 0.06, 2.2], [0.72, 0.0, y0 + 0.02, y0 - 0.01]], 22), C.team, Vector3.ZERO, Vector3.ZERO, true)
+	var wing := PackedVector2Array([Vector2(0.2, 0.0), Vector2(0.1, 0.85), Vector2(-0.02, 0.85), Vector2(-0.12, 0.0)])
+	for side in [-1.0, 1.0]:
+		K.add(root, K.extrude(mirror(wing, side), 0.02), C.team_panel, Vector3(0, y0 + 0.13, 0), Vector3(90, 0, 0), true)
+		for k in 2:
+			var z: float = side * (0.28 + k * 0.28)
+			K.add(root, K.loft([[-0.02, 0.0, y0 + 0.1, y0 + 0.1], [0.05, 0.04, y0 + 0.13, y0 + 0.05], [0.25, 0.035, y0 + 0.12, y0 + 0.06]], 12), C.sec, Vector3(0, 0, z))
+			K.add(root, K.cylinder(0.075, 0.004, 20), K.paint(Color(0.55, 0.56, 0.57), 0.3, 0.6, {"stripes": 7.0}), Vector3(0.27, y0 + 0.09, z), Vector3(0, 0, 90))
+		var tail := PackedVector2Array([Vector2(-0.55, 0.0), Vector2(-0.66, 0.28), Vector2(-0.76, 0.28), Vector2(-0.74, 0.0)])
+		K.add(root, K.extrude(mirror(tail, side), 0.012), C.team_panel, Vector3(0, y0 + 0.16, 0), Vector3(90, 0, 0), true)
+	K.add(root, K.extrude(PackedVector2Array([Vector2(-0.5, 0.0), Vector2(-0.66, 0.3), Vector2(-0.76, 0.3), Vector2(-0.73, 0.0)]), 0.014), C.team, Vector3(0, y0 + 0.16, 0), Vector3.ZERO, true)
+	K.add(root, K.loft([[0.5, 0.0, y0 + 0.11, y0 + 0.11], [0.54, 0.06, y0 + 0.14, y0 + 0.08, 2.5], [0.62, 0.0, y0 + 0.09, y0 + 0.09]], 12), C.glass, Vector3.ZERO)
+	roundel(root, Vector3(-0.25, y0 + 0.05, 0.111), 0.05, Vector3(90, 0, 0))
+	roundel(root, Vector3(-0.25, y0 + 0.05, -0.111), 0.05, Vector3(90, 0, 0))
+	return {"root": root, "turret": null, "pivot": Vector3.ZERO}
+
+## Dominion strategic bomber: long fuselage, swept wings, four turboprops with contra-rotating discs.
+static func bomber_plane() -> Dictionary:
+	var C := mats("dominion")
+	var root := Node3D.new()
+	var y0 := 0.2
+	K.add(root, K.loft([[-0.8, 0.02, y0 + 0.08, y0 + 0.04], [-0.5, 0.075, y0 + 0.1, y0 - 0.04, 2.2], [0.4, 0.085, y0 + 0.1, y0 - 0.05, 2.2], [0.7, 0.05, y0 + 0.05, y0 - 0.03, 2.2], [0.82, 0.0, y0 + 0.01, y0 + 0.0]], 22), C.team_rivet, Vector3.ZERO, Vector3.ZERO, true)
+	var wing := PackedVector2Array([Vector2(0.22, 0.0), Vector2(-0.18, 0.9), Vector2(-0.3, 0.9), Vector2(-0.18, 0.0)])
+	for side in [-1.0, 1.0]:
+		K.add(root, K.extrude(mirror(wing, side), 0.02), C.team_panel, Vector3(0, y0 + 0.04, 0), Vector3(90, 0, 0), true)
+		for k in 2:
+			var z: float = side * (0.3 + k * 0.3)
+			var x: float = 0.12 - (0.3 + k * 0.3) * 0.44
+			K.add(root, K.loft([[x - 0.18, 0.0, y0 + 0.02, y0 + 0.02], [x - 0.1, 0.04, y0 + 0.05, y0 - 0.03], [x + 0.12, 0.035, y0 + 0.04, y0 - 0.02]], 12), C.sec_rivet, Vector3(0, 0, z))
+			K.add(root, K.cylinder(0.07, 0.004, 20), K.paint(Color(0.55, 0.56, 0.57), 0.3, 0.6, {"stripes": 7.0}), Vector3(x + 0.14, y0 + 0.01, z), Vector3(0, 0, 90))
+		var tail := PackedVector2Array([Vector2(-0.58, 0.0), Vector2(-0.72, 0.26), Vector2(-0.8, 0.26), Vector2(-0.78, 0.0)])
+		K.add(root, K.extrude(mirror(tail, side), 0.012), C.team_panel, Vector3(0, y0 + 0.08, 0), Vector3(90, 0, 0), true)
+		red_star(root, Vector3(-0.1, y0 + 0.062, side * 0.6), 0.06, Vector3(90, 0, 0))
+	K.add(root, K.extrude(PackedVector2Array([Vector2(-0.52, 0.0), Vector2(-0.7, 0.3), Vector2(-0.8, 0.3), Vector2(-0.77, 0.0)]), 0.014), C.team, Vector3(0, y0 + 0.08, 0), Vector3.ZERO, true)
+	K.ellipsoid(root, Vector3(0.66, y0 + 0.05, 0), Vector3(0.1, 0.05, 0.05), C.glass)
+	K.ellipsoid(root, Vector3(-0.78, y0 + 0.06, 0), Vector3(0.05, 0.04, 0.035), C.glass)
+	return {"root": root, "turret": null, "pivot": Vector3.ZERO}
