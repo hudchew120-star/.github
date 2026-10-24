@@ -19,6 +19,7 @@ func _ready() -> void:
 		"test_engineer", "test_repair_facility", "test_map_presets",
 		"test_paratroopers", "test_bomber_strike", "test_dig_in", "test_jetpack_and_dog", "test_charges", "test_mines",
 		"test_countries", "test_thai_rangers_stealth", "test_country_powers", "test_country_units",
+		"test_new_defenses", "test_walls",
 	]
 	var only = OS.get_environment("RTS_TEST")
 	for t in tests:
@@ -1053,4 +1054,60 @@ func test_country_units() -> void:
 	check(gat.weapons[0].spin == 1.0, "Gatling spin resets after a pause (%.2f)" % gat.weapons[0].spin)
 	var snip_def := Data.weapon("sniper_rifle")
 	check(Combat.can_target(snip_def, g.spawn_unit(1, "e1", base)) and not Combat.can_target(snip_def, gat), "sniper rifle hits infantry only")
+	await free_game(g)
+
+# ---------------------------------------------------------------- defenses and walls
+
+func test_new_defenses() -> void:
+	for side in ["coalition", "dominion"]:
+		var defs: Array = Data.types_in_category("defense", side).filter(func(t): return not Data.def(t).get("wall", false) and not Data.def(t).has("countries"))
+		check(defs.size() >= 6, "%s has at least six defenses (%d)" % [side, defs.size()])
+	var g = make_game({"start_units": "base", "player_faction": "dominion", "enemy_factions": ["coalition"], "player_country": "russia", "victory": "none"})
+	g.cheats.execute("build instant on")
+	g.cheats.set_flag("no_prereq", true)
+	var rb = build_now(g, "rbat")
+	check(rb != null and rb.completed, "rocket battery built")
+	if rb != null:
+		var foe = g.spawn_unit(1, "mtank", rb.pos + Vector2(MapGrid.T * 7.0, 0))
+		var hp0: float = foe.hp
+		var shots := 0
+		for i in 120:
+			var before: int = g.projectiles.size()
+			g.step()
+			if g.projectiles.size() > before:
+				shots += 1
+		check(shots >= 4, "rocket battery fires a salvo (%d rockets)" % shots)
+		run(g, 4.0)
+		check(foe.dead or foe.hp < hp0, "salvo damaged the tank")
+	var bk = build_now(g, "bnkr")
+	check(bk != null and bk.weapons.size() == 1, "bunker built with a machine gun")
+	await free_game(g)
+
+func test_walls() -> void:
+	var g = make_game({"start_units": "base", "victory": "structures"})
+	g.cheats.execute("build instant on")
+	var cy = _own_building(g, 0)
+	check(g.queue_item(0, "cwal") == "", "wall queued")
+	run(g, 0.5)
+	check(g.wall_sections_left(0, "defense") == 8, "one purchase gives eight wall sections")
+	var start: Vector2i = cy.cell0 + Vector2i(-2, 4)
+	var placed := 0
+	for k in 10:
+		if g.place_structure(0, "defense", start + Vector2i(k, 0)) == "":
+			placed += 1
+	check(placed == 8, "eight sections placed, then the batch is used up (%d)" % placed)
+	check(g.wall_sections_left(0, "defense") == 0, "no sections left")
+	var walls: Array = g.buildings.filter(func(b): return b.pid == 0 and b.type == "cwal")
+	check(walls.size() == 8, "eight wall buildings exist")
+	var w0 = walls[0]
+	check(not g.map.passable(w0.cell0, "track"), "walls block ground units")
+	# Walls alone do not keep a player alive.
+	for b in g.buildings.duplicate():
+		if b.pid == 0 and not b.def.get("wall", false):
+			b.take_damage(b.hp + 1, null)
+	for u in g.units.duplicate():
+		if u.pid == 0:
+			u.take_damage(u.hp + 1, null)
+	run(g, 1.5)
+	check(g.players[0].defeated, "a player with only walls left is defeated")
 	await free_game(g)

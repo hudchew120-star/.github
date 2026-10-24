@@ -313,7 +313,7 @@ func create_building(pid: int, t: String, c: Vector2i, instant: bool, uid: int =
 func _push_units_out_of(b) -> void:
 	var cells: Array = b.footprint_cells()
 	for u in units:
-		if u.dead:
+		if u.dead or u.is_air_unit:
 			continue
 		if cells.has(u.cell()):
 			var dest: Vector2i = map.nearest_passable(u.cell(), u.move_class, 6)
@@ -466,6 +466,8 @@ func find_target(e, radius: float):
 		var score := d
 		if o.is_building():
 			score += 160.0
+			if o.def.get("wall", false):
+				score += 400.0      # walls only when nothing better is in reach
 			if o.weapons.size() > 0:
 				score -= 120.0
 		elif o.can_attack():
@@ -635,9 +637,23 @@ func place_structure(pid: int, cat: String, c: Vector2i) -> String:
 	var reason := can_place(pid, it.type, c)
 	if reason != "":
 		return reason
-	b.queues[cat].remove_at(0)
+	# Walls come in batches: one purchase places several sections.
+	var segs := int(Data.def(it.type).get("segments", 1))
+	it["placed"] = int(it.get("placed", 0)) + 1
+	if int(it.placed) >= segs:
+		b.queues[cat].remove_at(0)
 	create_building(pid, it.type, c, false)
 	return ""
+
+## Wall sections still to place from the ready item in a category (0 when none).
+func wall_sections_left(pid: int, cat: String) -> int:
+	var b = producer_for(pid, cat)
+	if b == null:
+		return 0
+	var it = b.ready_item(cat)
+	if it == null or not Data.def(it.type).get("wall", false):
+		return 0
+	return int(Data.def(it.type).get("segments", 1)) - int(it.get("placed", 0))
 
 func spawn_from_factory(b, t: String) -> bool:
 	var d := Data.def(t)
@@ -1224,7 +1240,7 @@ func _apply_human_visibility() -> void:
 
 func _player_alive(p) -> bool:
 	for b in buildings:
-		if b.pid == p.id and not b.dead:
+		if b.pid == p.id and not b.dead and not b.def.get("wall", false):
 			return true
 	for u in units:
 		if u.pid == p.id and not u.dead:

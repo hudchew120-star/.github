@@ -145,7 +145,7 @@ func _manage_construction() -> void:
 	var dq: Array = cy.queues.get("defense", [])
 	if dq.is_empty() and int(cfg.defenses) > 0 and _count_tag("defense") < int(cfg.defenses) and _count_tag("factory", false) > 0 and (_count_tag("refinery", false) >= mini(2, int(cfg.max_refineries)) or threat_time > 0.0):
 		if cfg.parallel or q.is_empty():
-			var options := Data.types_in_category("defense", player.faction, player.country).filter(func(t): return game.availability(player.id, t) == "")
+			var options := Data.types_in_category("defense", player.faction, player.country).filter(func(t): return game.availability(player.id, t) == "" and not Data.def(t).get("wall", false))
 			var aa := options.filter(func(t): return _hits_air(Data.def(t)))
 			if seen_air >= 2 and aa.size() > 0 and _count_aa_defenses() < 2 + seen_air / 6:
 				options = aa

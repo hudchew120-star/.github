@@ -75,11 +75,15 @@ tools/make_cameos.py      Sidebar build icons (from showcase renders, else from 
 Rebuild everything (needs a GPU or a software Vulkan driver):
 
 ```
-godot --path . res://tools/bake.tscn -- "_" --toon   # all sheets, hand-drawn style; or "<filter1,filter2>" [--resume]
+# Infantry, aircraft, ships, effects and decor: hand-drawn style
+godot --path . res://tools/bake.tscn -- "i_,u_heli,u_jet,u_transport,u_bomber,u_gunboat,u_destroyer_coalition,u_submarine,u_cruiser,d_" --toon
+# Structures, defenses, walls and land vehicles: realistic (no --toon)
+godot --path . res://tools/bake.tscn -- "b_,u_tank,u_jeep,u_aa_,u_harvester,u_mcv,u_minelayer,u_mecha"
 python3 tools/finalize_sprites.py
 python3 tools/paint_assets.py
 godot --path . res://tools/showcase.tscn -- cameos <absolute path>/tools/_bake_out/cameos/ 400 --toon
 for f in tools/_bake_out/cameos/*.png; do python3 tools/stylize.py "$f" "$f" 3; done
+godot --path . res://tools/showcase.tscn -- cameos <absolute path>/tools/_bake_out/cameos_real/ 400
 python3 tools/make_cameos.py
 python3 tools/make_catalog.py
 godot --headless --path . --import               # refresh imported textures
@@ -92,7 +96,12 @@ anchor (the model's ground origin; for structures the footprint's top corner), g
 frame count and extras (turret pivot, smoke points, structure height). `_mask.png` holds the
 team-colour mask that `SpriteLib.team_material()` uses to recolour per player.
 
-**Hand-drawn style** (the game's look): `--toon` switches the paint shader to cel shading
+`make_cameos.py` takes building, defense and vehicle cameos from `cameos_real` and the rest from
+the inked `cameos` renders, on a navy card plate; `BuildButton` draws the price tag, name bar and
+border on top. Walls use one sheet per side (`b_wall_<faction>`) with 32 frames: the neighbour
+mask (N=1, E=2, S=4, W=8) picks frames 0-15, damaged sections add 16 (`IsoView._wall_mask`).
+
+**Hand-drawn style** (infantry, aircraft, ships): `--toon` switches the paint shader to cel shading
 (`ArtKit.toon_mode`, three flat light bands and a crisp highlight) and marks the sheets;
 `finalize_sprites.py` then runs `tools/stylize.py` on the 3x supersampled frames: an ink line
 around each silhouette, thinner ink where colour bands meet (computed on a median-smoothed copy

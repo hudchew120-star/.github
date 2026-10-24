@@ -43,7 +43,7 @@ func setup_building(c: Vector2i, instant: bool) -> void:
 	for wid in def.get("weapons", []):
 		var wd := Data.weapon(wid)
 		if not wd.is_empty():
-			weapons.append({"id": wid, "def": wd, "cd": 0.0})
+			weapons.append({"id": wid, "def": wd, "cd": 0.0, "burst_left": 0, "burst_cd": 0.0})
 	if instant:
 		make_progress = 1.0
 		completed = true
@@ -246,6 +246,15 @@ func _tick_defense(dt: float) -> void:
 	if w.cd > 0.0:
 		w.cd -= dt * rf
 	charge = 1.0 - clampf(w.cd / float(w.def.rof), 0.0, 1.0)
+	# Salvo weapons (rocket battery, twin cannon) fire the rest of the burst in quick succession.
+	if int(w.get("burst_left", 0)) > 0:
+		w.burst_cd -= dt
+		if w.burst_cd <= 0.0 and target != null and is_instance_valid(target) and not target.dead:
+			Combat.fire(game, self, w.def, target)
+			w.burst_left -= 1
+			w.burst_cd = float(w.def.get("burst_delay", 0.15))
+		elif target == null or not is_instance_valid(target) or target.dead:
+			w.burst_left = 0
 	if target == null or not is_instance_valid(target) or target.dead or target.edge_distance(pos) > float(w.def.range) * MapGrid.T:
 		target = null
 		scan_t -= dt
@@ -262,6 +271,8 @@ func _tick_defense(dt: float) -> void:
 	if w.cd <= 0.0:
 		Combat.fire(game, self, w.def, target)
 		w.cd = float(w.def.rof)
+		w.burst_left = int(w.def.get("burst", 1)) - 1
+		w.burst_cd = float(w.def.get("burst_delay", 0.15))
 
 # ---------------------------------------------------------------- drawing
 
@@ -334,7 +345,7 @@ func apply_dict(d: Dictionary) -> void:
 	for cat in d.get("queues", {}):
 		queues[cat] = []
 		for it in d.queues[cat]:
-			queues[cat].append({"type": it.type, "progress": float(it.progress), "paid": int(it.paid), "state": it.state})
+			queues[cat].append({"type": it.type, "progress": float(it.progress), "paid": int(it.paid), "state": it.state, "placed": int(it.get("placed", 0))})
 	var cds: Array = d.get("cd", [])
 	for i in mini(cds.size(), weapons.size()):
 		weapons[i].cd = float(cds[i])

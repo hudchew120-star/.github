@@ -28,7 +28,13 @@ automatically by `.github/workflows/build-game.yml` whenever the game changes.
 | Ranger utility vehicle, Viper light tank, Warden battle tank, Skyhawk AA | Mammoth twin-gun heavy tank, SAM carrier |
 | Hornet attack helicopter, Falcon stealth fighter | Krait gunship, strike fighter with bombs |
 | Patrol boat, destroyer (sonar finds submarines) | Submarine (invisible while submerged), battlecruiser with cruise missiles |
-| Patriot SAM site | Flak cannon, **Minelayer** (press **E** to lay hidden mines) |
+| Defenses: Guard Tower, Pillbox, Mortar Pit, Gun Turret, Missile Bunker, Patriot SAM site, **Concrete Wall** | Defenses: Bunker, Flame Tower, Twin Cannon, Rocket Battery (6-rocket salvos), Arc Coil, Flak cannon, **Iron Wall**; **Minelayer** (press **E** to lay hidden mines) |
+
+**Walls**: one purchase gives eight sections. Click and drag on the map to lay a line; sections
+join up automatically into corners and T-junctions, block ground units, and do not count as
+structures for victory (a player left with only walls is defeated).
+
+Structures, defenses and vehicles use a realistic rendering style; infantry keep the hand-drawn look.
 
 ### Countries
 
@@ -74,7 +80,8 @@ Generated maps have a **Water** option (lakes, coastal for naval warfare, or dry
 ## Graphics
 
 The default presentation is **classic isometric**, in the style of late-90s pre-rendered RTS games,
-with a **hand-drawn finish**: cel-painted colour bands and ink outlines, like illustrated unit art.
+Structures, defenses and land vehicles are rendered **realistically** (soft lighting, no outlines);
+infantry, aircraft and ships keep a **hand-drawn finish**: cel-painted colour bands and ink outlines.
 
 - Units and structures are **pre-rendered sprites**: detailed 3D models (sloped armour, road wheels,
   hatches, antennas, pipes, ladders, windows, cranes, dishes) and anatomically proportioned soldiers

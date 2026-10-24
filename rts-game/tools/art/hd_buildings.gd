@@ -7,6 +7,7 @@ const K := preload("res://tools/art/kit.gd")
 const M := preload("res://tools/art/hd_models.gd")
 const B2 := preload("res://tools/art/buildings2.gd")
 const CU := preload("res://tools/art/country_units.gd")
+const DF := preload("res://tools/art/defenses.gd")
 
 # ---------------------------------------------------------------- shared details
 
@@ -154,6 +155,15 @@ static func build(sprite: String, faction: String, anim_t: float = 0.0) -> Dicti
 		"sam_site": return B2.sam_base(P, faction)
 		"flak_cannon": return B2.flak_base(P, faction)
 		"grand_cannon": return CU.grand_cannon_base(P, faction)
+		"guard_tower": return DF.guard_tower(P, faction)
+		"mortar_pit": return DF.mortar_base(P, faction)
+		"missile_bunker": return DF.missile_bunker_base(P, faction)
+		"bunker": return DF.bunker(P, faction)
+		"twin_cannon": return DF.twin_cannon_base(P, faction)
+		"rocket_battery": return DF.rocket_battery_base(P, faction)
+		"wall":
+			# Cameo / ghost: a straight east-west section.
+			return {"root": DF.concrete_wall(10, false) if faction == "coalition" else DF.iron_wall(10, false), "height": 0.4}
 	return {"root": Node3D.new(), "height": 0.5}
 
 static func conyard(P: Dictionary, f: String, t: float) -> Dictionary:

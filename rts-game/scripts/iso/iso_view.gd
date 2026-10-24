@@ -514,6 +514,18 @@ func _update_unit(v: Dictionary, delta: float) -> void:
 	else:
 		body.modulate = Color.WHITE
 
+func _wall_mask(e) -> int:
+	var m := 0
+	var dirs := [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
+	for k in 4:
+		var c: Vector2i = e.cell0 + dirs[k]
+		if not game.map.in_bounds(c):
+			continue
+		var o = game.entities.get(int(game.map.occupied[game.map.idx(c)]))
+		if o != null and not o.dead and o.is_building() and o.def.get("wall", false) and o.pid == e.pid:
+			m |= 1 << k
+	return m
+
 func _update_building(v: Dictionary, delta: float) -> void:
 	var e = v.e
 	var n: Node2D = v.node
@@ -524,6 +536,13 @@ func _update_building(v: Dictionary, delta: float) -> void:
 	var s: SpriteLib.Sheet = v.sheet
 	var body: Sprite2D = v.body
 	var hr: float = e.hp_ratio()
+	if e.def.get("wall", false):
+		# Wall sections pick the frame that joins them to neighbouring sections (N, E, S, W bits);
+		# frames 16-31 are the damaged versions.
+		body.texture = s.tex
+		body.region_rect = s.region(_wall_mask(e) + (16 if hr < 0.5 else 0))
+		body.modulate = Color(1.4, 1.4, 1.4) if e.hit_flash > 0.0 else Color.WHITE
+		return
 	if not e.completed:
 		body.texture = s.tex
 		body.region_rect = s.region(2 + clampi(int(e.make_progress * 5.0), 0, 4))

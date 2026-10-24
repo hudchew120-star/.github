@@ -684,5 +684,117 @@
    "ground"
   ],
   "sound": "cannon_heavy"
+ },
+ "tower_mg": {
+  "name": "Tower machine gun",
+  "damage": [
+   14,
+   18
+  ],
+  "range": 5.5,
+  "rof": 0.4,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "mg"
+ },
+ "bunker_mg": {
+  "name": "Twin bunker MG",
+  "damage": [
+   16,
+   20
+  ],
+  "range": 5.0,
+  "rof": 0.3,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "sound": "mg"
+ },
+ "mortar": {
+  "name": "81mm mortar",
+  "damage": [
+   40,
+   50
+  ],
+  "range": 8.0,
+  "rof": 2.6,
+  "warhead": "HE",
+  "projectile": "shell",
+  "speed": 240,
+  "splash": 0.9,
+  "accuracy": 0.8,
+  "targets": [
+   "ground"
+  ],
+  "sound": "cannon"
+ },
+ "bunker_missile": {
+  "name": "TOW missile",
+  "damage": [
+   85,
+   100
+  ],
+  "range": 6.5,
+  "rof": 2.4,
+  "warhead": "AP",
+  "projectile": "rocket",
+  "speed": 420,
+  "splash": 0.3,
+  "accuracy": 1.0,
+  "targets": [
+   "ground"
+  ],
+  "sound": "rocket"
+ },
+ "twin_cannon": {
+  "name": "Twin 122mm gun",
+  "damage": [
+   55,
+   65
+  ],
+  "range": 6.25,
+  "rof": 2.2,
+  "warhead": "AP",
+  "projectile": "shell",
+  "speed": 600,
+  "splash": 0.4,
+  "accuracy": 0.92,
+  "targets": [
+   "ground"
+  ],
+  "burst": 2,
+  "burst_delay": 0.18,
+  "sound": "cannon_heavy"
+ },
+ "katyusha": {
+  "name": "Rocket salvo",
+  "damage": [
+   45,
+   55
+  ],
+  "range": 10.0,
+  "rof": 6.0,
+  "warhead": "HE",
+  "projectile": "rocket",
+  "speed": 300,
+  "splash": 0.8,
+  "accuracy": 0.75,
+  "targets": [
+   "ground"
+  ],
+  "burst": 6,
+  "burst_delay": 0.12,
+  "sound": "rocket"
  }
 }

@@ -56,35 +56,16 @@ def compose(name, i, team, turret=None):
     return img
 
 def plate(faction):
-    base = np.zeros((H, W, 3), np.float32)
-    yy = np.linspace(0, 1, H)[:, None]
-    top = np.array([0.2, 0.26, 0.33]) if faction == "coalition" else np.array([0.3, 0.2, 0.17])
-    base[:] = top * (1.1 - 0.5 * yy)[..., None]
-    rng = np.random.default_rng(3)
-    base *= (0.94 + 0.08 * rng.random((H, W, 1)))
-    img = Image.fromarray((np.clip(base, 0, 1) * 255).astype(np.uint8)).convert("RGBA")
-    # Faint grid and a soft floor shadow, blended on top (ImageDraw alone would overwrite pixels).
-    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(ov)
-    for gx in range(0, W, 16):
-        d.line([(gx, 0), (gx, H)], fill=(255, 255, 255, 14))
-    for gy in range(0, H, 16):
-        d.line([(0, gy), (W, gy)], fill=(255, 255, 255, 14))
-    img.alpha_composite(ov)
+    """Card plate: deep navy with a soft spotlight behind the subject and a floor shadow."""
+    yy, xx = np.mgrid[0:H, 0:W]
+    r = np.sqrt(((xx - W / 2) / W) ** 2 + ((yy - H * 0.45) / H) ** 2)
+    k = np.clip(1 - r * 1.6, 0, 1)[..., None]
+    hi = np.array([34, 62, 118]) if faction == "coalition" else np.array([92, 40, 34])
+    c = np.array([8, 12, 24]) * (1 - k) + hi * k
+    img = Image.fromarray(c.astype(np.uint8)).convert("RGBA")
     sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(sh).ellipse([W * 0.14, H * 0.62, W * 0.86, H * 1.0], fill=(0, 0, 0, 90))
+    ImageDraw.Draw(sh).ellipse([W * 0.14, H * 0.66, W * 0.86, H * 0.96], fill=(0, 0, 0, 120))
     img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(8)))
-    return img
-
-def frame_border(img, faction):
-    d = ImageDraw.Draw(img)
-    hi = (190, 200, 210, 255) if faction == "coalition" else (215, 180, 140, 255)
-    lo = (20, 22, 26, 255)
-    for i in range(3):
-        d.line([(i, i), (W - 1 - i, i)], fill=hi if i == 1 else lo)
-        d.line([(i, i), (i, H - 1 - i)], fill=hi if i == 1 else lo)
-        d.line([(i, H - 1 - i), (W - 1 - i, H - 1 - i)], fill=lo)
-        d.line([(W - 1 - i, i), (W - 1 - i, H - 1 - i)], fill=lo)
     return img
 
 UNITS = {
@@ -94,11 +75,14 @@ UNITS = {
     "mcv": ("u_mcv_{f}", 3, None),
 }
 
-RENDERS = os.path.join(ROOT, "tools", "_bake_out", "cameos")
+RENDERS = os.path.join(ROOT, "tools", "_bake_out", "cameos")             # hand-drawn (inked) renders
+RENDERS_REAL = os.path.join(ROOT, "tools", "_bake_out", "cameos_real")   # realistic renders
+REAL_CATEGORIES = ("building", "defense", "vehicle")
 
-def from_render(t, faction):
+def from_render(t, faction, category=""):
     """High-resolution cameo rendered straight from the 3D model by tools/showcase.gd."""
-    p = os.path.join(RENDERS, "%s_%s.png" % (t, faction))
+    src = RENDERS_REAL if category in REAL_CATEGORIES and os.path.isdir(RENDERS_REAL) else RENDERS
+    p = os.path.join(src, "%s_%s.png" % (t, faction))
     if not os.path.exists(p):
         return None
     img = Image.open(p).convert("RGBA")
@@ -114,12 +98,12 @@ def main():
         items = []
         for t, d in data.items():
             if faction in d["factions"]:
-                items.append((t, "unit"))
+                items.append((t, "unit", d.get("category", "")))
         for t, d in bdata.items():
             if faction in d["factions"]:
-                items.append((t, "building"))
-        for t, kind in items:
-            img = from_render(t, faction)
+                items.append((t, "building", d.get("category", "")))
+        for t, kind, category in items:
+            img = from_render(t, faction, category)
             try:
                 if img is not None:
                     pass
@@ -153,8 +137,8 @@ def main():
                 print("skip", t, faction, e)
                 continue
             bg = plate(faction)
-            bg.alpha_composite(img, ((W - img.width) // 2, (H - img.height) // 2 + 4))
-            frame_border(bg, faction).convert("RGB").save(os.path.join(OUT, "%s_%s.png" % (t, faction)), optimize=True)
+            bg.alpha_composite(img, ((W - img.width) // 2, (H - img.height) // 2 + 2))
+            bg.convert("RGB").save(os.path.join(OUT, "%s_%s.png" % (t, faction)), optimize=True)
             print("cameo", t, faction)
 
 if __name__ == "__main__":

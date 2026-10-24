@@ -8,6 +8,7 @@ const B := preload("res://tools/art/hd_buildings.gd")
 const H := preload("res://tools/art/humans.gd")
 const V := preload("res://tools/art/vehicles.gd")
 const CU := preload("res://tools/art/country_units.gd")
+const DF := preload("res://tools/art/defenses.gd")
 ## Country uniforms: extra infantry sheets per country (the side's default country keeps the base sheet).
 const COUNTRY_INFANTRY := {
 	"uk": ["infantry", "rocket_inf"], "germany": ["infantry", "rocket_inf"], "france": ["infantry", "rocket_inf"],
@@ -124,6 +125,15 @@ static func building(sprite: String, faction: String, sx: int, sz: int) -> Array
 				return _rot(_wrap(t), i)})
 	return out
 
+## Wall sections: frames 0-15 by neighbour mask (N=1, E=2, S=4, W=8), 16-31 damaged.
+static func wall(faction: String) -> Dictionary:
+	var fr := building_frame(1, 1, 0.45)
+	return {"name": "b_wall_" + faction, "fw": fr.fw, "fh": fr.fh, "anchor": fr.anchor, "count": 32, "scale": 1.0,
+		"extra": {"frames": 32, "wall": true, "height": 0.45, "size": [1, 1]},
+		"build": func(i):
+			var dmg: bool = i >= 16
+			return _wrap(DF.concrete_wall(i % 16, dmg) if faction == "coalition" else DF.iron_wall(i % 16, dmg))}
+
 static func decor(name: String, count: int, fw: int, fh: int, anchor: Vector2, builder: Callable) -> Dictionary:
 	return {"name": name, "fw": fw, "fh": fh, "anchor": anchor, "count": count, "scale": 1.0, "mask": false,
 		"build": func(i): return _wrap(builder.call(i))}
@@ -131,10 +141,12 @@ static func decor(name: String, count: int, fw: int, fh: int, anchor: Vector2, b
 const BUILDINGS := {
 	"coalition": [["conyard", 3, 3], ["power", 2, 2], ["adv_power", 3, 3], ["refinery", 3, 3], ["silo", 1, 1], ["barracks", 2, 2],
 		["factory", 3, 3], ["radar", 2, 2], ["pillbox", 1, 1], ["gun_turret", 1, 1],
-		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["sam_site", 1, 1], ["grand_cannon", 2, 2]],
+		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["sam_site", 1, 1], ["grand_cannon", 2, 2],
+		["guard_tower", 1, 1], ["mortar_pit", 1, 1], ["missile_bunker", 1, 1]],
 	"dominion": [["conyard", 3, 3], ["power", 2, 2], ["adv_power", 3, 3], ["refinery", 3, 3], ["silo", 1, 1], ["barracks_dom", 2, 2],
 		["factory", 3, 3], ["radar", 2, 2], ["flame_tower", 1, 1], ["arc_coil", 1, 2],
-		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["flak_cannon", 1, 1]],
+		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["flak_cannon", 1, 1],
+		["bunker", 1, 1], ["twin_cannon", 1, 1], ["rocket_battery", 1, 1]],
 }
 
 static func all() -> Array:
@@ -187,6 +199,7 @@ static func all() -> Array:
 	for f in BUILDINGS:
 		for b in BUILDINGS[f]:
 			out += building(b[0], f, b[1], b[2])
+		out.append(wall(f))
 	out.append(decor("d_tree_broad", 4, 192, 224, Vector2(96, 180), func(i): return B.tree(0, 11 + i)))
 	out.append(decor("d_tree_pine", 4, 192, 224, Vector2(96, 180), func(i): return B.tree(1, 31 + i)))
 	out.append(decor("d_bush", 4, 128, 112, Vector2(64, 80), func(i): return B.tree(2, 51 + i)))

@@ -367,6 +367,225 @@
   "requires_power": true,
   "sprite": "arc_coil"
  },
+ "gtwr": {
+  "name": "Guard Tower",
+  "factions": [
+   "coalition"
+  ],
+  "category": "defense",
+  "role": "Cheap raised machine-gun post. Good against infantry, sees far.",
+  "cost": 300,
+  "build_time": 4,
+  "hp": 380,
+  "armor": "heavy",
+  "power": 0,
+  "sight": 6,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "tower_mg"
+  ],
+  "sprite": "guard_tower"
+ },
+ "mort": {
+  "name": "Mortar Pit",
+  "factions": [
+   "coalition"
+  ],
+  "category": "defense",
+  "role": "Sandbagged mortar. Lobs shells over obstacles; splash hurts groups of infantry and light vehicles.",
+  "cost": 550,
+  "build_time": 6,
+  "hp": 400,
+  "armor": "heavy",
+  "power": -15,
+  "sight": 7,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "mortar"
+  ],
+  "turret": true,
+  "sprite": "mortar_pit"
+ },
+ "mbnk": {
+  "name": "Missile Bunker",
+  "factions": [
+   "coalition"
+  ],
+  "category": "defense",
+  "role": "Concrete bunker with a guided anti-tank missile launcher.",
+  "cost": 750,
+  "build_time": 8,
+  "hp": 600,
+  "armor": "concrete",
+  "power": -30,
+  "sight": 7,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "radar"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "bunker_missile"
+  ],
+  "turret": true,
+  "requires_power": true,
+  "sprite": "missile_bunker"
+ },
+ "bnkr": {
+  "name": "Bunker",
+  "factions": [
+   "dominion"
+  ],
+  "category": "defense",
+  "role": "Half-buried concrete machine-gun bunker. Strong against infantry.",
+  "cost": 400,
+  "build_time": 5,
+  "hp": 550,
+  "armor": "concrete",
+  "power": 0,
+  "sight": 5,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "bunker_mg"
+  ],
+  "sprite": "bunker"
+ },
+ "tcan": {
+  "name": "Twin Cannon",
+  "factions": [
+   "dominion"
+  ],
+  "category": "defense",
+  "role": "Heavy twin-barrel anti-tank gun turret.",
+  "cost": 850,
+  "build_time": 9,
+  "hp": 650,
+  "armor": "heavy",
+  "power": -40,
+  "sight": 6,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "twin_cannon"
+  ],
+  "turret": true,
+  "requires_power": true,
+  "sprite": "twin_cannon"
+ },
+ "rbat": {
+  "name": "Rocket Battery",
+  "factions": [
+   "dominion"
+  ],
+  "category": "defense",
+  "role": "Truck-style rocket launcher rails: long-range salvos that blanket an area.",
+  "cost": 950,
+  "build_time": 10,
+  "hp": 450,
+  "armor": "heavy",
+  "power": -40,
+  "sight": 8,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "radar"
+  ],
+  "provides": [
+   "defense"
+  ],
+  "weapons": [
+   "katyusha"
+  ],
+  "turret": true,
+  "requires_power": true,
+  "sprite": "rocket_battery"
+ },
+ "cwal": {
+  "name": "Concrete Wall",
+  "factions": [
+   "coalition"
+  ],
+  "role": "Eight wall sections per purchase. Click and drag to lay a line; sections join up automatically. Blocks ground units.",
+  "category": "defense",
+  "cost": 200,
+  "build_time": 3,
+  "hp": 800,
+  "armor": "concrete",
+  "power": 0,
+  "sight": 1,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "power"
+  ],
+  "provides": [],
+  "wall": true,
+  "segments": 8,
+  "build_radius": 2,
+  "sprite": "wall"
+ },
+ "iwal": {
+  "name": "Iron Wall",
+  "factions": [
+   "dominion"
+  ],
+  "role": "Eight wall sections per purchase. Click and drag to lay a line; sections join up automatically. Blocks ground units.",
+  "category": "defense",
+  "cost": 200,
+  "build_time": 3,
+  "hp": 800,
+  "armor": "concrete",
+  "power": 0,
+  "sight": 1,
+  "footprint": [
+   "x"
+  ],
+  "prereq": [
+   "power"
+  ],
+  "provides": [],
+  "wall": true,
+  "segments": 8,
+  "build_radius": 2,
+  "sprite": "wall"
+ },
  "afld": {
   "name": "Airfield",
   "factions": [

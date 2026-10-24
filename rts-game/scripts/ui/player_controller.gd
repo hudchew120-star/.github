@@ -15,6 +15,8 @@ var mode: String = ""            # "", place, attack_move, patrol, repair, sell
 var place_type: String = ""
 var place_cat: String = ""
 var dragging: bool = false
+var wall_drag: bool = false        # laying a line of wall sections with the mouse held down
+var wall_last := Vector2i(-1, -1)
 var drag_start := Vector2.ZERO   # screen coordinates
 var drag_now := Vector2.ZERO
 var mmb_drag: bool = false
@@ -202,6 +204,24 @@ func begin_power(id: String) -> void:
 func cancel_mode() -> void:
 	set_mode("")
 
+## Lays wall sections cell by cell (straight steps) from the last placed section towards c.
+func _wall_drag_to(c: Vector2i) -> void:
+	var guard := 0
+	while wall_last != c and guard < 64:
+		guard += 1
+		var d := c - wall_last
+		var step := Vector2i(signi(d.x), 0) if absi(d.x) >= absi(d.y) else Vector2i(0, signi(d.y))
+		var nxt := wall_last + step
+		if game.wall_sections_left(game.human_pid, place_cat) <= 0:
+			wall_drag = false
+			cancel_mode()
+			return
+		if game.place_structure(game.human_pid, place_cat, nxt) != "":
+			# Blocked: skip over the cell but keep following the mouse.
+			wall_last = nxt
+			continue
+		wall_last = nxt
+
 func placement_cell() -> Vector2i:
 	var size: Vector2i = Data.def(place_type).size
 	var p: Vector2 = view.mouse_world() - Vector2(size) * MapGrid.T * 0.5 + Vector2(MapGrid.T, MapGrid.T) * 0.5
@@ -219,6 +239,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			view.pan_screen(event.relative)
 		if dragging:
 			drag_now = event.position
+		if wall_drag:
+			_wall_drag_to(placement_cell())
 	elif event is InputEventKey and event.pressed and not event.echo:
 		_key(event)
 
@@ -243,6 +265,19 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 		match mode:
 			"place":
 				var c := placement_cell()
+				if Data.def(place_type).get("wall", false):
+					# Walls: place a section here, then keep laying sections while the mouse is dragged.
+					var rw := game.place_structure(game.human_pid, place_cat, c)
+					if rw != "":
+						hud_message(rw, "warn")
+						game.play_sound("error", Vector2.INF)
+						return
+					wall_drag = true
+					wall_last = c
+					if game.wall_sections_left(game.human_pid, place_cat) <= 0:
+						wall_drag = false
+						cancel_mode()
+					return
 				var r := game.place_structure(game.human_pid, place_cat, c)
 				if r == "":
 					if not ev.shift_pressed:
@@ -281,6 +316,11 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 		drag_start = ev.position
 		drag_now = ev.position
 	else:
+		if wall_drag:
+			wall_drag = false
+			if game.wall_sections_left(game.human_pid, place_cat) <= 0:
+				cancel_mode()
+			return
 		if not dragging:
 			return
 		dragging = false

@@ -7,6 +7,7 @@ const HB := preload("res://tools/art/hd_buildings.gd")
 const HM := preload("res://tools/art/hd_models.gd")
 const CU := preload("res://tools/art/country_units.gd")
 const K := preload("res://tools/art/kit.gd")
+const DF := preload("res://tools/art/defenses.gd")
 
 ## Model id for a unit sprite (see data/units.json) and faction.
 static func unit_model(sprite: String, f: String) -> Node3D:
@@ -102,7 +103,7 @@ static func vehicle_model(id: String) -> Dictionary:
 	return {}
 
 static func showcase_cols(set_name: String) -> int:
-	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "dug": 5, "countries": 5, "country_units": 3, "mock_cameos": 7, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
+	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "dug": 5, "countries": 5, "country_units": 3, "mock_cameos": 7, "defenses": 4, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
 
 static func _rot(n: Node3D, deg: float) -> Node3D:
 	var w := Node3D.new()
@@ -193,6 +194,25 @@ static func showcase_set(set_name: String) -> Array:
 						if veh: return _veh(V.boat_coalition() if kind == "gunboat" else V.destroyer_coalition(), -25.0)
 						var c := "coalition" if kind == "engineer" or kind == "commando" else "thailand"
 						return _rot(H.soldier(kind, c, {"fire": 1} if kind != "engineer" else {}), -60.0)})
+		"defenses":
+			for e in [["guard_tower", "coalition"], ["mortar_pit", "coalition"], ["missile_bunker", "coalition"], ["pillbox", "coalition"],
+					["bunker", "dominion"], ["twin_cannon", "dominion"], ["rocket_battery", "dominion"], ["flame_tower", "dominion"]]:
+				var sp: String = e[0]
+				var ff: String = e[1]
+				out.append({"label": sp, "w": 1.0, "h": 1.0, "fit": true, "margin": 1.08, "team": BLUE if ff == "coalition" else RED,
+					"build": func(): return building_model(sp, ff)})
+			for ff in ["coalition", "dominion"]:
+				var f2: String = ff
+				out.append({"label": "wall_" + ff, "w": 1.0, "h": 1.0, "fit": true, "margin": 1.05, "team": BLUE if ff == "coalition" else RED,
+					"build": func():
+						var r := Node3D.new()
+						# An L-shaped run with a T junction: shows how sections join.
+						var cells := [[0, 0, 2 | 4], [1, 0, 8 | 2], [2, 0, 8 | 4], [0, 1, 1 | 4 | 2], [1, 1, 8], [0, 2, 1 | 2], [1, 2, 8], [2, 1, 1]]
+						for c in cells:
+							var w: Node3D = DF.concrete_wall(c[2], false) if f2 == "coalition" else DF.iron_wall(c[2], false)
+							w.position = Vector3(c[0], 0, c[1])
+							r.add_child(w)
+						return r})
 		"mock_scene_infantry":
 			out.append({"label": "infantry", "w": 3.4, "h": 4.0, "focus": Vector3(1.7, 0.0, 1.5), "team": BLUE, "build": func(): return _scene_infantry()})
 		"mock_scene_naval":

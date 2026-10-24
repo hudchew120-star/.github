@@ -99,6 +99,32 @@ func _metal(name: String, margin: int) -> StyleBox:
 	sb.content_margin_bottom = 8
 	return sb
 
+## Build tabs: dark slate buttons; the selected one is bright blue with a soft glow.
+func _style_tab(b: Button) -> void:
+	var base := StyleBoxFlat.new()
+	base.bg_color = Color(0.086, 0.118, 0.172)
+	base.border_color = Color(0.27, 0.33, 0.41)
+	base.set_border_width_all(1)
+	base.set_corner_radius_all(5)
+	base.content_margin_top = 4
+	base.content_margin_bottom = 4
+	var hover := base.duplicate()
+	hover.bg_color = Color(0.12, 0.16, 0.23)
+	hover.border_color = Color(0.45, 0.6, 0.8)
+	var on := base.duplicate()
+	on.bg_color = Color(0.12, 0.43, 0.9)
+	on.border_color = Color(0.55, 0.78, 1.0)
+	on.set_border_width_all(2)
+	on.shadow_color = Color(0.24, 0.6, 1.0, 0.55)
+	on.shadow_size = 5
+	b.add_theme_stylebox_override("normal", base)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", on)
+	b.add_theme_stylebox_override("hover_pressed", on)
+	b.add_theme_color_override("font_color", Color(0.8, 0.84, 0.9))
+	b.add_theme_color_override("font_pressed_color", Color.WHITE)
+	b.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
+
 func _build_sidebar() -> void:
 	var faction: String = game.players[game.human_pid].faction
 	var side := PanelContainer.new()
@@ -171,6 +197,7 @@ func _build_sidebar() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.add_theme_font_size_override("font_size", 12)
+		_style_tab(b)
 		b.pressed.connect(_select_tab.bind(c[0]))
 		tabs.add_child(b)
 		tab_buttons[c[0]] = b
