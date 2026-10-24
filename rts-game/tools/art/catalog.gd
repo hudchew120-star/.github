@@ -6,6 +6,7 @@ const V := preload("res://tools/art/vehicles.gd")
 const HB := preload("res://tools/art/hd_buildings.gd")
 const HM := preload("res://tools/art/hd_models.gd")
 const CU := preload("res://tools/art/country_units.gd")
+const K := preload("res://tools/art/kit.gd")
 
 ## Model id for a unit sprite (see data/units.json) and faction.
 static func unit_model(sprite: String, f: String) -> Node3D:
@@ -101,7 +102,7 @@ static func vehicle_model(id: String) -> Dictionary:
 	return {}
 
 static func showcase_cols(set_name: String) -> int:
-	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "dug": 5, "countries": 5, "country_units": 3, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
+	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "dug": 5, "countries": 5, "country_units": 3, "mock_cameos": 7, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
 
 static func _rot(n: Node3D, deg: float) -> Node3D:
 	var w := Node3D.new()
@@ -181,6 +182,21 @@ static func showcase_set(set_name: String) -> Array:
 					"build": func():
 						if kind == 2: return building_model(sp, ff)
 						return _rot(unit_model(sp, ff), -60.0 if kind == 0 else -25.0)})
+		"mock_cameos":
+			# Sidebar mock-up: Thai infantry and naval icons.
+			for e in [["e1", "infantry", 0], ["e3", "rocket_inf", 0], ["eng", "engineer", 0], ["cmdo", "commando", 0], ["rngr", "ranger", 0],
+					["boat_c", "gunboat", 1], ["dest_c", "destroyer", 1]]:
+				var kind: String = e[1]
+				var veh: bool = e[2] == 1
+				out.append({"label": e[0], "w": 0.96, "h": 0.76, "fit": true, "margin": 1.0 if not veh else 1.06, "team": BLUE,
+					"build": func():
+						if veh: return _veh(V.boat_coalition() if kind == "gunboat" else V.destroyer_coalition(), -25.0)
+						var c := "coalition" if kind == "engineer" or kind == "commando" else "thailand"
+						return _rot(H.soldier(kind, c, {"fire": 1} if kind != "engineer" else {}), -60.0)})
+		"mock_scene_infantry":
+			out.append({"label": "infantry", "w": 3.4, "h": 4.0, "focus": Vector3(1.7, 0.0, 1.5), "team": BLUE, "build": func(): return _scene_infantry()})
+		"mock_scene_naval":
+			out.append({"label": "naval", "w": 3.4, "h": 4.0, "focus": Vector3(1.8, 0.0, 1.6), "team": BLUE, "build": func(): return _scene_naval()})
 		"dug":
 			for d in [0.0, -45.0, -90.0, -135.0]:
 				var dd: float = d
@@ -203,3 +219,61 @@ static func showcase_set(set_name: String) -> Array:
 					out.append({"label": str(p), "w": 0.5, "h": 0.6, "focus": Vector3(0, 0.2, 0), "team": BLUE if f == "coalition" else RED,
 						"build": func(): return _rot(H.soldier("infantry", ff, pp), -90.0)})
 	return out
+
+# ---------------------------------------------------------------- sidebar backdrop scenes
+
+static func _thai_flag(r: Node3D, at: Vector3) -> void:
+	K.add(r, K.cylinder(0.012, 1.0, 8), HM.steel(), at + Vector3(0, 0.5, 0))
+	var cols := [Color(0.65, 0.1, 0.19), Color(0.95, 0.95, 0.95), Color(0.18, 0.16, 0.3), Color(0.18, 0.16, 0.3), Color(0.95, 0.95, 0.95), Color(0.65, 0.1, 0.19)]
+	for i in 6:
+		K.add(r, K.bevel_box(Vector3(0.36, 0.04, 0.008), 0.002), K.paint(cols[i], 0.0, 0.8), at + Vector3(0.19, 0.97 - i * 0.04, 0))
+
+static func _scene_infantry() -> Node3D:
+	var r := Node3D.new()
+	K.add(r, K.bevel_box(Vector3(16.0, 0.05, 16.0), 0.01), K.paint(Color(0.52, 0.5, 0.42), 0.0, 0.95, {"noise_amt": 0.35, "panel": 1.0, "panel_dark": 0.15}), Vector3(1.6, -0.025, 1.6))
+	var bk: Dictionary = HB.build("barracks", "coalition")
+	bk.root.position = Vector3(0.0, 0.0, -0.4)
+	r.add_child(bk.root)
+	for i in 8:
+		var sold := H.soldier("infantry" if i % 3 else "rocket_inf", "thailand", {})
+		sold.position = Vector3(1.0 + (i % 4) * 0.28, 0.0, 1.9 + (i / 4) * 0.3)
+		sold.rotation_degrees.y = -45.0
+		r.add_child(sold)
+	for i in 2:
+		var rg := H.soldier("ranger", "thailand", {"fire": 1})
+		rg.position = Vector3(2.3 + i * 0.3, 0.0, 1.2 + i * 0.2)
+		rg.rotation_degrees.y = -20.0
+		r.add_child(rg)
+	var jeep := _veh(V.jeep(), 30.0)
+	jeep.position = Vector3(2.9, 0.0, 2.5)
+	r.add_child(jeep)
+	for k in ["crates", "barrels", "sandbags"]:
+		var pr := HB.prop(k, 1)
+		pr.position = Vector3(2.6 if k != "sandbags" else 0.6, 0.0, 0.5 + ["crates", "barrels", "sandbags"].find(k) * 0.5)
+		r.add_child(pr)
+	_thai_flag(r, Vector3(2.3, 0.0, 0.2))
+	for i in 3:
+		var t := HB.tree(i % 2, 5 + i)
+		t.position = Vector3(3.6 + i * 0.4, 0.0, -0.4 + i * 0.7)
+		r.add_child(t)
+	return r
+
+static func _scene_naval() -> Node3D:
+	var r := Node3D.new()
+	K.add(r, K.bevel_box(Vector3(16.0, 0.04, 16.0), 0.01), K.paint(Color(0.14, 0.36, 0.5), 0.0, 0.95, {"noise_amt": 0.4}), Vector3(1.8, -0.06, 1.8))
+	K.add(r, K.bevel_box(Vector3(16.0, 0.08, 1.4), 0.02), K.paint(Color(0.5, 0.5, 0.46), 0.0, 0.9, {"panel": 2.0}), Vector3(1.8, 0.0, -0.6))
+	var yd: Dictionary = HB.build("naval_yard", "coalition")
+	yd.root.position = Vector3(-0.6, 0.0, 0.1)
+	r.add_child(yd.root)
+	var d1 := _veh(V.destroyer_coalition(), -35.0)
+	d1.position = Vector3(2.6, 0.0, 2.0)
+	r.add_child(d1)
+	var d2 := _veh(V.destroyer_coalition(), -35.0)
+	d2.position = Vector3(3.8, 0.0, 0.7)
+	r.add_child(d2)
+	for i in 2:
+		var b := _veh(V.boat_coalition(), -50.0)
+		b.position = Vector3(1.2 + i * 0.7, 0.0, 3.0 + i * 0.3)
+		r.add_child(b)
+	_thai_flag(r, Vector3(3.0, 0.04, -0.6))
+	return r
