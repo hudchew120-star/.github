@@ -91,7 +91,10 @@
    "rngr": 3,
    "tdst": 3,
    "mech": 3,
-   "bjet": 2
+   "bjet": 2,
+   "bomb_c": 1,
+   "dolph": 2,
+   "aegis": 1.5
   },
   "dominion": {
    "e1": 3,
@@ -107,7 +110,10 @@
    "ivan": 0.6,
    "tsar": 2.5,
    "gatl": 3,
-   "guer": 4
+   "guer": 4,
+   "kirov": 1,
+   "squid": 2,
+   "scorp": 1.5
   }
  },
  "counters": {

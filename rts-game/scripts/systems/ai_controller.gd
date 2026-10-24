@@ -142,6 +142,11 @@ func _manage_construction() -> void:
 				t = Data.building_for_tag(player.faction, tag)
 		if t != "" and game.availability(player.id, t) == "" and player.credits() >= int(Data.def(t).cost) * 0.25:
 			game.queue_item(player.id, t)
+	# Late game: one superweapon when rich (not on Easy).
+	if q.is_empty() and player.difficulty != "easy" and player.credits() > 7000 and game.sim_time > float(cfg.first_attack):
+		var sw := Data.building_for_tag(player.faction, "superweapon")
+		if sw != "" and game.availability(player.id, sw) == "":
+			game.queue_item(player.id, sw)
 	var dq: Array = cy.queues.get("defense", [])
 	if dq.is_empty() and int(cfg.defenses) > 0 and _count_tag("defense") < int(cfg.defenses) and _count_tag("factory", false) > 0 and (_count_tag("refinery", false) >= mini(2, int(cfg.max_refineries)) or threat_time > 0.0):
 		if cfg.parallel or q.is_empty():

@@ -561,6 +561,9 @@ func count_owned(pid: int, t: String) -> int:
 		if u.pid == pid and not u.dead and u.type == t:
 			n += 1
 	for b in buildings:
+		if b.pid == pid and not b.dead and b.type == t:
+			n += 1
+	for b in buildings:
 		if b.pid == pid and not b.dead:
 			for cat in b.queues:
 				for it in b.queues[cat]:
@@ -1053,12 +1056,14 @@ func _process_paths() -> void:
 				return
 	_path_cursor = 0
 
+## Units drive and walk straight through each other (no jostling for lanes); only units that
+## have stopped are spread apart a little so a parked group does not collapse into one spot.
 func _separate() -> void:
 	for u in units:
-		if u.dead or u.harv_state == "unloading" or u.is_air_unit or u.deployed:
+		if u.dead or u.moving or u.harv_state == "unloading" or u.is_air_unit or u.deployed:
 			continue
 		for o in unit_hash.query(u.pos, u.radius * 2.0):
-			if o == u or o.dead or o.uid < u.uid or o.harv_state == "unloading" or o.is_air_unit or o.deployed:
+			if o == u or o.dead or o.moving or o.uid < u.uid or o.harv_state == "unloading" or o.is_air_unit or o.deployed:
 				continue
 			var d: Vector2 = u.pos - o.pos
 			var dist := d.length()
@@ -1070,11 +1075,8 @@ func _separate() -> void:
 				dist = 1.0
 			var push := (min_d - dist)
 			var dir := d / dist
-			# Moving units shove idle ones more than they are shoved.
-			var wu := 0.3 if u.moving else 0.7
-			var wo := 0.3 if o.moving else 0.7
-			_try_push(u, dir * push * wu * 2.0)
-			_try_push(o, -dir * push * wo * 2.0)
+			_try_push(u, dir * push * 0.5)
+			_try_push(o, -dir * push * 0.5)
 
 func _try_push(u, v: Vector2) -> void:
 	var np: Vector2 = u.pos + v

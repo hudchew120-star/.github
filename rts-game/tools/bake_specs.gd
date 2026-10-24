@@ -9,6 +9,7 @@ const H := preload("res://tools/art/humans.gd")
 const V := preload("res://tools/art/vehicles.gd")
 const CU := preload("res://tools/art/country_units.gd")
 const DF := preload("res://tools/art/defenses.gd")
+const AN := preload("res://tools/art/air_naval2.gd")
 ## Country uniforms: extra infantry sheets per country (the side's default country keeps the base sheet).
 const COUNTRY_INFANTRY := {
 	"uk": ["infantry", "rocket_inf"], "germany": ["infantry", "rocket_inf"], "france": ["infantry", "rocket_inf"],
@@ -104,7 +105,7 @@ static func building(sprite: String, faction: String, sx: int, sz: int) -> Array
 			if i >= 2:
 				B.scaffold(d.root, sx, sz, h * cuts[i - 2] + 0.12)
 			return _wrap(d.root)}]
-	if sprite == "conyard" or sprite == "radar":
+	if sprite == "conyard" or sprite == "radar" or sprite == "weather_control":
 		out.append({"name": key + "_anim", "fw": fr.fw, "fh": fr.fh, "anchor": fr.anchor, "count": 16, "scale": 1.0, "extra": {"frames": 16},
 			"build": func(i): return _wrap(B.build(sprite, faction, float(i) / 16.0).root)})
 	if sprite == "arc_coil":
@@ -142,11 +143,11 @@ const BUILDINGS := {
 	"coalition": [["conyard", 3, 3], ["power", 2, 2], ["adv_power", 3, 3], ["refinery", 3, 3], ["silo", 1, 1], ["barracks", 2, 2],
 		["factory", 3, 3], ["radar", 2, 2], ["pillbox", 1, 1], ["gun_turret", 1, 1],
 		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["sam_site", 1, 1], ["grand_cannon", 2, 2],
-		["guard_tower", 1, 1], ["mortar_pit", 1, 1], ["missile_bunker", 1, 1]],
+		["guard_tower", 1, 1], ["mortar_pit", 1, 1], ["missile_bunker", 1, 1], ["weather_control", 2, 2]],
 	"dominion": [["conyard", 3, 3], ["power", 2, 2], ["adv_power", 3, 3], ["refinery", 3, 3], ["silo", 1, 1], ["barracks_dom", 2, 2],
 		["factory", 3, 3], ["radar", 2, 2], ["flame_tower", 1, 1], ["arc_coil", 1, 2],
 		["airfield", 3, 3], ["naval_yard", 3, 3], ["repair", 3, 3], ["flak_cannon", 1, 1],
-		["bunker", 1, 1], ["twin_cannon", 1, 1], ["rocket_battery", 1, 1]],
+		["bunker", 1, 1], ["twin_cannon", 1, 1], ["rocket_battery", 1, 1], ["missile_silo", 2, 2]],
 }
 
 static func all() -> Array:
@@ -191,6 +192,13 @@ static func all() -> Array:
 	out += vehicle("u_jet_eagle_coalition", func(_s): return CU.black_eagle(), 1.0, 1, Vector2i(240, 176), true)
 	out += vehicle("u_tank_tsar_dominion", func(_s): return CU.tsar_tank(), 1.25, 1, Vector2i(272, 224))
 	out += vehicle("u_tank_gatling_dominion", func(_s): return CU.gatling_tank(), 1.3, 1, Vector2i(208, 176))
+	# Second wave of aircraft and sea units.
+	out += vehicle("u_strat_bomber_coalition", func(_s): return AN.strat_bomber(), 1.0, 1, Vector2i(304, 224), true)
+	out += vehicle("u_airship_dominion", func(_s): return AN.airship(), 1.0, 1, Vector2i(352, 288), true)
+	out += vehicle("u_dolphin_coalition", func(_s): return AN.dolphin(), 1.2, 1, Vector2i(160, 128))
+	out += vehicle("u_aegis_coalition", func(_s): return AN.aegis(), 1.0, 1, Vector2i(320, 224))
+	out += vehicle("u_squid_dominion", func(_s): return AN.squid(), 1.15, 1, Vector2i(192, 160))
+	out += vehicle("u_sea_scorpion_dominion", func(_s): return AN.sea_scorpion(), 1.15, 1, Vector2i(208, 160))
 	for c in COUNTRY_INFANTRY:
 		for kind in COUNTRY_INFANTRY[c]:
 			out += infantry("i_%s_%s" % [kind, c], kind, c)

@@ -19,7 +19,7 @@ func _ready() -> void:
 		"test_engineer", "test_repair_facility", "test_map_presets",
 		"test_paratroopers", "test_bomber_strike", "test_dig_in", "test_jetpack_and_dog", "test_charges", "test_mines",
 		"test_countries", "test_thai_rangers_stealth", "test_country_powers", "test_country_units",
-		"test_new_defenses", "test_walls",
+		"test_new_defenses", "test_walls", "test_units_pass_through", "test_superweapons", "test_sea_beasts",
 	]
 	var only = OS.get_environment("RTS_TEST")
 	for t in tests:
@@ -818,7 +818,7 @@ func _own_building(g: Game, pid: int):
 func test_paratroopers() -> void:
 	var g = _base_game()
 	g.cheats.execute("build instant on")
-	check(g.specials.powers_for(0) == ["paradrop"], "Coalition has the paratroopers power")
+	check(g.specials.powers_for(0).has("paradrop"), "Coalition has the paratroopers power")
 	check(not g.specials.power_state(0, "paradrop").available, "paratroopers need an airfield")
 	for t in ["proc", "dome", "afld"]:
 		if g.buildings.filter(func(b): return b.pid == 0 and b.type == t).is_empty():
@@ -841,7 +841,7 @@ func test_paratroopers() -> void:
 
 func test_bomber_strike() -> void:
 	var g = make_game({"start_units": "base", "player_faction": "dominion", "enemy_factions": ["coalition"]})
-	check(g.specials.powers_for(0) == ["bomber"], "Dominion has the bomber strike")
+	check(g.specials.powers_for(0).has("bomber"), "Dominion has the bomber strike")
 	g.specials.powers[0] = {"bomber": g.sim_time}
 	var foe = _own_building(g, 1)
 	var hp0: float = foe.hp
@@ -978,7 +978,8 @@ func test_countries() -> void:
 	var hp0: float = tank.hp
 	tank.take_damage(100.0, null)
 	check(is_equal_approx(hp0 - tank.hp, 90.0), "German vehicles take 10%% less damage (%.1f)" % (hp0 - tank.hp))
-	check(g.specials.powers_for(0).is_empty() and g.specials.powers_for(1).is_empty(), "Germany and China have no support power")
+	var own_powers := func(pid): return g.specials.powers_for(pid).filter(func(id): return not Specials.POWERS[id].get("superweapon", false))
+	check(own_powers.call(0).is_empty() and own_powers.call(1).is_empty(), "Germany and China have no country support power")
 	# Old saves and quick starts without a country fall back to the side's default.
 	var g2 = make_game({"player_faction": "dominion", "enemy_factions": ["coalition"], "enemy_countries": []})
 	check(g2.players[0].country == "russia", "Dominion defaults to Russia")
@@ -1011,8 +1012,8 @@ func test_thai_rangers_stealth() -> void:
 
 func test_country_powers() -> void:
 	var g = make_game({"start_units": "base", "player_country": "uk", "enemy_countries": ["cuba"]})
-	check(g.specials.powers_for(0) == ["spyplane"], "UK has the spy plane")
-	check(g.specials.powers_for(1) == ["revolution"], "Cuba has the revolution")
+	check(g.specials.powers_for(0).has("spyplane") and not g.specials.powers_for(0).has("paradrop"), "UK has the spy plane (not US paratroopers)")
+	check(g.specials.powers_for(1).has("revolution") and not g.specials.powers_for(1).has("bomber"), "Cuba has the revolution (not the Russian bomber)")
 	g.specials.powers[0] = {"spyplane": g.sim_time}
 	var foe = _own_building(g, 1)
 	var c: Vector2i = foe.cell0
@@ -1110,4 +1111,78 @@ func test_walls() -> void:
 			u.take_damage(u.hp + 1, null)
 	run(g, 1.5)
 	check(g.players[0].defeated, "a player with only walls left is defeated")
+	await free_game(g)
+
+func test_units_pass_through() -> void:
+	var g = make_game({"victory": "none"})
+	var base: Vector2 = MapGrid.cell_center(g.map.starts[0])
+	var c: Vector2i = g.map.nearest_passable(MapGrid.to_cell(base) + Vector2i(0, 6), "track", 8)
+	var a = g.spawn_unit(0, "ltank", MapGrid.cell_center(c))
+	var b = g.spawn_unit(0, "ltank", MapGrid.cell_center(c + Vector2i(6, 0)))
+	var a_goal: Vector2 = b.pos
+	var b_goal: Vector2 = a.pos
+	a.cmd_move(a_goal)
+	b.cmd_move(b_goal)
+	var crossed := false
+	for i in 300:
+		g.step()
+		if a.pos.x > b.pos.x:
+			crossed = true
+	check(crossed, "two tanks driving head-on pass through each other")
+	check(a.pos.distance_to(a_goal) < MapGrid.T and b.pos.distance_to(b_goal) < MapGrid.T, "both reach their destinations")
+	# Parked units still spread a little instead of stacking on one spot.
+	var s1 = g.spawn_unit(0, "e1", MapGrid.cell_center(c + Vector2i(2, 2)))
+	var s2 = g.spawn_unit(0, "e1", MapGrid.cell_center(c + Vector2i(2, 2)))
+	run(g, 1.0)
+	check(s1.pos.distance_to(s2.pos) > 2.0, "idle units on the same spot spread apart")
+	await free_game(g)
+
+func test_superweapons() -> void:
+	var g = make_game({"start_units": "base", "victory": "none"})
+	g.cheats.execute("build instant on")
+	g.cheats.set_flag("no_prereq", true)
+	check(g.specials.powers_for(0).has("lightning"), "Coalition (any country) can use the Lightning Storm")
+	var w = build_now(g, "wthr")
+	check(w != null, "weather controller built")
+	check(g.availability(0, "wthr") != "", "only one weather controller at a time")
+	run(g, 1.0)
+	check(g.specials.power_state(0, "lightning").available, "lightning storm unlocked by the weather controller")
+	var foe = _own_building(g, 1)
+	var hp0: float = foe.hp
+	g.specials.powers[0]["lightning"] = g.sim_time
+	check(g.specials.use_power(0, "lightning", foe.rect_px().get_center()) == "", "lightning storm called")
+	run(g, 16.0)
+	check(foe.dead or foe.hp < hp0, "lightning damaged the enemy structure (%.0f -> %.0f)" % [hp0, foe.hp])
+	check(g.specials.storms.is_empty(), "storm ends")
+	await free_game(g)
+	var g2 = make_game({"start_units": "base", "player_faction": "dominion", "enemy_factions": ["coalition"], "victory": "none"})
+	check(g2.specials.powers_for(0).has("nuke"), "Dominion can launch a nuclear missile")
+	g2.specials.powers[0] = {"nuke": g2.sim_time}
+	var t2 = _own_building(g2, 1)
+	var h2: float = t2.hp
+	check(g2.specials.use_power(0, "nuke", t2.rect_px().get_center()) == "", "missile launched")
+	run(g2, 6.0)
+	check(t2.dead or t2.hp < h2 * 0.5, "nuke wrecked the target (%.0f -> %.0f)" % [h2, t2.hp])
+	await free_game(g2)
+
+func test_sea_beasts() -> void:
+	var g = make_game({"map_size": "medium", "water": "coastal", "victory": "none"})
+	var w := Vector2i(-1, -1)
+	for y in g.map.h:
+		for x in g.map.w:
+			if w.x < 0 and g.map.terrain_id(Vector2i(x, y)) == "water" and g.map.passable(Vector2i(x + 4, y), "naval"):
+				w = Vector2i(x, y)
+	check(w.x >= 0, "found open water")
+	var sq = g.spawn_unit(1, "squid", MapGrid.cell_center(w))
+	check(sq.submarine and g.is_hidden_from(sq, 0), "giant squid hides underwater")
+	var boat = g.spawn_unit(0, "dolph", MapGrid.cell_center(w + Vector2i(3, 0)))
+	run(g, 0.6)
+	check(not g.is_hidden_from(sq, 0), "dolphin detects the squid")
+	var ship = g.spawn_unit(0, "boat_c", MapGrid.cell_center(w + Vector2i(1, 0)))
+	var hp0: float = ship.hp
+	sq.cmd_attack(ship)
+	run(g, 3.0)
+	check(ship.dead or ship.hp < hp0, "squid crushes a ship")
+	var kv = g.spawn_unit(1, "kirov", MapGrid.cell_center(g.map.starts[1]))
+	check(kv.is_air_unit and kv.max_ammo < 0, "airship flies and never needs to rearm")
 	await free_game(g)

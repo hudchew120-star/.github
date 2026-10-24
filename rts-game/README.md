@@ -26,9 +26,13 @@ automatically by `.github/workflows/build-game.yml` whenever the game changes.
 | Modern western style: multi-tone camouflage, plate carriers, rounded combat helmets, carbines with optics; faceted armour with side skirts, sand and steel paint | Eastern-bloc style: olive field uniforms, steel helmets with red stars, chest rigs, assault rifles with wooden furniture; cast dome turrets, reactive armour, rivets, fuel drums |
 | Rifleman (press **E** to dig in behind sandbags), Lancer (anti-tank), Engineer, **Commando** (twin pistols, C4 on structures, one at a time) | Conscript, RPG trooper, Flame trooper, Engineer, **Demolition Trooper** (timed charges on any target), **Attack Dog** (kills infantry in one bite) |
 | Ranger utility vehicle, Viper light tank, Warden battle tank, Skyhawk AA | Mammoth twin-gun heavy tank, SAM carrier |
-| Hornet attack helicopter, Falcon stealth fighter | Krait gunship, strike fighter with bombs |
-| Patrol boat, destroyer (sonar finds submarines) | Submarine (invisible while submerged), battlecruiser with cruise missiles |
+| Hornet attack helicopter, Falcon strike jet, **Thunderbolt Bomber** (carpet-bombs a line) | Hammerhead gunship, Kestrel bomber, **Krepost Airship** (huge, slow, armoured bomber blimp that never rearms) |
+| Patrol boat, destroyer (sonar finds submarines), **Aegis Cruiser** (long-range anti-air), **Dolphin** (sonic pulses, finds submarines and squids) | Submarine (invisible while submerged), battlecruiser with cruise missiles, **Sea Scorpion** (hydrofoil flak boat), **Giant Squid** (hides underwater, crushes ships) |
+| Superweapon: **Weather Controller** -> **Lightning Storm** (12 s of lightning over an area, every 7 min) | Superweapon: **Missile Silo** -> **Nuclear Missile** (one huge blast, every 8 min) |
 | Defenses: Guard Tower, Pillbox, Mortar Pit, Gun Turret, Missile Bunker, Patriot SAM site, **Concrete Wall** | Defenses: Bunker, Flame Tower, Twin Cannon, Rocket Battery (6-rocket salvos), Arc Coil, Flak cannon, **Iron Wall**; **Minelayer** (press **E** to lay hidden mines) |
+
+**Movement**: units drive and walk straight through each other instead of fighting over lanes;
+only units that have stopped spread out a little.
 
 **Walls**: one purchase gives eight sections. Click and drag on the map to lay a line; sections
 join up automatically into corners and T-junctions, block ground units, and do not count as
@@ -71,6 +75,8 @@ Generated maps have a **Water** option (lakes, coastal for naval warfare, or dry
 ![Country units: Thai rangers, Japanese mecha, Korean Black Eagle, German tank destroyer, French Grand Cannon, Russian Tsar tank, Chinese Gatling tank, Cuban guerrillas](docs/screenshots/iso_countries.png)
 ![Choosing countries by flag](docs/screenshots/menu_countries.png)
 ![New defenses, walls and the card-style build menu](docs/screenshots/iso_defenses.png)
+![Lightning storm, strategic bomber and airship](docs/screenshots/iso_superweapon.png)
+![Dolphins, Aegis cruiser and a giant squid](docs/screenshots/iso_sea_units.png)
 ![Paratroopers, dug-in riflemen, rocketeers, commando, dogs and a minelayer](docs/screenshots/iso_specials.png)
 ![Naval base on a coastal map](docs/screenshots/iso_naval.png)
 ![Armies and helicopters](docs/screenshots/iso_army.png)

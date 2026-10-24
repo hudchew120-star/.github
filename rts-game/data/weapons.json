@@ -796,5 +796,119 @@
   "burst": 6,
   "burst_delay": 0.12,
   "sound": "rocket"
+ },
+ "carpet_bombs": {
+  "name": "Carpet bombs",
+  "damage": [
+   110,
+   130
+  ],
+  "range": 1.6,
+  "rof": 1.0,
+  "warhead": "HE",
+  "projectile": "bomb",
+  "speed": 220,
+  "splash": 1.2,
+  "accuracy": 0.9,
+  "targets": [
+   "ground"
+  ],
+  "burst": 6,
+  "burst_delay": 0.12,
+  "sound": "explode"
+ },
+ "airship_bombs": {
+  "name": "Heavy bombs",
+  "damage": [
+   170,
+   200
+  ],
+  "range": 1.1,
+  "rof": 1.4,
+  "warhead": "HE",
+  "projectile": "bomb",
+  "speed": 160,
+  "splash": 1.1,
+  "accuracy": 0.95,
+  "targets": [
+   "ground"
+  ],
+  "sound": "explode_big"
+ },
+ "sonic_pulse": {
+  "name": "Sonic pulse",
+  "damage": [
+   34,
+   40
+  ],
+  "range": 4.0,
+  "rof": 0.9,
+  "warhead": "AP",
+  "projectile": "zap",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 1.0,
+  "targets": [
+   "naval",
+   "sub"
+  ],
+  "sound": "zap"
+ },
+ "aegis_missiles": {
+  "name": "Aegis missiles",
+  "damage": [
+   60,
+   70
+  ],
+  "range": 9.5,
+  "rof": 0.9,
+  "warhead": "AA",
+  "projectile": "rocket",
+  "speed": 700,
+  "splash": 0.35,
+  "accuracy": 1.0,
+  "targets": [
+   "air"
+  ],
+  "burst": 2,
+  "burst_delay": 0.2,
+  "sound": "rocket"
+ },
+ "tentacles": {
+  "name": "Tentacles",
+  "damage": [
+   55,
+   65
+  ],
+  "range": 0.9,
+  "rof": 0.8,
+  "warhead": "AP",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 1.0,
+  "targets": [
+   "naval"
+  ],
+  "sound": ""
+ },
+ "scorpion_flak": {
+  "name": "Twin flak gun",
+  "damage": [
+   18,
+   24
+  ],
+  "range": 6.0,
+  "rof": 0.4,
+  "warhead": "AA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.3,
+  "accuracy": 0.9,
+  "targets": [
+   "air",
+   "naval"
+  ],
+  "sound": "mg"
  }
 }

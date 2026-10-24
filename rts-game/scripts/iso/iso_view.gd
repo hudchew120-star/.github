@@ -786,6 +786,10 @@ func spawn_fx(kind: String, p: Vector2, opts: Dictionary) -> void:
 			fx.life = 0.07 if kind == "tracer" else 0.25
 			fx.zap = kind == "zap"
 			fx.line_w = 1.5 if kind == "tracer" else 2.0
+			if opts.get("bolt", false):
+				# Lightning bolt from the clouds: thicker and lingers a little.
+				fx.line_w = 4.0
+				fx.life = 0.32
 			air_fx.add_child(fx)
 		"spark":
 			var s: SpriteLib.Sheet = fx_sheets.muzzle
@@ -909,6 +913,26 @@ func _draw_overlay() -> void:
 		overlay.draw_circle(bp, 8.0, Color(0.08, 0.08, 0.08, 0.85))
 		overlay.draw_circle(bp, 5.0, Color(1, 0.15, 0.1) if blink else Color(0.45, 0.05, 0.05))
 		overlay.draw_string(font, bp + Vector2(10, 5), "%d" % int(ceil(bomb.t)), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.85, 0.3))
+	# Superweapons: storm clouds over a lightning storm, a red target ring under an incoming missile.
+	for st in game.specials.storms:
+		var cp := world_to_screen(st.pos, 3.2)
+		if not screen_has(cp):
+			continue
+		var rad: float = float(Specials.POWERS.lightning.radius) * 32.0 * camera.zoom.x * 1.6
+		var gather: float = clampf(1.0 - (st.t - float(Specials.POWERS.lightning.duration)) / float(Specials.POWERS.lightning.delay), 0.2, 1.0)
+		for k in 9:
+			var a := k * 0.7 + game.sim_time * 0.15
+			var off := Vector2(cos(a), sin(a) * 0.45) * rad * (0.25 + 0.12 * (k % 4))
+			overlay.draw_circle(cp + off, rad * (0.32 + 0.05 * (k % 3)), Color(0.13, 0.14, 0.18, 0.28 * gather))
+	for nk in game.specials.nukes:
+		var np := world_to_screen(nk.pos)
+		if not screen_has(np):
+			continue
+		var rr: float = float(Specials.POWERS.nuke.radius) * 32.0 * camera.zoom.x * 1.4
+		var pulse: float = 0.5 + 0.5 * sin(game.sim_time * 10.0)
+		overlay.draw_arc(np, rr, 0, TAU, 48, Color(1, 0.15, 0.1, 0.5 + 0.4 * pulse), 3.0)
+		overlay.draw_arc(np, rr * 0.5, 0, TAU, 32, Color(1, 0.3, 0.1, 0.4), 2.0)
+		overlay.draw_string(font, np + Vector2(-8, -rr * 0.55), "%d" % int(ceil(nk.t)), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1, 0.85, 0.3))
 	for u in game.units:
 		if u.dead or not u.visible:
 			continue

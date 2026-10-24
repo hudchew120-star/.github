@@ -3,7 +3,7 @@
 Environment: Godot 4.3 stable, Linux, headless run and software-rendered (Mesa llvmpipe)
 screenshots. Command: `godot --headless --path . res://tests/test_runner.tscn`
 
-**Result: 41 tests, 409 checks passed, 0 failed.**
+**Result: 44 tests, 430 checks passed, 0 failed.**
 
 | Test | What it verifies |
 | --- | --- |
@@ -47,6 +47,9 @@ screenshots. Command: `godot --headless --path . res://tests/test_runner.tscn`
 | test_country_powers | UK spy plane reveals the enemy base for 30 s, then the fog returns; Cuban revolution raises five guerrillas |
 | test_new_defenses | Each side has at least six defenses; the rocket battery fires a multi-rocket salvo that damages a tank; bunker built with its machine gun |
 | test_walls | One wall purchase gives eight sections that can be placed one by one; walls block ground units; a player with only walls left is defeated |
+| test_units_pass_through | Two tanks driving head-on pass through each other and reach their goals; idle units on one spot spread apart |
+| test_superweapons | Lightning Storm is available to every Coalition country once a Weather Controller stands (one at a time) and damages the target; the Dominion nuclear missile wrecks its target |
+| test_sea_beasts | The giant squid hides underwater, a dolphin detects it, the squid crushes a ship; the airship flies and never rearms |
 | test_country_units | Tsar tank repairs itself and carries anti-air missiles; Gatling spin-up and reset; sniper rifle hits infantry only |
 
 Manual checks (1920x1080 screenshots, Forward+ renderer on a software Vulkan driver): isometric

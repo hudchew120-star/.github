@@ -8,6 +8,7 @@ const M := preload("res://tools/art/hd_models.gd")
 const B2 := preload("res://tools/art/buildings2.gd")
 const CU := preload("res://tools/art/country_units.gd")
 const DF := preload("res://tools/art/defenses.gd")
+const AN := preload("res://tools/art/air_naval2.gd")
 
 # ---------------------------------------------------------------- shared details
 
@@ -156,6 +157,8 @@ static func build(sprite: String, faction: String, anim_t: float = 0.0) -> Dicti
 		"flak_cannon": return B2.flak_base(P, faction)
 		"grand_cannon": return CU.grand_cannon_base(P, faction)
 		"guard_tower": return DF.guard_tower(P, faction)
+		"weather_control": return AN.weather_control(P, faction, anim_t)
+		"missile_silo": return AN.missile_silo(P, faction)
 		"mortar_pit": return DF.mortar_base(P, faction)
 		"missile_bunker": return DF.missile_bunker_base(P, faction)
 		"bunker": return DF.bunker(P, faction)

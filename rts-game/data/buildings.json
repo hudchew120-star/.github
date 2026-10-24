@@ -775,5 +775,61 @@
   "turret": true,
   "requires_power": true,
   "sprite": "grand_cannon"
+ },
+ "wthr": {
+  "name": "Weather Controller",
+  "factions": [
+   "coalition"
+  ],
+  "category": "building",
+  "role": "Superweapon. Unlocks the Lightning Storm: a thunderstorm that hammers an area with lightning bolts. One at a time.",
+  "cost": 5000,
+  "build_time": 40,
+  "hp": 1300,
+  "armor": "concrete",
+  "power": -200,
+  "sight": 6,
+  "footprint": [
+   "xx",
+   "xx"
+  ],
+  "prereq": [
+   "radar",
+   "factory"
+  ],
+  "provides": [
+   "superweapon"
+  ],
+  "requires_power": true,
+  "build_limit": 1,
+  "sprite": "weather_control"
+ },
+ "msil": {
+  "name": "Missile Silo",
+  "factions": [
+   "dominion"
+  ],
+  "category": "building",
+  "role": "Superweapon. Unlocks the Nuclear Missile: a single devastating strike on a large area. One at a time.",
+  "cost": 5000,
+  "build_time": 40,
+  "hp": 1300,
+  "armor": "concrete",
+  "power": -200,
+  "sight": 6,
+  "footprint": [
+   "xx",
+   "xx"
+  ],
+  "prereq": [
+   "radar",
+   "factory"
+  ],
+  "provides": [
+   "superweapon"
+  ],
+  "requires_power": true,
+  "build_limit": 1,
+  "sprite": "missile_silo"
  }
 }

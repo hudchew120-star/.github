@@ -928,5 +928,161 @@
   "sprite": "guerrilla",
   "regen": 1.5,
   "turn_rate": 0
+ },
+ "bomb_c": {
+  "name": "Thunderbolt Bomber",
+  "factions": [
+   "coalition"
+  ],
+  "category": "aircraft",
+  "role": "Heavy four-engine bomber. Each run carpet-bombs a line of ground targets, then flies home to rearm.",
+  "cost": 2000,
+  "build_time": 19,
+  "hp": 340,
+  "armor": "aircraft",
+  "speed": 4.6,
+  "move": "air",
+  "altitude": 2.3,
+  "hover": false,
+  "sight": 6,
+  "radius": 20,
+  "weapons": [
+   "carpet_bombs"
+  ],
+  "ammo": 2,
+  "rearm_time": 2.0,
+  "prereq": [
+   "airfield",
+   "radar"
+  ],
+  "sprite": "strat_bomber",
+  "turn_rate": 1.4
+ },
+ "kirov": {
+  "name": "Krepost Airship",
+  "factions": [
+   "dominion"
+  ],
+  "category": "aircraft",
+  "role": "Huge armoured bomber airship. Very slow and very tough; drops heavy bombs on anything below it and never needs to rearm.",
+  "cost": 2400,
+  "build_time": 24,
+  "hp": 1500,
+  "armor": "aircraft",
+  "speed": 1.0,
+  "move": "air",
+  "altitude": 2.0,
+  "hover": true,
+  "sight": 6,
+  "radius": 26,
+  "weapons": [
+   "airship_bombs"
+  ],
+  "ammo": -1,
+  "prereq": [
+   "airfield",
+   "radar"
+  ],
+  "sprite": "airship",
+  "turn_rate": 1.2
+ },
+ "dolph": {
+  "name": "Dolphin",
+  "factions": [
+   "coalition"
+  ],
+  "category": "naval",
+  "role": "Trained dolphin. Fast, sees submarines and squids, and stuns ships with sonic pulses.",
+  "cost": 500,
+  "build_time": 7,
+  "hp": 220,
+  "armor": "light",
+  "speed": 4.2,
+  "move": "naval",
+  "sight": 7,
+  "radius": 12,
+  "weapons": [
+   "sonic_pulse"
+  ],
+  "detector": 6,
+  "prereq": [
+   "naval_yard"
+  ],
+  "sprite": "dolphin",
+  "turn_rate": 5.0
+ },
+ "aegis": {
+  "name": "Aegis Cruiser",
+  "factions": [
+   "coalition"
+  ],
+  "category": "naval",
+  "role": "Air-defence cruiser. Its missile cells shoot down aircraft from long range.",
+  "cost": 1400,
+  "build_time": 15,
+  "hp": 650,
+  "armor": "ship",
+  "speed": 2.4,
+  "move": "naval",
+  "sight": 9,
+  "radius": 22,
+  "weapons": [
+   "aegis_missiles"
+  ],
+  "prereq": [
+   "naval_yard",
+   "radar"
+  ],
+  "sprite": "aegis",
+  "turn_rate": 1.8
+ },
+ "squid": {
+  "name": "Giant Squid",
+  "factions": [
+   "dominion"
+  ],
+  "category": "naval",
+  "role": "Trained giant squid. Hides underwater and crushes ships in its tentacles.",
+  "cost": 700,
+  "build_time": 9,
+  "hp": 380,
+  "armor": "light",
+  "speed": 3.0,
+  "move": "naval",
+  "sight": 6,
+  "radius": 14,
+  "weapons": [
+   "tentacles"
+  ],
+  "submarine": true,
+  "prereq": [
+   "naval_yard"
+  ],
+  "sprite": "squid",
+  "turn_rate": 4.0
+ },
+ "scorp": {
+  "name": "Sea Scorpion",
+  "factions": [
+   "dominion"
+  ],
+  "category": "naval",
+  "role": "Hydrofoil escort with a twin flak gun: hits aircraft and light boats.",
+  "cost": 900,
+  "build_time": 10,
+  "hp": 400,
+  "armor": "ship",
+  "speed": 3.6,
+  "move": "naval",
+  "sight": 8,
+  "radius": 16,
+  "weapons": [
+   "scorpion_flak"
+  ],
+  "prereq": [
+   "naval_yard"
+  ],
+  "sprite": "sea_scorpion",
+  "turn_rate": 3.0
  }
 }

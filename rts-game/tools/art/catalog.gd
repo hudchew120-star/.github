@@ -8,6 +8,7 @@ const HM := preload("res://tools/art/hd_models.gd")
 const CU := preload("res://tools/art/country_units.gd")
 const K := preload("res://tools/art/kit.gd")
 const DF := preload("res://tools/art/defenses.gd")
+const AN := preload("res://tools/art/air_naval2.gd")
 
 ## Model id for a unit sprite (see data/units.json) and faction.
 static func unit_model(sprite: String, f: String) -> Node3D:
@@ -23,6 +24,12 @@ static func unit_model(sprite: String, f: String) -> Node3D:
 		"jet_eagle": return _veh(CU.black_eagle(), 0.0)
 		"tank_tsar": return _veh(CU.tsar_tank(), 0.0)
 		"tank_gatling": return _veh(CU.gatling_tank(), 0.0)
+		"strat_bomber": return _veh(AN.strat_bomber(), 0.0)
+		"airship": return _veh(AN.airship(), 0.0)
+		"dolphin": return _veh(AN.dolphin(), 0.0)
+		"aegis": return _veh(AN.aegis(), 0.0)
+		"squid": return _veh(AN.squid(), 0.0)
+		"sea_scorpion": return _veh(AN.sea_scorpion(), 0.0)
 		"minelayer": return _veh(V.minelayer(), 0.0)
 		"tank_light": return _veh(V.light_tank(), 0.0)
 		"tank_medium": return _veh(V.medium_tank(), 0.0)
@@ -103,7 +110,7 @@ static func vehicle_model(id: String) -> Dictionary:
 	return {}
 
 static func showcase_cols(set_name: String) -> int:
-	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "dug": 5, "countries": 5, "country_units": 3, "mock_cameos": 7, "defenses": 4, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
+	return {"infantry": 7, "poses": 7, "closeup": 5, "new": 4, "style": 4, "dug": 5, "countries": 5, "country_units": 3, "mock_cameos": 7, "defenses": 4, "wave2": 4, "vehicles": 5, "air": 4, "ships": 4}.get(set_name, 6)
 
 static func _rot(n: Node3D, deg: float) -> Node3D:
 	var w := Node3D.new()
@@ -213,6 +220,14 @@ static func showcase_set(set_name: String) -> Array:
 							w.position = Vector3(c[0], 0, c[1])
 							r.add_child(w)
 						return r})
+		"wave2":
+			for e in [["strat_bomber", "coalition", 0], ["airship", "dominion", 0], ["dolphin", "coalition", 0], ["aegis", "coalition", 0],
+					["squid", "dominion", 0], ["sea_scorpion", "dominion", 0], ["weather_control", "coalition", 1], ["missile_silo", "dominion", 1]]:
+				var sp: String = e[0]
+				var ff: String = e[1]
+				var bld: bool = e[2] == 1
+				out.append({"label": sp, "w": 1.0, "h": 0.8, "fit": true, "margin": 1.06, "team": BLUE if ff == "coalition" else RED,
+					"build": func(): return building_model(sp, ff) if bld else _rot(unit_model(sp, ff), -25.0)})
 		"mock_scene_infantry":
 			out.append({"label": "infantry", "w": 3.4, "h": 4.0, "focus": Vector3(1.7, 0.0, 1.5), "team": BLUE, "build": func(): return _scene_infantry()})
 		"mock_scene_naval":

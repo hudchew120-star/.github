@@ -14,6 +14,11 @@ const POWERS := {
 		"desc": "A reconnaissance jet reveals a wide area for 30 seconds.", "radius": 8, "duration": 30.0},
 	"bomber": {"name": "Bomber Strike", "faction": "dominion", "countries": ["russia"], "prereq": ["airfield"], "cooldown": 240.0,
 		"desc": "Three bombers carpet-bomb a line through the target.", "planes": 3, "damage": 140.0, "radius": 1.1},
+	"lightning": {"name": "Lightning Storm", "faction": "coalition", "prereq": ["superweapon"], "cooldown": 420.0, "superweapon": true,
+		"desc": "A thunderstorm gathers over the target and strikes it with lightning for 12 seconds.", "radius": 3.5, "duration": 12.0,
+		"bolt_every": 0.35, "bolt_damage": 130.0, "bolt_radius": 0.9, "delay": 3.0},
+	"nuke": {"name": "Nuclear Missile", "faction": "dominion", "prereq": ["superweapon"], "cooldown": 480.0, "superweapon": true,
+		"desc": "A nuclear missile flattens a large area after a short flight.", "radius": 3.5, "damage": 1100.0, "delay": 4.0},
 	"revolution": {"name": "Revolution", "faction": "dominion", "countries": ["cuba"], "prereq": ["barracks"], "cooldown": 200.0,
 		"desc": "A band of five guerrillas rises up anywhere you can see or have explored.", "drop": "guer", "count": 5},
 }
@@ -25,6 +30,8 @@ var flyovers: Array = []            # active delivery planes
 var bombs: Array = []               # planted charges
 var mines := {}                     # map cell index -> owner pid
 var reveals: Array = []             # spy plane vision: {pid, pos, r (cells), until}
+var storms: Array = []              # lightning storms: {pid, pos, t (time left, negative while gathering), bolt_t}
+var nukes: Array = []               # incoming missiles: {pid, pos, t}
 
 func _init(g) -> void:
 	game = g
@@ -35,7 +42,8 @@ func powers_for(pid: int) -> Array:
 	var out := []
 	var p = game.players[pid]
 	for id in POWERS:
-		if POWERS[id].faction == p.faction and POWERS[id].countries.has(p.country):
+		# Superweapons belong to the whole side; other powers to one country.
+		if POWERS[id].faction == p.faction and (not POWERS[id].has("countries") or POWERS[id].countries.has(p.country)):
 			out.append(id)
 	return out
 
@@ -66,6 +74,14 @@ func use_power(pid: int, id: String, target: Vector2) -> String:
 	if dir == Vector2.ZERO:
 		dir = Vector2.RIGHT
 	var start: Vector2 = target - dir * (game.map.w * MapGrid.T * 0.75)
+	if id == "lightning":
+		storms.append({"pid": pid, "pos": target, "t": float(POWERS.lightning.duration) + float(POWERS.lightning.delay), "bolt_t": float(POWERS.lightning.delay)})
+		_warn_all(pid, "Lightning Storm", target)
+		return ""
+	if id == "nuke":
+		nukes.append({"pid": pid, "pos": target, "t": float(POWERS.nuke.delay)})
+		_warn_all(pid, "Nuclear missile launched", target)
+		return ""
 	if id == "revolution":
 		_raise_guerrillas(pid, target)
 		game.notify(pid, "The people rise up!", "unit")
@@ -142,6 +158,60 @@ func _drop_paratroopers(f: Dictionary) -> void:
 		u.altitude_now = 1.6
 		placed += 1
 	game.play_sound("unit_ready", f.target)
+
+func _warn_all(pid: int, what: String, target: Vector2) -> void:
+	game.notify(pid, "%s on its way." % what, "unit")
+	for other in game.players:
+		if other.id != pid:
+			game.notify(other.id, "Warning: %s detected!" % what.to_lower(), "alert")
+	game.play_sound("alert", target)
+
+## Lightning storm: after the clouds gather, bolts strike random points in the radius.
+func _tick_storms(dt: float) -> void:
+	var d: Dictionary = POWERS.lightning
+	for st in storms.duplicate():
+		st.t -= dt
+		st.bolt_t -= dt
+		if st.t <= 0.0:
+			storms.erase(st)
+			continue
+		if st.bolt_t <= 0.0:
+			st.bolt_t = float(d.bolt_every) * randf_range(0.6, 1.4)
+			var r: float = float(d.radius) * MapGrid.T * sqrt(randf())
+			var p: Vector2 = st.pos + Vector2.RIGHT.rotated(randf() * TAU) * r
+			game.spawn_effect("zap", p, {"to": p, "h": 7.0, "th": 0.0, "bolt": true})
+			game.spawn_effect("explosion", p)
+			game.spawn_effect("spark", p)
+			game.play_sound("zap", p)
+			_area_damage(p, float(d.bolt_radius) * MapGrid.T, float(d.bolt_damage), st.pid, true)
+
+func _tick_nukes(dt: float) -> void:
+	var d: Dictionary = POWERS.nuke
+	for nk in nukes.duplicate():
+		nk.t -= dt
+		if nk.t > 0.0:
+			continue
+		nukes.erase(nk)
+		var p: Vector2 = nk.pos
+		game.spawn_effect("explosion_big", p)
+		for i in 10:
+			var q: Vector2 = p + Vector2.RIGHT.rotated(i * TAU / 10.0) * MapGrid.T * randf_range(0.8, 2.6)
+			game.spawn_effect("explosion_big" if i % 2 == 0 else "explosion", q)
+			game.spawn_effect("fire", q)
+		game.spawn_effect("crater", p, {"r": 46.0})
+		game.play_sound("explode_big", p)
+		_area_damage(p, float(d.radius) * MapGrid.T, float(d.damage), nk.pid, false)
+
+## Damage with linear falloff to everything hostile on the ground (and low flyers for lightning).
+func _area_damage(p: Vector2, r: float, dmg: float, pid: int, hit_air: bool) -> void:
+	for e in game.entities_near(p, r + 48.0):
+		if e.dead or not game.are_enemies(pid, e.pid):
+			continue
+		if e.is_unit() and e.is_air_unit and e.altitude_now > 0.3 and not hit_air:
+			continue
+		var dd: float = e.edge_distance(p)
+		if dd <= r:
+			e.take_damage(dmg * (1.0 - 0.6 * dd / r), null)
 
 ## Cuban Revolution: guerrillas spring up around the target point.
 func _raise_guerrillas(pid: int, target: Vector2) -> void:
@@ -281,6 +351,10 @@ func tick(dt: float) -> void:
 		_tick_powers()
 	_tick_flyovers(dt)
 	_tick_bombs(dt)
+	if not storms.is_empty():
+		_tick_storms(dt)
+	if not nukes.is_empty():
+		_tick_nukes(dt)
 	if not reveals.is_empty() and game.tick_count % 15 == 0:
 		reveals = reveals.filter(func(r): return game.sim_time < float(r.until))
 	if game.tick_count % 3 == 0:
@@ -308,7 +382,13 @@ func to_dict() -> Dictionary:
 	var rv := []
 	for r in reveals:
 		rv.append({"pid": r.pid, "pos": [r.pos.x, r.pos.y], "r": r.r, "until": r.until})
-	return {"powers": pw, "flyovers": fl, "bombs": bm, "mines": mn, "reveals": rv}
+	var sw := []
+	for st in storms:
+		sw.append({"pid": st.pid, "pos": [st.pos.x, st.pos.y], "t": st.t, "bolt_t": st.bolt_t})
+	var nk := []
+	for n in nukes:
+		nk.append({"pid": n.pid, "pos": [n.pos.x, n.pos.y], "t": n.t})
+	return {"powers": pw, "flyovers": fl, "bombs": bm, "mines": mn, "reveals": rv, "storms": sw, "nukes": nk}
 
 func from_dict(d: Dictionary) -> void:
 	powers = {}
@@ -331,6 +411,12 @@ func from_dict(d: Dictionary) -> void:
 	mines = {}
 	for k in d.get("mines", {}):
 		mines[int(k)] = int(d.mines[k])
+	storms = []
+	for st in d.get("storms", []):
+		storms.append({"pid": int(st.pid), "pos": Vector2(st.pos[0], st.pos[1]), "t": float(st.t), "bolt_t": float(st.bolt_t)})
+	nukes = []
+	for n in d.get("nukes", []):
+		nukes.append({"pid": int(n.pid), "pos": Vector2(n.pos[0], n.pos[1]), "t": float(n.t)})
 	reveals = []
 	for r in d.get("reveals", []):
 		reveals.append({"pid": int(r.pid), "pos": Vector2(r.pos[0], r.pos[1]), "r": int(r.r), "until": float(r.until)})

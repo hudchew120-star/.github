@@ -139,7 +139,7 @@ func _stage_scene(kind: String) -> void:
 			var u = game.spawn_unit(ships[i][1], ships[i][0], MapGrid.cell_center(c))
 			if u != null:
 				u.facing = randf() * TAU
-	var land := [] if kind == "specials" or kind == "defenses" else [["mtank", 0, Vector2(4, 5)], ["mtank", 0, Vector2(5, 4)], ["ltank", 0, Vector2(6, 6)], ["aa_c", 0, Vector2(3, 6)], ["jeep", 0, Vector2(7, 4)],
+	var land := [] if kind in ["specials", "defenses", "wave2"] else [["mtank", 0, Vector2(4, 5)], ["mtank", 0, Vector2(5, 4)], ["ltank", 0, Vector2(6, 6)], ["aa_c", 0, Vector2(3, 6)], ["jeep", 0, Vector2(7, 4)],
 		["e1", 0, Vector2(6, 2)], ["e1", 0, Vector2(6.4, 2.5)], ["e1", 0, Vector2(6.8, 2.1)], ["e3", 0, Vector2(7.2, 2.6)], ["eng", 0, Vector2(5.6, 2.8)],
 		["htank", 1, Vector2(10, 9)], ["aa_d", 1, Vector2(11, 8)], ["e1", 1, Vector2(9, 10.5)], ["e4", 1, Vector2(9.5, 11)], ["flm", 1, Vector2(10, 11.2)], ["e1", 1, Vector2(10.5, 10.6)]]
 	for e in land:
@@ -186,6 +186,30 @@ func _stage_scene(kind: String) -> void:
 		game.specials.use_power(1, "bomber", c0 + Vector2(-260, -200))
 		for f in game.specials.flyovers:
 			f.pos = f.target - f.dir * MapGrid.T * (5.0 if f.kind == "transport" else 9.0)
+	if kind == "wave2":
+		for p in game.players:
+			p.team = 0
+			p.power_bonus = 2000
+		var wsite := ai._find_spot("wthr")
+		if wsite.x >= 0:
+			game.create_building(0, "wthr", wsite, true)
+		var wc2: Vector2i = ai._nearest_water(yard + Vector2i(1, 1) if yard.x >= 0 else base, 14)
+		var sea := [["dolph", 0, Vector2i(-3, 2)], ["dolph", 0, Vector2i(-2, 3)], ["aegis", 0, Vector2i(1, 4)], ["squid", 1, Vector2i(4, 1)], ["scorp", 1, Vector2i(6, 3)]]
+		for e in sea:
+			var c: Vector2i = ai._nearest_water(wc2 + e[2], 6)
+			if c.x >= 0:
+				var u = game.spawn_unit(e[1], e[0], MapGrid.cell_center(c))
+				if u != null:
+					u.facing = 0.6
+					u.surfaced_until = game.sim_time + 999.0
+		for e in [["bomb_c", 0, Vector2(1, 3)], ["kirov", 1, Vector2(9, 8)]]:
+			var u = game.spawn_unit(e[1], e[0], bp + (e[2] as Vector2) * MapGrid.T)
+			if u != null:
+				u.air_state = "flying"
+				u.altitude_now = u.altitude
+				u.facing = 0.8 if e[1] == 0 else 3.9
+				u.cmd_move(u.pos + Vector2(cos(u.facing), sin(u.facing)) * 160.0)
+		game.specials.storms.append({"pid": 1, "pos": bp + Vector2(7, 6) * MapGrid.T, "t": 10.0, "bolt_t": 0.0})
 	if kind == "defenses":
 		for p in game.players:
 			p.team = 0
@@ -217,6 +241,8 @@ func _stage_scene(kind: String) -> void:
 	if controller != null:
 		if kind == "defenses":
 			controller.center_on(MapGrid.cell_center(base + Vector2i(8, 9)))
+		elif kind == "wave2":
+			controller.center_on(bp + Vector2(4, 5) * MapGrid.T)
 		elif kind == "specials":
 			controller.center_on(bp + Vector2(5, 6) * MapGrid.T)
 		elif kind == "naval" and yard.x >= 0:
