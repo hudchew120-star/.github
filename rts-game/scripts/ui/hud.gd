@@ -678,6 +678,8 @@ func _process(delta: float) -> void:
 	power_bar.queue_redraw()
 	speed_label.text = "%.2fx" % game.speed
 	time_label.text = _clock()
+	if bool(Config.settings.get("show_fps", true)):
+		time_label.text += "   FPS %d" % Engine.get_frames_per_second()
 	var harv := game.units.filter(func(u): return u.pid == game.human_pid and u.is_harvester).size()
 	objective_label.text = "Objective: %s   |   Collectors %d%s" % [game.objectives[0].text, harv, stored]
 	refresh_t -= delta

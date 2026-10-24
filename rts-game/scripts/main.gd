@@ -39,10 +39,18 @@ func _ready() -> void:
 	for a in args:
 		if a.begins_with("--stage="):
 			stage = a.substr(8)
+	var bench := 0
+	for a in args:
+		if a.begins_with("--bench="):
+			bench = int(a.substr(8))
+	if bench > 0:
+		stage = "army"
 	if stage != "":
 		start_match({"mode": "sandbox", "map_size": "medium", "water": "coastal", "seed": 11, "start_units": "base", "fog": false,
 			"ai_count": 1, "cheats_allowed": true, "victory": "none", "start_credits": 50000, "player_faction": "coalition", "enemy_factions": ["dominion"]})
 		_stage_scene(stage)
+		if bench > 0:
+			_run_bench(bench)
 	elif "--quickstart" in args:
 		start_match({"map_size": "small", "start_units": "base", "cheats_allowed": true})
 	elif "--sandbox" in args:
@@ -129,6 +137,53 @@ func _stage_scene(kind: String) -> void:
 			controller.center_on(MapGrid.cell_center(yard) + Vector2(2.5, 3.5) * MapGrid.T)
 		else:
 			controller.center_on(bp + Vector2(7, 7) * MapGrid.T)
+
+## Developer helper: --bench=<seconds> stages a large battle (AI on) and prints frame timings.
+func _run_bench(seconds: int) -> void:
+	await get_tree().create_timer(0.6).timeout
+	game.cheats.set_flag("ai_disabled", false)
+	var bp := MapGrid.cell_center(game.map.starts[0])
+	var ep := MapGrid.cell_center(game.map.starts[1])
+	var types := ["mtank", "ltank", "e1", "e1", "e3", "jeep", "aa_c"]
+	var etypes := ["htank", "e1", "e1", "e4", "flm", "aa_d"]
+	for i in 70:
+		var u = game.spawn_unit(0, types[i % types.size()], bp + Vector2(randf_range(80, 400), randf_range(80, 400)))
+		if u != null: u.cmd_attack_move(ep)
+		var v = game.spawn_unit(1, etypes[i % etypes.size()], ep - Vector2(randf_range(80, 400), randf_range(80, 400)))
+		if v != null: v.cmd_attack_move(bp)
+	await get_tree().create_timer(4.0).timeout   # warm-up
+	for n in OS.get_environment("BENCH_HIDE").split(",", false):
+		var node = view.get(n)
+		if node != null:
+			node.visible = false
+	if OS.get_environment("BENCH_NOHUD") != "" and hud != null:
+		hud.visible = false
+	game.profile.clear()
+	var tick0 := game.tick_count
+	game.profiling = true
+	var frames := 0
+	var worst := 0.0
+	var proc_sum := 0.0
+	var phys_sum := 0.0
+	var t_end := Time.get_ticks_msec() + seconds * 1000
+	var last := Time.get_ticks_usec()
+	while Time.get_ticks_msec() < t_end:
+		await get_tree().process_frame
+		var now := Time.get_ticks_usec()
+		worst = maxf(worst, (now - last) / 1000.0)
+		last = now
+		frames += 1
+		proc_sum += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+		phys_sum += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+		if controller != null and frames % 60 == 0:
+			controller.center_on(game.units[randi() % game.units.size()].pos)
+	print("BENCH frames %d in %ds = %.1f fps, worst frame %.1f ms, process %.2f ms, physics %.2f ms, units %d, draw calls %d, nodes %d" % [
+		frames, seconds, frames / float(seconds), worst, proc_sum / frames, phys_sum / frames, game.units.size(),
+		Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.OBJECT_NODE_COUNT)])
+	var ticks := maxf(1.0, game.tick_count - tick0)
+	for k in game.profile:
+		print("BENCH step.%s %.3f ms/tick" % [k, game.profile[k] / 1000.0 / ticks])
+	get_tree().quit()
 
 # ---------------------------------------------------------------- menus
 
@@ -316,6 +371,20 @@ func show_settings() -> void:
 	fs.toggled.connect(func(on):
 		S.fullscreen = on
 		Config.apply_display())
+	var qualities := ["performance", "balanced", "quality"]
+	var q := _opt(v, "Graphics quality (applies to the next match)", ["Performance (fastest, for older PCs)", "Balanced (recommended)", "Quality (sharpest terrain)"], maxi(qualities.find(str(S.get("quality", "balanced"))), 0))
+	q.item_selected.connect(func(i): S.quality = qualities[i])
+	var limits := [0, 30, 60, 120, 144, 240]
+	var fl := _opt(v, "Frame rate limit", ["Unlimited", "30", "60", "120", "144", "240"], maxi(limits.find(int(S.get("fps_limit", 0))), 0))
+	fl.item_selected.connect(func(i):
+		S.fps_limit = limits[i]
+		Config.apply_display())
+	var vs := _check(v, "VSync (smooth, no tearing)", bool(S.get("vsync", true)))
+	vs.toggled.connect(func(on):
+		S.vsync = on
+		Config.apply_display())
+	var sf := _check(v, "Show FPS counter", bool(S.get("show_fps", true)))
+	sf.toggled.connect(func(on): S.show_fps = on)
 	v.add_child(UITheme.label("Controls", 17, UITheme.AMBER))
 	var es := _check(v, "Edge scrolling", bool(S.edge_scroll))
 	es.toggled.connect(func(on): S.edge_scroll = on)

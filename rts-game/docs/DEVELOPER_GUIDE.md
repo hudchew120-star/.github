@@ -220,6 +220,21 @@ maps are JSON files placed in `maps/` and appear in the skirmish map list:
 
 `MapGen.to_text_dict()` exports any map (including exact `ore_cells`) to this format.
 
+## Performance
+
+- Benchmark: `godot --path . -- --iso --bench=20` stages a 175-unit battle with AI, warms up
+  4 s, then prints FPS, worst frame, draw calls and the cost of each simulation stage per tick
+  (`Game.profiling` / `Game.profile`).
+- Sprite sheets for both factions are preloaded when a match starts (`IsoView._preload_sheets`);
+  loading them mid-battle froze the game whenever a new unit type appeared.
+- The terrain shader renders into a smaller `SubViewport` (`Config.terrain_scale()`, 50/70/100%
+  per quality preset) that is stretched over the screen.
+- Fog of war updates incrementally (`Game._vis_lists`, row spans instead of per-cell offsets);
+  unit separation runs every second tick; hidden simulation nodes skip transform updates and
+  physics interpolation; hover picking is throttled; the minimap is built from byte arrays.
+- Textures import with mipmaps (`[importer_defaults]` in project.godot) and 2D uses
+  linear-mipmap filtering, since sprites are drawn at 35-60% of their 2x art size.
+
 ## Testing
 
 `tests/test_runner.gd` builds headless matches and drives them through the real systems.

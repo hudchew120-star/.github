@@ -10,6 +10,10 @@ var settings := {
 	"edge_scroll": true,
 	"scroll_speed": 900.0,
 	"fullscreen": false,
+	"quality": "balanced",     # performance / balanced / quality
+	"fps_limit": 0,            # 0 = unlimited
+	"vsync": true,
+	"show_fps": true,
 	"music_volume": 0.6,
 	"sfx_volume": 0.8,
 	"ui_volume": 0.7,
@@ -71,8 +75,18 @@ func rebind(action: String, key_name: String) -> void:
 	apply_keymap()
 	save_settings()
 
+## Ground render scale per quality preset (the painted terrain is the most expensive layer to draw).
+func terrain_scale() -> float:
+	return {"performance": 0.5, "balanced": 0.7, "quality": 1.0}.get(str(settings.get("quality", "balanced")), 0.7)
+
+## Fewer decorations and particles on the performance preset.
+func effects_density() -> float:
+	return {"performance": 0.5, "balanced": 0.85, "quality": 1.0}.get(str(settings.get("quality", "balanced")), 0.85)
+
 func apply_display() -> void:
 	get_tree().root.content_scale_factor = float(settings.ui_scale)
+	Engine.max_fps = int(settings.get("fps_limit", 0))
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if bool(settings.get("vsync", true)) else DisplayServer.VSYNC_DISABLED)
 	if settings.fullscreen:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	elif DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN:

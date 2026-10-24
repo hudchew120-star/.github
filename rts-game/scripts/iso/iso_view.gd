@@ -24,6 +24,9 @@ var visuals := {}
 var proj_vis := {}
 var fx_sheets := {}
 var sidebar_width: float = 316.0
+var ground_vp: SubViewport          # terrain rendered at reduced resolution (quality setting)
+var ground_rect: TextureRect
+var terrain_scale: float = 1.0
 
 func setup(g: Game) -> void:
 	game = g
@@ -46,6 +49,8 @@ func setup(g: Game) -> void:
 	air_fx = Node2D.new()
 	add_child(air_fx)
 	terrain.setup(g, entity_layer)
+	_setup_ground_scaling()
+	_preload_sheets()
 	_build_fog()
 	ghost = Node2D.new()
 	ghost.draw.connect(_draw_ghost_cells)
@@ -67,6 +72,66 @@ func setup(g: Game) -> void:
 		fx_sheets[k] = SpriteLib.sheet(k, "fx")
 	game.entity_removed.connect(_on_removed)
 	set_focus(Vector2(g.map.w, g.map.h) * T * 0.5)
+
+## Draws the terrain shader into a smaller off-screen image and stretches it over the screen.
+## The painted ground is soft, so 50-70% resolution looks nearly identical but costs far less.
+func _setup_ground_scaling() -> void:
+	terrain_scale = Config.terrain_scale()
+	if terrain_scale >= 0.99 or terrain.ground == null:
+		return
+	ground_vp = SubViewport.new()
+	ground_vp.disable_3d = true
+	ground_vp.transparent_bg = false
+	ground_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	ground_vp.size = Vector2i(64, 64)
+	add_child(ground_vp)
+	terrain.ground.reparent(ground_vp, false)
+	var layer := CanvasLayer.new()
+	layer.layer = -1
+	add_child(layer)
+	ground_rect = TextureRect.new()
+	ground_rect.texture = ground_vp.get_texture()
+	ground_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ground_rect.stretch_mode = TextureRect.STRETCH_SCALE
+	ground_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	ground_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ground_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(ground_rect)
+	_sync_ground()
+
+func _sync_ground() -> void:
+	if ground_vp == null:
+		return
+	var screen := get_viewport().get_visible_rect().size
+	var want := Vector2i(maxi(64, int(screen.x * terrain_scale)), maxi(64, int(screen.y * terrain_scale)))
+	if ground_vp.size != want:
+		ground_vp.size = want
+	var k := float(want.x) / maxf(screen.x, 1.0)
+	ground_vp.canvas_transform = Transform2D(0.0, Vector2(k, float(want.y) / maxf(screen.y, 1.0)), 0.0, Vector2.ZERO) * _ct()
+
+## Loads every sprite sheet the factions in this match can use, so nothing is read from
+## disk in the middle of a battle (that caused a freeze whenever a new unit type appeared).
+func _preload_sheets() -> void:
+	var factions := {}
+	for p in game.players:
+		factions[p.faction] = true
+	for f in factions:
+		for src in [Data.units, Data.buildings]:
+			for t in src:
+				var d: Dictionary = src[t]
+				if not d.get("factions", []).has(f):
+					continue
+				var prefix := "b_" if src == Data.buildings else ("i_" if d.get("category", "") == "infantry" else "u_")
+				var n := "%s%s_%s" % [prefix, d.get("sprite", ""), f]
+				if not SpriteLib.has(n):
+					continue
+				for suffix in ["_turret", "_die", "_anim"]:
+					SpriteLib.sheet(n + suffix)
+				var s := SpriteLib.sheet(n)
+				for p in game.players:
+					SpriteLib.team_material(p.color, s.mask)
+				if d.get("category", "") == "aircraft":
+					SpriteLib._load_tex("res://assets/sprites/%s_shadow.png" % n)
 
 func _build_fog() -> void:
 	var sh := Shader.new()
@@ -287,6 +352,7 @@ func _draw_rotor(rot: Node2D, v: Dictionary) -> void:
 func _process(delta: float) -> void:
 	if game == null:
 		return
+	_sync_ground()
 	for uid in game.entities:
 		if not visuals.has(uid):
 			visuals[uid] = _make_visual(game.entities[uid])
@@ -446,7 +512,7 @@ func _wake(p: Vector2) -> void:
 	ground_fx.add_child(fx)
 
 func _puff(kind: String, p: Vector2, sc: float, drift: Vector2) -> void:
-	if fx_sheets.get(kind) == null or air_fx.get_child_count() > 500:
+	if fx_sheets.get(kind) == null or air_fx.get_child_count() > 500 or randf() > Config.effects_density():
 		return
 	var fx := IsoFx.new()
 	fx.play(fx_sheets[kind], p, 9.0, sc)

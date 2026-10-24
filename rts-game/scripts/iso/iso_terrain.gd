@@ -210,6 +210,7 @@ func _scatter_decor() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = map.w * 1000 + map.h
 	var starts: Array = map.starts
+	var density: float = Config.effects_density()
 	for y in map.h:
 		for x in map.w:
 			var c := Vector2i(x, y)
@@ -220,7 +221,7 @@ func _scatter_decor() -> void:
 					near_start = true
 			match id:
 				"forest":
-					for i in rng.randi_range(1, 3):
+					for i in maxi(1, int(round(rng.randi_range(1, 3) * density))):
 						var p := Vector2(x + rng.randf_range(0.15, 0.85), y + rng.randf_range(0.15, 0.85))
 						_add_decor("d_tree_pine" if rng.randf() < 0.4 else "d_tree_broad", rng.randi() % 4, p, rng.randf_range(0.85, 1.15))
 				"rock":
@@ -232,7 +233,7 @@ func _scatter_decor() -> void:
 				"grass", "dirt":
 					if near_start or map.ore[map.idx(c)] > 0:
 						continue
-					var r := rng.randf()
+					var r := rng.randf() / density
 					if r < 0.035:
 						_add_decor("d_bush", rng.randi() % 4, Vector2(x + rng.randf(), y + rng.randf()), rng.randf_range(0.7, 1.1))
 					elif r < 0.042:

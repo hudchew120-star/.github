@@ -50,6 +50,7 @@ var unit_layer: Node2D
 var fx_layer: Node2D
 var fog_sprite: Sprite2D
 var fog_image: Image
+var sim_nodes_visible := true    # false when a separate view (iso/3D) draws the battlefield
 var fog_texture: ImageTexture
 
 # ---------------------------------------------------------------- setup
@@ -173,9 +174,11 @@ func _build_layers() -> void:
 	add_child(unit_layer)
 	add_child(fx_layer)
 	if headless:
+		sim_nodes_visible = false
 		return
 	if bool(settings.get("use_3d", false)):
 		# The 3D view draws everything; keep the 2D nodes for logic only.
+		sim_nodes_visible = false
 		building_layer.visible = false
 		unit_layer.visible = false
 		fx_layer.visible = false
@@ -252,6 +255,8 @@ func spawn_unit(pid: int, t: String, p: Vector2, uid: int = 0) -> Unit:
 			u.pos = MapGrid.cell_center(c)
 	_register(u)
 	units.append(u)
+	if not sim_nodes_visible:
+		u.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	unit_layer.add_child(u)
 	u.reset_physics_interpolation()
 	if u.is_harvester:
@@ -891,34 +896,52 @@ func _physics_process(_delta: float) -> void:
 func set_speed(v: float) -> void:
 	speed = clampf(v, 0.25, 8.0)
 
+var profile := {}   # section -> accumulated microseconds (filled when profiling is on)
+var profiling := false
+
+func _prof(section: String, t0: int) -> int:
+	var t1 := Time.get_ticks_usec()
+	profile[section] = int(profile.get(section, 0)) + (t1 - t0)
+	return t1
+
 func step() -> void:
 	tick_count += 1
 	sim_time += DT
+	var t := Time.get_ticks_usec() if profiling else 0
 	unit_hash.rebuild(units)
+	if profiling: t = _prof("hash", t)
 	if not cheats.flag(-1, "ai_disabled"):
 		for ai in ais:
 			if not ai.player.defeated:
 				ai.tick(DT)
+	if profiling: t = _prof("ai", t)
 	for b in buildings.duplicate():
 		if not b.dead:
 			b.tick(DT)
+	if profiling: t = _prof("buildings", t)
 	_process_paths()
+	if profiling: t = _prof("paths", t)
 	for u in units.duplicate():
 		if not u.dead:
 			u.tick(DT)
 			if cheats.flag(u.pid, "auto_repair_units") and u.hp < u.max_hp:
 				u.heal(u.max_hp * 0.05 * DT)
-	_separate()
+	if profiling: t = _prof("units", t)
+	if tick_count % 2 == 0:
+		_separate()
+	if profiling: t = _prof("separate", t)
 	for pr in projectiles.duplicate():
 		pr.tick(DT)
 		if pr.dead:
 			projectiles.erase(pr)
 			pr.queue_free()
+	if profiling: t = _prof("projectiles", t)
 	if tick_count % 4 == 0:
 		_service_repairs()
 	if tick_count % 8 == 0:
 		_update_sub_detection()
 		update_fog()
+	if profiling: t = _prof("fog", t)
 	if tick_count % 30 == 0:
 		_check_victory()
 
@@ -952,7 +975,7 @@ func _separate() -> void:
 			if dist < 0.01:
 				d = Vector2.RIGHT.rotated(randf() * TAU)
 				dist = 1.0
-			var push := (min_d - dist) * 0.5
+			var push := (min_d - dist)
 			var dir := d / dist
 			# Moving units shove idle ones more than they are shoved.
 			var wu := 0.3 if u.moving else 0.7
@@ -966,6 +989,20 @@ func _try_push(u, v: Vector2) -> void:
 		u.pos = np
 
 # ---------------------------------------------------------------- fog of war
+
+var _span_cache := {}
+## Half-width of each row of a sight circle (same shape as _circle).
+func _circle_spans(r: int) -> PackedInt32Array:
+	if _span_cache.has(r):
+		return _span_cache[r]
+	var out := PackedInt32Array()
+	for dy in range(-r, r + 1):
+		var half := 0
+		while (half + 1) * (half + 1) + dy * dy <= r * r + r:
+			half += 1
+		out.append(half)
+	_span_cache[r] = out
+	return out
 
 func _circle(r: int) -> Array:
 	if _circle_cache.has(r):
@@ -981,26 +1018,56 @@ func _circle(r: int) -> Array:
 func fog_enabled() -> bool:
 	return bool(settings.fog) and not cheats.flag(-1, "no_fog")
 
+var _vis_lists := {}            # pid -> PackedInt32Array of cells marked visible at the last update
+var _fog_data := PackedByteArray()
+var _fog_reveal_last := -1
+
+## Fog of war, updated incrementally: only cells that were visible last time are dimmed
+## and only cells around units and structures are lit, instead of sweeping the whole map.
 func update_fog(force_full: bool = false) -> void:
 	var w := map.w
+	var h := map.h
+	var human_prev := PackedInt32Array()
+	var human_now := PackedInt32Array()
+	var full_human := force_full
 	for p in players:
 		var vis: PackedByteArray = p.vis
-		for i in vis.size():
-			if vis[i] == 2:
+		var prev: PackedInt32Array = _vis_lists.get(p.id, PackedInt32Array())
+		if force_full or not _vis_lists.has(p.id):
+			for i in vis.size():
+				if vis[i] == 2:
+					vis[i] = 1
+			if p.id == human_pid:
+				full_human = true
+		else:
+			for i in prev:
 				vis[i] = 1
-		for e in units + buildings:
-			if e.dead or e.pid != p.id:
-				continue
-			var c: Vector2i = e.cell()
-			var r: int = e.sight
-			if e.is_building() and e.def.get("provides", []).has("radar") and not e.powered():
-				r = 3
-			for o in _circle(r):
-				var x: int = c.x + o.x
-				var y: int = c.y + o.y
-				if x >= 0 and y >= 0 and x < w and y < map.h:
-					vis[y * w + x] = 2
+		var now := PackedInt32Array()
+		for list in [units, buildings]:
+			for e in list:
+				if e.dead or e.pid != p.id:
+					continue
+				var c: Vector2i = e.cell()
+				var r: int = e.sight
+				if e.is_building() and e.def.get("provides", []).has("radar") and not e.powered():
+					r = 3
+				var spans: PackedInt32Array = _circle_spans(r)
+				for dy in range(-r, r + 1):
+					var y: int = c.y + dy
+					if y < 0 or y >= h:
+						continue
+					var half: int = spans[dy + r]
+					var row: int = y * w
+					for x in range(maxi(c.x - half, 0), mini(c.x + half, w - 1) + 1):
+						var i: int = row + x
+						if vis[i] != 2:
+							vis[i] = 2
+							now.append(i)
 		p.vis = vis
+		_vis_lists[p.id] = now
+		if p.id == human_pid:
+			human_prev = prev
+			human_now = now
 	_apply_human_visibility()
 	for c in map.ore_dirty_cells:
 		if view3d != null:
@@ -1010,17 +1077,27 @@ func update_fog(force_full: bool = false) -> void:
 	map.ore_dirty_cells.clear()
 	if headless or fog_image == null:
 		return
-	var reveal := not fog_enabled() or cheats.flag(-1, "reveal_map")
+	var reveal := 1 if (not fog_enabled() or cheats.flag(-1, "reveal_map")) else 0
 	var hv: PackedByteArray = players[human_pid].vis
-	var data := PackedByteArray()
-	data.resize(hv.size())
-	if reveal:
-		data.fill(0)
-	else:
+	if _fog_data.size() != hv.size() or reveal != _fog_reveal_last:
+		full_human = true
+	_fog_reveal_last = reveal
+	if reveal == 1:
+		if not full_human:
+			return
+		_fog_data.resize(hv.size())
+		_fog_data.fill(0)
+	elif full_human:
+		_fog_data.resize(hv.size())
 		for i in hv.size():
 			var v := hv[i]
-			data[i] = 255 if v == 0 else (130 if v == 1 else 0)
-	fog_image.set_data(map.w, map.h, false, Image.FORMAT_L8, data)
+			_fog_data[i] = 255 if v == 0 else (130 if v == 1 else 0)
+	else:
+		for i in human_prev:
+			_fog_data[i] = 130
+		for i in human_now:
+			_fog_data[i] = 0
+	fog_image.set_data(map.w, map.h, false, Image.FORMAT_L8, _fog_data)
 	fog_texture.update(fog_image)
 
 func cell_visible_to_human(c: Vector2i) -> bool:
@@ -1197,6 +1274,7 @@ func to_save() -> Dictionary:
 	}
 
 func load_save(d: Dictionary, is_headless: bool = false) -> void:
+	_vis_lists.clear()
 	headless = is_headless
 	settings = default_settings()
 	settings.merge(d.settings, true)

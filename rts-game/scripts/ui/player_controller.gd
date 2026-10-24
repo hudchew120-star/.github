@@ -79,8 +79,18 @@ func _typing() -> bool:
 
 # ---------------------------------------------------------------- picking
 
+var _hover_mouse := Vector2(-1, -1)
+var _hover_t: float = 0.0
+
 func _update_hover() -> void:
-	var h = view.pick(get_viewport().get_mouse_position())
+	# Picking walks every unit and structure, so only redo it when the mouse moved or every 0.15 s.
+	var mp := get_viewport().get_mouse_position()
+	_hover_t -= get_process_delta_time()
+	if mp.distance_squared_to(_hover_mouse) < 4.0 and _hover_t > 0.0:
+		return
+	_hover_mouse = mp
+	_hover_t = 0.15
+	var h = view.pick(mp)
 	if h != hovered:
 		if hovered != null and is_instance_valid(hovered):
 			hovered.hovered = false

@@ -17,23 +17,45 @@ func setup(g: Game, pc: PlayerController) -> void:
 	base_img = Image.create(g.map.w, g.map.h, false, Image.FORMAT_RGBA8)
 	_rebuild()
 
+var _terrain_rgb := PackedByteArray()
+var _pixels := PackedByteArray()
+
+## Builds the radar image from byte arrays (much faster than setting pixels one by one).
 func _rebuild() -> void:
 	var m := game.map
+	var n := m.w * m.h
+	if _terrain_rgb.size() != n * 3:
+		_terrain_rgb.resize(n * 3)
+		for i in n:
+			var col := Color(m.terrain_def(Vector2i(i % m.w, i / m.w)).get("color", "#777"))
+			_terrain_rgb[i * 3] = int(col.r * 255.0)
+			_terrain_rgb[i * 3 + 1] = int(col.g * 255.0)
+			_terrain_rgb[i * 3 + 2] = int(col.b * 255.0)
+		_pixels.resize(n * 4)
 	var hv: PackedByteArray = game.players[game.human_pid].vis
 	var reveal := not game.fog_enabled() or game.cheats.flag(-1, "reveal_map")
-	for y in m.h:
-		for x in m.w:
-			var c := Vector2i(x, y)
-			var i := m.idx(c)
-			var col := Color(m.terrain_def(c).get("color", "#777"))
-			if m.ore[i] > 0:
-				col = Color(0.85, 0.68, 0.25) if m.ore_kind[i] == 1 else Color(0.4, 0.75, 0.95)
-			if not reveal:
-				if hv[i] == 0:
-					col = Color(0.02, 0.02, 0.03)
-				elif hv[i] == 1:
-					col = col.darkened(0.45)
-			base_img.set_pixel(x, y, col)
+	var ore: PackedInt32Array = m.ore
+	var kinds: PackedByteArray = m.ore_kind
+	for i in n:
+		var r := _terrain_rgb[i * 3]
+		var g := _terrain_rgb[i * 3 + 1]
+		var b := _terrain_rgb[i * 3 + 2]
+		if ore[i] > 0:
+			if kinds[i] == 1:
+				r = 217; g = 173; b = 64
+			else:
+				r = 102; g = 191; b = 242
+		if not reveal:
+			var v := hv[i]
+			if v == 0:
+				r = 5; g = 5; b = 8
+			elif v == 1:
+				r = r * 55 / 100; g = g * 55 / 100; b = b * 55 / 100
+		_pixels[i * 4] = r
+		_pixels[i * 4 + 1] = g
+		_pixels[i * 4 + 2] = b
+		_pixels[i * 4 + 3] = 255
+	base_img.set_data(m.w, m.h, false, Image.FORMAT_RGBA8, _pixels)
 	if tex == null:
 		tex = ImageTexture.create_from_image(base_img)
 	else:
@@ -52,7 +74,7 @@ func _process(delta: float) -> void:
 		return
 	refresh_t -= delta
 	if refresh_t <= 0.0:
-		refresh_t = 0.5
+		refresh_t = 1.0
 		_rebuild()
 	queue_redraw()
 

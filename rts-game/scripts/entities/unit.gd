@@ -337,7 +337,8 @@ func tick(dt: float) -> void:
 	if is_air_unit:
 		_tick_weapons_cd(dt)
 		_tick_air(dt)
-		position = pos
+		if game.sim_nodes_visible:
+			position = pos
 		return
 	for w in weapons:
 		if w.cd > 0.0:
@@ -378,8 +379,9 @@ func tick(dt: float) -> void:
 		"capture":
 			_tick_capture(dt)
 	_check_stuck(dt)
-	position = pos
-	queue_redraw()
+	if game.sim_nodes_visible:
+		position = pos
+		queue_redraw()
 
 func _target_valid(t) -> bool:
 	if t == null or not is_instance_valid(t) or t.dead:
