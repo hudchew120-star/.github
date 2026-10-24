@@ -296,6 +296,7 @@ func _make_visual(e) -> Dictionary:
 			v["turret"] = tur
 			v["tsheet"] = ts
 		n.position = SpriteLib.iso(e.pos, e.altitude_now)   # start at flight height (no slide-up on spawn)
+		_add_emblems(v, e, sheet)
 		if e.is_infantry():
 			v["dug"] = SpriteLib.sheet(name + "_dug")
 			var extras := Node2D.new()
@@ -338,6 +339,8 @@ func _make_visual(e) -> Dictionary:
 			v["turret"] = tur
 			v["tsheet"] = ts
 		terrain.clear_decor(e.all_cells())
+		_add_emblems(v, e, sheet)
+		_place_emblems(v, e)
 	if e.is_unit() and e.is_air_unit:
 		air_layer.add_child(n)
 	else:
@@ -538,6 +541,84 @@ func _update_unit(v: Dictionary, delta: float) -> void:
 		body.modulate = Color(1.6, 1.6, 1.6)
 	else:
 		body.modulate = Color.WHITE
+	if v.has("emblems"):
+		_place_emblems(v, e)
+
+# ---------------------------------------------------------------- national emblems
+
+## Country emblem decals painted flat onto a surface of the sprite: the rear deck of vehicles,
+## both wings of aircraft, the afterdeck of ships, and the front corner of a structure's pad.
+## Each entry: [Sprite2D, local offset in world px (x along facing, y across), height, size px].
+func _add_emblems(v: Dictionary, e, sheet: SpriteLib.Sheet) -> void:
+	var country: String = e.player().country
+	var tex := SpriteLib._load_tex("res://assets/ui/insignia/%s.png" % country)
+	if tex == null:
+		return
+	var marks := []
+	if e.is_unit():
+		var cat: String = e.def.get("category", "")
+		var sp: String = e.def.get("sprite", "")
+		if cat == "infantry" or sp in ["dolphin", "squid"]:
+			return
+		var r: float = e.radius
+		if cat == "aircraft":
+			var deck := 0.14 if sp != "airship" else 0.5
+			if sp == "airship" or e.def.get("hover", true) and sp == "heli":
+				marks.append([Vector2(-r * 0.15, 0.0), deck + (0.12 if sp == "heli" else 0.0), r * 0.55])
+			else:
+				for side in [-1.0, 1.0]:
+					marks.append([Vector2(-r * 0.25, side * r * 0.7), deck, r * 0.42])
+		elif cat == "naval":
+			marks.append([Vector2(-r * 0.45, 0.0), 0.11, r * 0.5])
+		elif e.def.get("walker", false):
+			marks.append([Vector2(-r * 0.1, 0.0), 0.62, r * 0.6])          # mecha: on the back of the cockpit pod
+		elif v.has("turret"):
+			# Turret roof: always in view from above; follows the turret's own rotation.
+			marks.append([Vector2(-r * 0.2, 0.0), 0.11, r * 0.6, true])
+		else:
+			marks.append([Vector2(-r * 0.55, 0.0), 0.26, r * 0.7])
+	else:
+		if e.def.get("wall", false) or e.size.x < 2:
+			return
+		# Painted on the pad near the front (camera-facing) corner of the footprint.
+		var corner := Vector2(e.cell0 + e.size) * T - Vector2(T, T) * 0.42
+		marks.append([corner, 0.065, 15.0])
+	var list := []
+	for m in marks:
+		var d := Sprite2D.new()
+		d.texture = tex
+		v.node.add_child(d)
+		list.append([d, m[0], m[1], m[2], m.size() > 3 and m[3]])
+	v["emblems"] = list
+
+## Keeps emblems lying flat on their surface as the unit turns (iso-projected, rotated with facing).
+func _place_emblems(v: Dictionary, e) -> void:
+	if not v.has("emblems"):
+		return
+	var ex := SpriteLib.iso(Vector2(1, 0))
+	var ey := SpriteLib.iso(Vector2(0, 1))
+	var a: float = e.facing if e.is_unit() else 0.0
+	var c := cos(a)
+	var s := sin(a)
+	var u := ex * c + ey * s
+	var w := -ex * s + ey * c
+	for m in v.emblems:
+		var d: Sprite2D = m[0]
+		var off: Vector2 = m[1]
+		var k: float = float(m[3]) / float(d.texture.get_width())
+		var origin: Vector2
+		var uu := u
+		var ww := w
+		if m[4] and v.has("turret"):
+			var ta: float = e.turret_facing
+			uu = ex * cos(ta) + ey * sin(ta)
+			ww = -ex * sin(ta) + ey * cos(ta)
+			origin = v.turret.position + uu * off.x + ww * off.y - Vector2(0, float(m[2]) * SpriteLib.HEIGHT_PX)
+		elif e.is_unit():
+			origin = u * off.x + w * off.y - Vector2(0, float(m[2]) * SpriteLib.HEIGHT_PX)
+		else:
+			origin = SpriteLib.iso(off, float(m[2])) - v.node.position
+		d.transform = Transform2D(uu * k, ww * k, origin)
 
 func _wall_mask(e) -> int:
 	var m := 0

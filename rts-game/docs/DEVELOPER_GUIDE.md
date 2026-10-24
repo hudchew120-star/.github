@@ -221,7 +221,9 @@ buildings it may use, and add an `army` entry in `ai.json`.
 multipliers per category, e.g. `{"armor": {"vehicle": 0.9}}`). Mark country-only units and
 buildings with `"countries": ["<id>"]` next to their `factions`; `Data.allowed()` and
 `Game.availability()` filter on both. Support powers live in `Specials.POWERS` (`countries` list).
-Draw a flag in `tools/make_flags.py` (output `assets/ui/flags/<id>.png`) and, for a uniform, a
+Draw a flag in `tools/make_flags.py` (output `assets/ui/flags/<id>.png`), an emblem in
+`tools/make_insignia.py` (`assets/ui/insignia/<id>.png`; `IsoView._add_emblems` paints it on
+vehicles, aircraft, ships and structure pads at runtime) and, for a uniform, a
 `CAMO` row in `humans.gd` plus a `COUNTRY_INFANTRY` entry in `bake_specs.gd`: infantry sheets
 named `i_<sprite>_<country>` are picked before the side's `i_<sprite>_<faction>` sheet.
 

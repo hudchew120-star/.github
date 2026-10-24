@@ -12,6 +12,7 @@ var on_hold: bool = false
 var reason: String = ""
 var blink: float = 0.0
 var cameo: Texture2D = null
+var emblem: Texture2D = null
 static var _cameo_cache := {}
 
 static func cameo_for(t: String, faction: String) -> Texture2D:
@@ -99,6 +100,12 @@ func _draw() -> void:
 		IconView.draw(self, type, Rect2(2, 2, size.x - 4, size.y - 22), p.color, p.faction)
 	var f := ThemeDB.fallback_font
 	var d := Data.def(type)
+	# Country emblem in the top-right corner of machines and structures.
+	if d.get("category", "") != "infantry":
+		if emblem == null:
+			emblem = SpriteLib._load_tex("res://assets/ui/insignia/%s.png" % p.country)
+		if emblem != null:
+			draw_texture_rect(emblem, Rect2(size.x - 22, 3, 19, 19), false)
 	draw_rect(Rect2(2, size.y - 19, size.x - 4, 17), Color(0.02, 0.03, 0.055, 0.88))
 	draw_string(f, Vector2(5, size.y - 6), String(d.name).substr(0, 15), HORIZONTAL_ALIGNMENT_LEFT, size.x - 8, 11, Color(0.94, 0.95, 0.98))
 	var price := "$" + UITheme.fmt(g.cost_of(g.human_pid, type))

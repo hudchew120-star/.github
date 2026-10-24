@@ -560,7 +560,8 @@ func _refresh_powers() -> void:
 		var btn: Button = power_buttons[id]
 		var nm: String = Specials.POWERS[id].name
 		if not st.available:
-			btn.text = nm + " (needs Airfield)"
+			var need: Array = Specials.POWERS[id].prereq.map(func(t): return Data.def(Data.building_for_tag(game.players[game.human_pid].faction, t)).get("name", t))
+			btn.text = "%s (needs %s)" % [nm, ", ".join(need)]
 			btn.disabled = true
 		elif st.ready:
 			btn.text = nm + "  READY"

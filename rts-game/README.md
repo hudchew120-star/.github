@@ -59,6 +59,15 @@ support power or a bonus, and its own infantry uniform.
 | 🇨🇳 | China | Dominion | **Gatling Tank**: fires faster the longer it shoots, hits air too | Infantry 20% cheaper and faster to train |
 | 🇨🇺 | Cuba | Dominion | **Guerrilla**: cheap, quick, heals itself | **Revolution**: 5 guerrillas rise up anywhere, recharges in 3 min 20 s |
 
+Every country has its own **emblem** (a unique outline and national animal: US eagle on a star,
+British lion on a shield, German eagle on a gold diamond, French rooster on a hexagon, Thai white
+elephant on a temple arch, Korean tiger on an octagon, Japanese rising sun, Russian bear on a
+cut-corner badge, Chinese dragon on a triangle, Cuban crocodile on a pennant). It is painted on
+turret roofs and vehicle decks, aircraft wings, ship decks and structure pads, and shown on the
+build cards.
+
+![Country emblems](docs/screenshots/country_emblems.png)
+
 Support power buttons sit under the minimap in the sidebar (click, then click the target on
 the map). AI opponents pick a country of their side and use its specials.
 
