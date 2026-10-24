@@ -100,7 +100,7 @@ func _update_hover() -> void:
 	var shape := Input.CURSOR_ARROW
 	if mode == "place":
 		shape = Input.CURSOR_CROSS
-	elif mode in ["attack_move", "patrol"]:
+	elif mode in ["attack_move", "patrol", "power"]:
 		shape = Input.CURSOR_CROSS
 	elif mode == "repair" or mode == "sell":
 		shape = Input.CURSOR_POINTING_HAND
@@ -182,6 +182,23 @@ func set_mode(m: String) -> void:
 		place_type = ""
 	mode_changed.emit()
 
+var power_id: String = ""
+
+## E / Deploy button: construction vehicles unpack, Coalition riflemen dig in, minelayers lay a mine.
+func deploy_selected() -> void:
+	for u in own_units():
+		if u.def.has("deploys_to") or u.can_dig_in() or u.def.has("minelayer"):
+			u.cmd_deploy()
+
+func begin_power(id: String) -> void:
+	var st: Dictionary = game.specials.power_state(game.human_pid, id)
+	if not st.ready:
+		hud_message("%s: %s" % [Specials.POWERS[id].name, "recharging" if st.available else "requires an Airfield"], "warn")
+		game.play_sound("error", Vector2.INF)
+		return
+	power_id = id
+	set_mode("power")
+
 func cancel_mode() -> void:
 	set_mode("")
 
@@ -233,6 +250,15 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 				else:
 					hud_message(r, "warn")
 					game.play_sound("error", Vector2.INF)
+				return
+			"power":
+				var r: String = game.specials.use_power(game.human_pid, power_id, wp)
+				if r != "":
+					hud_message(r, "warn")
+					game.play_sound("error", Vector2.INF)
+				else:
+					_marker(wp, Color(1, 0.8, 0.2))
+				cancel_mode()
 				return
 			"attack_move", "patrol":
 				game.command_group(own_units(), mode, wp)
@@ -292,6 +318,18 @@ func _right_click(wp: Vector2, shift: bool, sp: Vector2) -> void:
 		else:
 			set_selection([])
 		return
+	var planters := units.filter(func(u): return u.def.has("planter") and u.plant_cd <= 0.0)
+	if target != null and game.are_enemies(game.human_pid, target.pid) and planters.size() > 0:
+		var usable := planters.filter(func(u): return target.is_building() or not u.def.planter.get("buildings_only", false))
+		if usable.size() > 0:
+			# Commando C4 / demolition charge; the rest of the selection attacks normally.
+			usable[0].cmd_plant(target)
+			var rest := units.filter(func(u): return u != usable[0])
+			if rest.size() > 0:
+				game.command_group(rest, "attack", wp, target)
+			_marker(target.pos, Color(1, 0.55, 0.1))
+			game.play_sound("move", Vector2.INF)
+			return
 	var engineers := units.filter(func(u): return u.engineer)
 	if target != null and target.is_building() and engineers.size() > 0 and (game.are_enemies(game.human_pid, target.pid) or (target.pid == game.human_pid and target.hp < target.max_hp)):
 		# Engineers capture enemy structures or fully repair our own; one engineer is enough.
@@ -382,9 +420,7 @@ func _key(ev: InputEventKey) -> void:
 		for u in own_units():
 			u.cmd_scatter()
 	elif ev.is_action("cmd_deploy"):
-		for u in own_units():
-			if u.def.has("deploys_to"):
-				u.cmd_deploy()
+		deploy_selected()
 	elif ev.is_action("select_all_army"):
 		set_selection(game.units.filter(func(u): return u.pid == game.human_pid and u.can_attack() and not u.is_harvester))
 	elif ev.is_action("repair_mode"):

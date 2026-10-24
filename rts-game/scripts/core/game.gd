@@ -29,6 +29,7 @@ var accumulator: float = 0.0
 var over: bool = false
 var won: bool = false
 var cheats: Cheats
+var specials: Specials
 var ais: Array = []
 var unit_hash := SpatialHash.new(128.0)
 var building_hash := SpatialHash.new(192.0)
@@ -61,6 +62,7 @@ func setup(s: Dictionary, is_headless: bool = false) -> void:
 	settings.merge(s, true)
 	headless = is_headless
 	cheats = Cheats.new(self)
+	specials = Specials.new(self)
 	cheats.enabled = bool(settings.cheats_allowed) or settings.mode == "sandbox"
 	if cheats.enabled:
 		cheats.load_persisted()
@@ -522,7 +524,23 @@ func availability(pid: int, t: String) -> String:
 			return "Requires: " + ", ".join(names)
 	if producer_for(pid, d.get("category", "")) == null:
 		return "No production facility."
+	if d.has("build_limit") and count_owned(pid, t) >= int(d.build_limit):
+		return "Limit reached (%d at a time)." % int(d.build_limit)
 	return ""
+
+## Units of a type a player owns plus those queued.
+func count_owned(pid: int, t: String) -> int:
+	var n := 0
+	for u in units:
+		if u.pid == pid and not u.dead and u.type == t:
+			n += 1
+	for b in buildings:
+		if b.pid == pid and not b.dead:
+			for cat in b.queues:
+				for it in b.queues[cat]:
+					if it.type == t:
+						n += 1
+	return n
 
 func producer_for(pid: int, cat: String):
 	var p = players[pid]
@@ -600,7 +618,9 @@ func place_structure(pid: int, cat: String, c: Vector2i) -> String:
 func spawn_from_factory(b, t: String) -> bool:
 	var d := Data.def(t)
 	var mc: String = d.get("move", "foot")
-	if mc == "air":
+	if mc == "air" and d.get("jetpack", false):
+		mc = "foot"
+	elif mc == "air":
 		var au := spawn_unit(b.pid, t, b.pos)
 		if au == null:
 			return false
@@ -947,6 +967,7 @@ func step() -> void:
 		if pr.dead:
 			projectiles.erase(pr)
 			pr.queue_free()
+	specials.tick(DT)
 	if profiling: t = _prof("projectiles", t)
 	if tick_count % 4 == 0:
 		_service_repairs()
@@ -1282,7 +1303,7 @@ func to_save() -> Dictionary:
 	return {
 		"version": 1, "settings": s, "map": map.to_dict(), "players": players.map(func(p): return p.to_dict()),
 		"entities": ents, "next_uid": next_uid, "tick": tick_count, "time": sim_time, "speed": speed,
-		"cheats": cheats.to_dict(), "ai": ais.map(func(a): return a.to_dict()), "over": over, "objectives": objectives,
+		"cheats": cheats.to_dict(), "specials": specials.to_dict(), "ai": ais.map(func(a): return a.to_dict()), "over": over, "objectives": objectives,
 	}
 
 func load_save(d: Dictionary, is_headless: bool = false) -> void:
@@ -1292,6 +1313,8 @@ func load_save(d: Dictionary, is_headless: bool = false) -> void:
 	settings.merge(d.settings, true)
 	cheats = Cheats.new(self)
 	cheats.from_dict(d.get("cheats", {}))
+	specials = Specials.new(self)
+	specials.from_dict(d.get("specials", {}))
 	map = MapGrid.new()
 	map.from_dict(d.map)
 	map.build_navigation()

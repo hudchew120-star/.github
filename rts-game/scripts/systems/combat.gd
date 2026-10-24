@@ -11,7 +11,7 @@ static func roll_damage(w: Dictionary) -> float:
 ## Target classes: "air", "sub" (submerged submarine), "naval" (ships), "ground" (land and ships).
 static func target_class(t) -> String:
 	if t.is_air():
-		return "air"
+		return "air_low" if t.is_unit() and t.def.get("low_air", false) else "air"
 	if t.is_unit():
 		if t.submarine and t.submerged():
 			return "sub"
@@ -21,7 +21,12 @@ static func target_class(t) -> String:
 
 static func can_target(w: Dictionary, t) -> bool:
 	var targets: Array = w.get("targets", ["ground"])
+	if w.get("infantry_only", false) and not (t.is_unit() and t.is_infantry() and not t.is_air()):
+		return false
 	var c := target_class(t)
+	if c == "air_low":
+		# Jetpack troopers fly low: anti-air and ordinary guns (not shells or rockets) can hit them.
+		return targets.has("air") or (targets.has("ground") and w.get("projectile", "bullet") in ["bullet", "zap"])
 	if targets.has(c):
 		return true
 	if c == "naval" and targets.has("ground"):
@@ -40,6 +45,10 @@ static func damage_against(w: Dictionary, t, base: float) -> float:
 static func fire(game, shooter, w: Dictionary, t) -> void:
 	if t == null or not is_instance_valid(t) or t.dead:
 		return
+	if shooter.is_unit() and shooter.damage_mult() != 1.0:
+		w = w.duplicate()
+		var dm: Array = w.get("damage", [10, 10])
+		w["damage"] = [dm[0] * shooter.damage_mult(), dm[1] * shooter.damage_mult()]
 	var from: Vector2 = shooter.pos
 	var muzzle = from + (t.pos - from).normalized() * shooter.radius
 	var h: float = shooter.altitude_now if shooter.is_unit() and shooter.is_air_unit else 0.0

@@ -15,6 +15,8 @@ var power_bar: Control
 var power_label: Label
 var minimap: Minimap
 var tab_buttons := {}
+var powers_box: HBoxContainer
+var power_buttons := {}
 var current_cat: String = "building"
 var grid: GridContainer
 var buttons: Array = []
@@ -147,6 +149,10 @@ func _build_sidebar() -> void:
 	minimap.custom_minimum_size = Vector2(SIDEBAR_W - 18, SIDEBAR_W - 40)
 	minimap.setup(game, controller)
 	v.add_child(minimap)
+	# Support powers (Paratroopers / Bomber Strike).
+	powers_box = HBoxContainer.new()
+	powers_box.add_theme_constant_override("separation", 3)
+	v.add_child(powers_box)
 	# Tabs.
 	var tabs := GridContainer.new()
 	tabs.columns = 3
@@ -469,11 +475,24 @@ func _refresh_selection() -> void:
 		_cmd("Scatter (V)", _each.bind("cmd_scatter"))
 		var has_mcv := false
 		var has_harv := false
+		var has_dig := false
+		var has_mines := false
+		var mines_left := 0
 		for u in controller.own_units():
 			has_mcv = has_mcv or u.def.has("deploys_to")
 			has_harv = has_harv or u.is_harvester
+			has_dig = has_dig or u.can_dig_in()
+			if u.def.has("minelayer"):
+				has_mines = true
+				mines_left += u.mines_left
 		if has_mcv:
 			_cmd("Deploy (E)", _each.bind("cmd_deploy"))
+		if has_dig:
+			_cmd("Dig in / move out (E)", controller.deploy_selected)
+		if has_mines:
+			_cmd("Lay mine (E) [%d]" % mines_left, func():
+				controller.deploy_selected()
+				_refresh_selection())
 		if has_harv:
 			_cmd("Harvest", _each.bind("cmd_harvest"))
 	elif first.is_building() and sel.size() == 1:
@@ -490,6 +509,35 @@ func _refresh_selection() -> void:
 				_refresh_sidebar())
 			var l = UITheme.label("Right-click the ground to set a rally point.", 12, UITheme.DIM)
 			sel_cmds.add_child(l)
+
+func _refresh_powers() -> void:
+	if powers_box == null:
+		return
+	for id in game.specials.powers_for(game.human_pid):
+		var st: Dictionary = game.specials.power_state(game.human_pid, id)
+		if not power_buttons.has(id):
+			var b := Button.new()
+			b.focus_mode = Control.FOCUS_NONE
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.add_theme_font_size_override("font_size", 12)
+			b.tooltip_text = "%s\n%s\nRecharges in %d s. Free to use." % [Specials.POWERS[id].name, Specials.POWERS[id].desc, int(Specials.POWERS[id].cooldown)]
+			b.pressed.connect(controller.begin_power.bind(id))
+			powers_box.add_child(b)
+			power_buttons[id] = b
+		var btn: Button = power_buttons[id]
+		var nm: String = Specials.POWERS[id].name
+		if not st.available:
+			btn.text = nm + " (needs Airfield)"
+			btn.disabled = true
+		elif st.ready:
+			btn.text = nm + "  READY"
+			btn.disabled = false
+			btn.modulate = Color(1.0, 1.0, 1.0) if fmod(game.sim_time, 1.0) < 0.6 else Color(1.25, 1.15, 0.7)
+		else:
+			var rem := int(ceil(st.remaining))
+			btn.text = "%s  %d:%02d" % [nm, rem / 60, rem % 60]
+			btn.disabled = true
+			btn.modulate = Color.WHITE
 
 func _each(method: String) -> void:
 	for u in controller.own_units():
@@ -687,4 +735,5 @@ func _process(delta: float) -> void:
 		refresh_t = 0.2
 		_refresh_sidebar()
 		_update_status()
+		_refresh_powers()
 	box_overlay.queue_redraw()

@@ -53,6 +53,13 @@ var submarine: bool = false
 var surfaced_until: float = -100.0
 var detector_px: float = 0.0
 var engineer: bool = false
+# Special abilities
+var para_t: float = 0.0            # > 0 while floating down under a parachute
+var deployed: bool = false         # Coalition rifleman dug in behind sandbags
+var deploy_t: float = 0.0          # time left to finish digging in / packing up
+var mines_left: int = 0
+var mine_regen_t: float = 0.0
+var plant_cd: float = 0.0
 
 # Harvester state
 var is_harvester: bool = false
@@ -105,6 +112,8 @@ func setup_unit() -> void:
 	submarine = bool(def.get("submarine", false))
 	detector_px = float(def.get("detector", 0)) * MapGrid.T
 	engineer = bool(def.get("engineer", false))
+	if def.has("minelayer"):
+		mines_left = int(def.minelayer.max)
 	position = pos
 	last_pos = pos
 	guard_pos = pos
@@ -131,6 +140,8 @@ func cmd_stop() -> void:
 		harv_state = ""
 
 func cmd_move(p: Vector2, keep_order: bool = false) -> void:
+	if deployed:
+		_set_deployed(false)
 	if is_air_unit:
 		order = "move"
 		clear_target()
@@ -221,9 +232,55 @@ func cmd_harvest(c: Vector2i = Vector2i(-1, -1)) -> void:
 		_request_path()
 
 func cmd_deploy() -> bool:
+	if can_dig_in():
+		_set_deployed(not deployed)
+		return true
+	if def.has("minelayer"):
+		return game.specials.lay_mine(self)
 	if not def.has("deploys_to"):
 		return false
 	return game.try_deploy(self)
+
+func can_dig_in() -> bool:
+	return def.has("deploy") and def.deploy.get("factions", []).has(player().faction)
+
+func _set_deployed(on: bool) -> void:
+	if on == deployed:
+		return
+	deployed = on
+	deploy_t = float(def.deploy.get("time", 1.0))
+	if on:
+		_stop_moving()
+		order = "hold"
+		guard_pos = pos
+	game.play_sound("click", pos)
+
+## Outgoing damage multiplier (dug-in riflemen hit harder).
+func damage_mult() -> float:
+	return float(def.deploy.get("damage_mult", 1.0)) if deployed and deploy_t <= 0.0 else 1.0
+
+func range_mult() -> float:
+	return float(def.deploy.get("range_mult", 1.0)) if deployed and deploy_t <= 0.0 else 1.0
+
+func take_damage(amount: float, attacker) -> void:
+	if deployed and deploy_t <= 0.0:
+		amount *= float(def.deploy.get("armor_mult", 1.0))
+	super.take_damage(amount, attacker)
+
+## Commando C4 / Demolition Trooper: walk up to a target and plant a timed charge.
+func cmd_plant(t) -> void:
+	if not def.has("planter") or t == null:
+		return
+	if def.planter.get("buildings_only", false) and not t.is_building():
+		return
+	if deployed:
+		_set_deployed(false)
+	order = "plant"
+	target = t
+	target_uid = t.uid
+	forced_target = true
+	goal = t.pos
+	_request_path()
 
 # ---------------------------------------------------------------- pathing
 
@@ -332,8 +389,24 @@ func _check_stuck(dt: float) -> void:
 func tick(dt: float) -> void:
 	if hit_flash > 0.0:
 		hit_flash -= dt
+	if para_t > 0.0:
+		para_t -= dt
+		altitude_now = maxf(0.0, para_t * 0.7)
+		if para_t <= 0.0:
+			altitude_now = 0.0
+			guard_pos = pos
+		return
 	if game.cheats.frozen(pid):
 		return
+	if deploy_t > 0.0:
+		deploy_t -= dt
+	if plant_cd > 0.0:
+		plant_cd -= dt
+	if def.has("minelayer") and mines_left < int(def.minelayer.max):
+		mine_regen_t += dt
+		if mine_regen_t >= float(def.minelayer.regen):
+			mine_regen_t = 0.0
+			mines_left += 1
 	if is_air_unit:
 		_tick_weapons_cd(dt)
 		_tick_air(dt)
@@ -378,6 +451,8 @@ func tick(dt: float) -> void:
 			_tick_harvest(dt)
 		"capture":
 			_tick_capture(dt)
+		"plant":
+			_tick_plant(dt)
 	_check_stuck(dt)
 	if game.sim_nodes_visible:
 		position = pos
@@ -394,7 +469,7 @@ func _target_valid(t) -> bool:
 
 func _in_range(w: Dictionary, t) -> bool:
 	var d: float = t.edge_distance(pos)
-	var r := float(w.def.range) * MapGrid.T
+	var r := float(w.def.range) * MapGrid.T * range_mult()
 	var mn := float(w.def.get("min_range", 0.0)) * MapGrid.T
 	return d <= r and d >= mn
 
@@ -464,7 +539,7 @@ func _tick_guard(dt: float) -> void:
 	if moving:
 		_follow_path(dt)
 	if target == null:
-		var r := max_range_px + (MapGrid.T * 2.0 if order == "guard" else MapGrid.T * 0.5)
+		var r := maxf(max_range_px * range_mult(), MapGrid.T * 3.0) + (MapGrid.T * 2.0 if order == "guard" else MapGrid.T * 0.5)
 		_acquire(dt, r)
 		if target == null and not moving and pos.distance_to(guard_pos) > MapGrid.T * 2.0 and order == "guard":
 			goal = guard_pos
@@ -556,7 +631,7 @@ func _tick_patrol(dt: float) -> void:
 
 func _tick_hold(dt: float) -> void:
 	if target == null:
-		_acquire(dt, max_range_px)
+		_acquire(dt, max_range_px * range_mult())
 	if target != null and not _engage(target, dt):
 		clear_target()
 
@@ -695,6 +770,29 @@ func _go_to_refinery() -> void:
 	_request_path()
 
 # ---------------------------------------------------------------- engineers
+
+func _tick_plant(dt: float) -> void:
+	if target == null or not is_instance_valid(target) or target.dead:
+		order = "idle"
+		clear_target()
+		_stop_moving()
+		return
+	if target.edge_distance(pos) <= MapGrid.T * 0.9:
+		if plant_cd <= 0.0:
+			game.specials.plant_bomb(self, target)
+			plant_cd = float(def.planter.get("cooldown", 3.0))
+		order = "guard"
+		guard_pos = pos
+		clear_target()
+		_stop_moving()
+		return
+	if target.is_unit():
+		goal = target.pos
+	repath_t -= dt
+	if (not moving and not need_path and repath_t <= 0.0) or (target.is_unit() and repath_t <= 0.0):
+		repath_t = 0.8
+		_request_path()
+	_follow_path(dt)
 
 func _tick_capture(dt: float) -> void:
 	if target == null or not is_instance_valid(target) or target.dead:
@@ -890,6 +988,7 @@ func to_dict() -> Dictionary:
 		"harv_cell": [harv_cell.x, harv_cell.y], "last_field": [last_field.x, last_field.y],
 		"cd": weapons.map(func(w): return w.cd),
 		"ammo": ammo, "air_state": air_state, "alt": altitude_now, "pad": pad_uid, "pad_i": pad_index,
+		"para": para_t, "deployed": deployed, "mines": mines_left, "plant_cd": plant_cd,
 	})
 	return d
 
@@ -919,6 +1018,10 @@ func apply_dict(d: Dictionary) -> void:
 	altitude_now = float(d.get("alt", altitude_now))
 	pad_uid = int(d.get("pad", 0))
 	pad_index = int(d.get("pad_i", -1))
+	para_t = float(d.get("para", 0.0))
+	deployed = bool(d.get("deployed", false))
+	mines_left = int(d.get("mines", mines_left))
+	plant_cd = float(d.get("plant_cd", 0.0))
 	if bool(d.get("moving", false)) or order in ["move", "attack_move", "patrol"]:
 		_request_path()
 	if is_harvester and order == "harvest" and harv_state in ["to_refinery", "unloading", "wait_dock"]:

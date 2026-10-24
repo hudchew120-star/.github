@@ -6,7 +6,7 @@
    "dominion"
   ],
   "category": "infantry",
-  "role": "Cheap all-round infantry. Good against other infantry.",
+  "role": "Cheap all-round infantry. Good against other infantry. Coalition riflemen press E to dig in behind sandbags (more range and damage, less damage taken).",
   "cost": 100,
   "build_time": 4,
   "hp": 50,
@@ -22,7 +22,16 @@
    "barracks"
   ],
   "sprite": "infantry",
-  "turn_rate": 0
+  "turn_rate": 0,
+  "deploy": {
+   "factions": [
+    "coalition"
+   ],
+   "range_mult": 1.5,
+   "damage_mult": 1.75,
+   "armor_mult": 0.5,
+   "time": 1.0
+  }
  },
  "e3": {
   "name": "Lancer",
@@ -541,5 +550,146 @@
   ],
   "sprite": "cruiser",
   "turn_rate": 1.4
+ },
+ "jjet": {
+  "name": "Rocketeer",
+  "factions": [
+   "coalition"
+  ],
+  "category": "infantry",
+  "role": "Jetpack trooper. Flies over any terrain; good against infantry. Hit by anti-air and rifles.",
+  "cost": 600,
+  "build_time": 8,
+  "hp": 110,
+  "armor": "aircraft",
+  "speed": 2.2,
+  "move": "air",
+  "altitude": 0.75,
+  "hover": true,
+  "low_air": true,
+  "jetpack": true,
+  "sight": 6,
+  "radius": 7,
+  "weapons": [
+   "jet_mg"
+  ],
+  "prereq": [
+   "barracks",
+   "radar"
+  ],
+  "sprite": "rocketeer",
+  "turn_rate": 6.0
+ },
+ "cmdo": {
+  "name": "Commando",
+  "factions": [
+   "coalition"
+  ],
+  "category": "infantry",
+  "role": "Elite soldier. Kills infantry fast and destroys structures with C4 (right-click a structure). One at a time.",
+  "cost": 1500,
+  "build_time": 14,
+  "hp": 220,
+  "armor": "none",
+  "speed": 1.25,
+  "move": "foot",
+  "sight": 7,
+  "radius": 6,
+  "weapons": [
+   "dual_pistols"
+  ],
+  "prereq": [
+   "barracks",
+   "radar"
+  ],
+  "sprite": "commando",
+  "build_limit": 1,
+  "planter": {
+   "delay": 3.0,
+   "c4": true,
+   "buildings_only": true,
+   "cooldown": 1.0
+  }
+ },
+ "ivan": {
+  "name": "Demolition Trooper",
+  "factions": [
+   "dominion"
+  ],
+  "category": "infantry",
+  "role": "Plants a timed bomb on any enemy unit or structure (right-click). The blast hurts everything nearby.",
+  "cost": 600,
+  "build_time": 8,
+  "hp": 80,
+  "armor": "none",
+  "speed": 1.0,
+  "move": "foot",
+  "sight": 5,
+  "radius": 6,
+  "weapons": [],
+  "prereq": [
+   "barracks",
+   "radar"
+  ],
+  "sprite": "demolition",
+  "planter": {
+   "delay": 8.0,
+   "damage": 650,
+   "splash": 1.3,
+   "buildings_only": false,
+   "cooldown": 5.0
+  }
+ },
+ "dog": {
+  "name": "Attack Dog",
+  "factions": [
+   "dominion"
+  ],
+  "category": "infantry",
+  "role": "Fast scout. Kills infantry in one bite; cannot hurt vehicles or structures.",
+  "cost": 200,
+  "build_time": 4,
+  "hp": 60,
+  "armor": "none",
+  "speed": 2.5,
+  "move": "foot",
+  "sight": 7,
+  "radius": 6,
+  "weapons": [
+   "jaws"
+  ],
+  "prereq": [
+   "barracks"
+  ],
+  "sprite": "dog"
+ },
+ "mnly": {
+  "name": "Minelayer",
+  "factions": [
+   "dominion"
+  ],
+  "category": "vehicle",
+  "role": "Lays hidden mines (press E). Holds 5 mines and slowly makes new ones.",
+  "cost": 800,
+  "build_time": 10,
+  "hp": 320,
+  "armor": "heavy",
+  "speed": 1.8,
+  "move": "track",
+  "sight": 5,
+  "radius": 12,
+  "weapons": [],
+  "prereq": [
+   "factory"
+  ],
+  "sprite": "minelayer",
+  "turret": false,
+  "turn_rate": 3.0,
+  "minelayer": {
+   "max": 5,
+   "regen": 15.0,
+   "damage": 380,
+   "radius": 0.9
+  }
  }
 }

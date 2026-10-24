@@ -437,5 +437,61 @@
    "ground"
   ],
   "sound": "rocket"
+ },
+ "jet_mg": {
+  "name": "Jetpack machine gun",
+  "damage": [
+   11,
+   15
+  ],
+  "range": 4.5,
+  "rof": 0.45,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 0.9,
+  "targets": [
+   "ground",
+   "naval"
+  ],
+  "sound": "rifle"
+ },
+ "dual_pistols": {
+  "name": "Twin pistols",
+  "damage": [
+   95,
+   115
+  ],
+  "range": 5.0,
+  "rof": 0.55,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 1.0,
+  "targets": [
+   "ground"
+  ],
+  "sound": "rifle"
+ },
+ "jaws": {
+  "name": "Jaws",
+  "damage": [
+   500,
+   500
+  ],
+  "range": 0.9,
+  "rof": 0.9,
+  "warhead": "SA",
+  "projectile": "bullet",
+  "speed": 0,
+  "splash": 0.0,
+  "accuracy": 1.0,
+  "targets": [
+   "ground"
+  ],
+  "infantry_only": true,
+  "sound": ""
  }
 }

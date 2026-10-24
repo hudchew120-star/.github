@@ -290,6 +290,12 @@ func _make_visual(e) -> Dictionary:
 			v["turret"] = tur
 			v["tsheet"] = ts
 		n.position = SpriteLib.iso(e.pos)
+		if e.is_infantry():
+			var extras := Node2D.new()
+			extras.draw.connect(_draw_unit_extras.bind(extras, v))
+			n.add_child(extras)
+			n.move_child(extras, 0)
+			v["extras"] = extras
 		if e.is_air_unit:
 			# Ground shadow (separate sheet) and, for helicopters, a spinning rotor disc.
 			var stex := SpriteLib._load_tex("res://assets/sprites/%s_shadow.png" % name)
@@ -330,6 +336,34 @@ func _make_visual(e) -> Dictionary:
 	else:
 		entity_layer.add_child(n)
 	return v
+
+## Sandbag ring for dug-in riflemen (drawn behind the soldier) and parachute canopies.
+func _draw_unit_extras(node: Node2D, v: Dictionary) -> void:
+	var e = v.e
+	if e.deployed:
+		var k: float = 1.0 if e.deploy_t <= 0.0 else 1.0 - e.deploy_t
+		for i in 10:
+			var a := TAU * i / 10.0
+			var p: Vector2 = Vector2(cos(a) * 22.0, sin(a) * 11.0 + 2.0) * k
+			var col := Color(0.62, 0.53, 0.36).darkened(0.18 if sin(a) < 0.0 else 0.0)
+			node.draw_set_transform(p, a * 0.0, Vector2(1, 1))
+			node.draw_circle(Vector2.ZERO, 6.5, col.darkened(0.35))
+			node.draw_circle(Vector2(0, -1.5), 5.5, col)
+		node.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if e.para_t > 0.0:
+		var top := Vector2(0, -78)
+		var w := 30.0
+		var pts := PackedVector2Array()
+		for i in 13:
+			var a := PI + PI * i / 12.0
+			pts.append(top + Vector2(cos(a) * w, sin(a) * 18.0))
+		pts.append(top + Vector2(w, 0))
+		node.draw_colored_polygon(pts, Color(0.92, 0.9, 0.82))
+		for i in 6:
+			var x := -w + i * (w * 2.0 / 5.0)
+			node.draw_line(top + Vector2(x, -2), top + Vector2(x * 0.92, -14.0 * sin(PI * i / 5.0)), Color(0.75, 0.72, 0.62), 1.5)
+		for x in [-w, -w * 0.4, w * 0.4, w]:
+			node.draw_line(top + Vector2(x, 0), Vector2(0, -40), Color(0.2, 0.2, 0.2, 0.8), 1.0)
 
 ## Helicopter main rotor: translucent blurred disc plus fast-turning blade highlights.
 func _draw_rotor(rot: Node2D, v: Dictionary) -> void:
@@ -374,6 +408,8 @@ func _process(delta: float) -> void:
 		else:
 			_update_building(v, delta)
 	_update_projectiles(delta)
+	_update_flyovers()
+	_update_mines(delta)
 	_update_ghost()
 	overlay.queue_redraw()
 
@@ -410,6 +446,9 @@ func _update_unit(v: Dictionary, delta: float) -> void:
 			var sn := sin(e.facing)
 			v.rotor.position = SpriteLib.iso_cells(Vector2(rp[0] * c - rp[2] * sn, rp[0] * sn + rp[2] * c), rp[1])
 			v.rotor.queue_redraw()
+	if v.has("extras") and (e.deployed or e.para_t > 0.0 or v.get("had_extras", false)):
+		v.extras.queue_redraw()
+		v["had_extras"] = e.deployed or e.para_t > 0.0
 	# Submarines: own submerged boats show as a dark translucent shape.
 	if e.submarine:
 		n.modulate = Color(0.55, 0.65, 0.75, 0.45) if e.submerged() else Color.WHITE
@@ -532,6 +571,73 @@ func _on_removed(e) -> void:
 	fx.fade = 1.0
 	fx.material = SpriteLib.team_material(e.team_color(), ds.mask)
 	ground_fx.add_child(fx)
+
+var flyover_sprites: Array = []
+var mines_node: Node2D
+var mines_t: float = 0.0
+
+## Support-power aircraft (transport for paratroopers, bombers).
+func _update_flyovers() -> void:
+	var fl: Array = game.specials.flyovers
+	while flyover_sprites.size() < fl.size():
+		var body := Sprite2D.new()
+		body.region_enabled = true
+		body.centered = false
+		air_layer.add_child(body)
+		var sh := Sprite2D.new()
+		sh.region_enabled = true
+		sh.centered = false
+		ground_fx.add_child(sh)
+		flyover_sprites.append([body, sh, ""])
+	for i in flyover_sprites.size():
+		var pair: Array = flyover_sprites[i]
+		var body: Sprite2D = pair[0]
+		var sh: Sprite2D = pair[1]
+		if i >= fl.size():
+			body.visible = false
+			sh.visible = false
+			continue
+		var f: Dictionary = fl[i]
+		var name: String = ("u_transport_%s" if f.kind == "transport" else "u_bomber_%s") % f.faction
+		if not SpriteLib.has(name):
+			name = "u_jet_%s" % f.faction
+		var s := SpriteLib.sheet(name)
+		if s == null:
+			continue
+		if pair[2] != name:
+			pair[2] = name
+			body.texture = s.tex
+			body.offset = -Vector2(s.ax, s.ay)
+			body.material = SpriteLib.team_material(game.players[f.pid].color, s.mask)
+			var stex := SpriteLib._load_tex("res://assets/sprites/%s_shadow.png" % name)
+			sh.texture = stex
+			sh.offset = -Vector2(s.ax, s.ay)
+		var d := SpriteLib.dir_index(f.dir.angle(), int(s.extra.get("dirs", 32)))
+		body.region_rect = s.region(d)
+		sh.region_rect = s.region(d)
+		body.visible = true
+		sh.visible = sh.texture != null
+		body.position = SpriteLib.iso(f.pos, 2.2)
+		sh.position = SpriteLib.iso(f.pos)
+
+## The player's own (and allies') mines; enemy mines are invisible.
+func _update_mines(delta: float) -> void:
+	mines_t -= delta
+	if mines_t > 0.0:
+		return
+	mines_t = 0.4
+	if mines_node == null:
+		mines_node = Node2D.new()
+		mines_node.draw.connect(_draw_mines)
+		ground_fx.add_child(mines_node)
+	mines_node.queue_redraw()
+
+func _draw_mines() -> void:
+	for c in game.specials.visible_mines(game.human_pid):
+		var p := SpriteLib.iso_cells(Vector2(c) + Vector2(0.5, 0.5))
+		mines_node.draw_circle(p + Vector2(0, 2), 7.0, Color(0, 0, 0, 0.35))
+		mines_node.draw_circle(p, 6.0, Color(0.28, 0.3, 0.24))
+		mines_node.draw_circle(p + Vector2(0, -1), 2.5, Color(0.85, 0.15, 0.1))
 
 func _update_projectiles(_delta: float) -> void:
 	var seen := {}
@@ -725,6 +831,14 @@ func _draw_overlay() -> void:
 			overlay.draw_circle(c, 9, Color(0.1, 0.45, 0.15, 0.85))
 			overlay.draw_line(c - Vector2(5, 0), c + Vector2(5, 0), Color.WHITE, 2.0)
 			overlay.draw_line(c - Vector2(0, 5), c + Vector2(0, 5), Color.WHITE, 2.0)
+	for bomb in game.specials.bombs:
+		var bp := world_to_screen(bomb.pos, 0.7)
+		if not screen_has(bp):
+			continue
+		var blink: bool = fmod(bomb.t, 0.5 if bomb.t < 3.0 else 1.0) < 0.25
+		overlay.draw_circle(bp, 8.0, Color(0.08, 0.08, 0.08, 0.85))
+		overlay.draw_circle(bp, 5.0, Color(1, 0.15, 0.1) if blink else Color(0.45, 0.05, 0.05))
+		overlay.draw_string(font, bp + Vector2(10, 5), "%d" % int(ceil(bomb.t)), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.85, 0.3))
 	for u in game.units:
 		if u.dead or not u.visible:
 			continue

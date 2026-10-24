@@ -84,7 +84,9 @@
    "heli_c": 2,
    "jet_c": 1,
    "boat_c": 2,
-   "dest_c": 2
+   "dest_c": 2,
+   "jjet": 1,
+   "cmdo": 0.3
   },
   "dominion": {
    "e1": 3,
@@ -95,7 +97,9 @@
    "heli_d": 2,
    "jet_d": 1,
    "sub_d": 2,
-   "cruiser_d": 2
+   "cruiser_d": 2,
+   "dog": 1,
+   "ivan": 0.6
   }
  },
  "counters": {

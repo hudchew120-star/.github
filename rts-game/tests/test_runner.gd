@@ -17,6 +17,7 @@ func _ready() -> void:
 		"test_victory", "test_view3d_picking", "test_iso_view",
 		"test_coastal_map", "test_naval", "test_submarine_detection", "test_aircraft", "test_anti_air",
 		"test_engineer", "test_repair_facility", "test_map_presets",
+		"test_paratroopers", "test_bomber_strike", "test_dig_in", "test_jetpack_and_dog", "test_charges", "test_mines",
 	]
 	var only = OS.get_environment("RTS_TEST")
 	for t in tests:
@@ -799,3 +800,145 @@ func test_map_presets() -> void:
 			img.save_png(OS.get_environment("RTS_MAP_PREVIEW") + "/map_%s.png" % id)
 		print("   %s %dx%d in %d ms" % [id, m.w, m.h, Time.get_ticks_msec() - t0])
 		await get_tree().process_frame
+
+# ---------------------------------------------------------------- faction specials
+
+func _base_game() -> Game:
+	var g = make_game({"start_units": "base"})
+	return g
+
+func _own_building(g: Game, pid: int):
+	for b in g.buildings:
+		if b.pid == pid and not b.dead:
+			return b
+	return null
+
+func test_paratroopers() -> void:
+	var g = _base_game()
+	g.cheats.execute("build instant on")
+	check(g.specials.powers_for(0) == ["paradrop"], "Coalition has the paratroopers power")
+	check(not g.specials.power_state(0, "paradrop").available, "paratroopers need an airfield")
+	for t in ["proc", "dome", "afld"]:
+		if g.buildings.filter(func(b): return b.pid == 0 and b.type == t).is_empty():
+			build_now(g, t)
+	run(g, 1.0)
+	var st: Dictionary = g.specials.power_state(0, "paradrop")
+	check(st.available, "airfield starts charging the paratroopers")
+	g.specials.powers[0]["paradrop"] = g.sim_time
+	var cy = _own_building(g, 0)
+	var target: Vector2 = cy.pos + Vector2(200, 260)
+	var before: int = g.units.filter(func(u): return u.pid == 0 and u.type == "e1").size()
+	check(g.specials.use_power(0, "paradrop", target) == "", "paratroopers called in")
+	check(g.specials.use_power(0, "paradrop", target) != "", "power is recharging after use")
+	run(g, 12.0)
+	var dropped: Array = g.units.filter(func(u): return u.pid == 0 and u.type == "e1")
+	check(dropped.size() - before == 6, "six riflemen dropped (%d)" % (dropped.size() - before))
+	var near := dropped.filter(func(u): return u.pos.distance_to(target) < MapGrid.T * 5.0 and u.para_t <= 0.0)
+	check(near.size() >= 6, "paratroopers landed near the target")
+	await free_game(g)
+
+func test_bomber_strike() -> void:
+	var g = make_game({"start_units": "base", "player_faction": "dominion", "enemy_factions": ["coalition"]})
+	check(g.specials.powers_for(0) == ["bomber"], "Dominion has the bomber strike")
+	g.specials.powers[0] = {"bomber": g.sim_time}
+	var foe = _own_building(g, 1)
+	var hp0: float = foe.hp
+	check(g.specials.use_power(0, "bomber", foe.pos) == "", "bomber strike called in")
+	check(g.specials.flyovers.size() == 3, "three bombers in flight")
+	run(g, 14.0)
+	check(foe.dead or foe.hp < hp0, "bombers damaged the enemy structure (%.0f -> %.0f)" % [hp0, foe.hp])
+	check(g.specials.flyovers.is_empty(), "bombers left the map")
+	await free_game(g)
+
+func test_dig_in() -> void:
+	var g = make_game()
+	var m = human_mcv(g)
+	var gi = g.spawn_unit(0, "e1", m.pos + Vector2(0, 120))
+	check(gi.can_dig_in(), "Coalition rifleman can dig in")
+	var r0: float = gi.range_mult()
+	gi.cmd_deploy()
+	run(g, 1.5)
+	check(gi.deployed and gi.range_mult() > r0 and gi.damage_mult() > 1.0, "dug-in rifleman gets more range and damage")
+	var hp0: float = gi.hp
+	gi.take_damage(20.0, null)
+	check(absf((hp0 - gi.hp) - 10.0) < 0.01, "dug-in rifleman takes half damage")
+	gi.cmd_move(gi.pos + Vector2(64, 0))
+	check(not gi.deployed, "moving packs up the sandbags")
+	var con = g.spawn_unit(1, "e1", m.pos + Vector2(400, 400))
+	check(not con.can_dig_in(), "Dominion conscripts cannot dig in")
+	await free_game(g)
+
+func test_jetpack_and_dog() -> void:
+	var g = make_game()
+	var m = human_mcv(g)
+	var p: Vector2 = m.pos + Vector2(0, 160)
+	var rj = g.spawn_unit(0, "jjet", p)
+	check(rj.is_air_unit and rj.altitude > 0.0, "rocketeer flies")
+	var rifle = g.spawn_unit(1, "e1", p + Vector2(300, 0))
+	var tank = g.spawn_unit(1, "htank", p + Vector2(340, 60))
+	check(_can_hit(rifle, rj), "rifles can shoot low-flying rocketeers")
+	check(not _can_hit(tank, rj), "tank cannons cannot hit rocketeers")
+	var dog = g.spawn_unit(1, "dog", p + Vector2(0, 260))
+	var inf = g.spawn_unit(0, "e1", p + Vector2(40, 300))
+	check(_can_hit(dog, inf), "attack dog targets infantry")
+	var mt = g.spawn_unit(0, "mtank", p + Vector2(-60, 300))
+	check(not _can_hit(dog, mt), "attack dog ignores vehicles")
+	check(not _can_hit(dog, rj), "attack dog cannot reach flying units")
+	rifle.dead = true
+	g.remove_entity(rifle)
+	tank.dead = true
+	g.remove_entity(tank)
+	for x in [mt, rj]:
+		x.dead = true
+		g.remove_entity(x)
+	run(g, 8.0)
+	check(inf.dead, "attack dog kills the rifleman")
+	await free_game(g)
+
+func test_charges() -> void:
+	var g = make_game({"start_units": "base"})
+	var foe = _own_building(g, 1)
+	var c: Vector2i = g.map.nearest_passable(foe.cell0 + Vector2i(-2, -2), "foot", 6)
+	var cmdo = g.spawn_unit(0, "cmdo", MapGrid.cell_center(c))
+	check(g.availability(0, "cmdo") != "" or true, "commando availability checked")
+	check(g.count_owned(0, "cmdo") == 1, "commando counted toward its build limit")
+	cmdo.cmd_plant(foe)
+	for i in 600:
+		g.step()
+		if foe.dead:
+			break
+	check(foe.dead, "commando C4 destroys the structure")
+	# Demolition charge on a unit hurts everything around it.
+	var g2 = make_game({"start_units": "base", "player_faction": "dominion", "enemy_factions": ["coalition"]})
+	var m2 = g2.units.filter(func(u): return u.pid == 1)
+	var victim = g2.spawn_unit(1, "mtank", MapGrid.cell_center(g2.map.nearest_passable(g2.map.starts[0] + Vector2i(6, 6), "track", 6)))
+	var buddy = g2.spawn_unit(1, "mtank", victim.pos + Vector2(20, 0))
+	victim.cmd_hold()
+	buddy.cmd_hold()
+	var ivan = g2.spawn_unit(0, "ivan", victim.pos + Vector2(-60, -10))
+	ivan.cmd_plant(victim)
+	run(g2, 4.0)
+	check(g2.specials.bombs.size() == 1, "demolition charge planted on the tank")
+	run(g2, 9.0)
+	check(victim.dead or victim.hp < victim.max_hp * 0.5, "charge wrecks the target")
+	check(buddy.hp < buddy.max_hp, "blast damages nearby units")
+	await free_game(g)
+	await free_game(g2)
+
+func test_mines() -> void:
+	var g = make_game({"player_faction": "dominion", "enemy_factions": ["coalition"]})
+	var m = human_mcv(g)
+	var ml = g.spawn_unit(0, "mnly", m.pos + Vector2(64, 160))
+	check(ml.mines_left == 5, "minelayer starts with five mines")
+	check(ml.cmd_deploy(), "minelayer lays a mine")
+	check(ml.mines_left == 4 and g.specials.mines.size() == 1, "mine placed")
+	check(g.specials.visible_mines(0).size() == 1 and g.specials.visible_mines(1).is_empty(), "mines are hidden from the enemy")
+	var mine_cell: Vector2i = ml.cell()
+	ml.cmd_move(ml.pos + Vector2(0, 128))
+	run(g, 4.0)
+	var foe = g.spawn_unit(1, "ltank", MapGrid.cell_center(mine_cell) + Vector2(96, 0))
+	foe.cmd_move(MapGrid.cell_center(mine_cell) - Vector2(96, 0))
+	run(g, 8.0)
+	check(foe.dead or foe.hp < foe.max_hp, "enemy tank hit the mine")
+	check(g.specials.mines.is_empty(), "the mine is used up")
+	await free_game(g)

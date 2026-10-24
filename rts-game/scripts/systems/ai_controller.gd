@@ -68,6 +68,7 @@ func _think() -> void:
 	_manage_army()
 	_manage_navy()
 	_manage_air()
+	_manage_specials()
 	if cfg.repair:
 		_manage_repairs()
 
@@ -326,7 +327,7 @@ func _manage_production() -> void:
 		for b in _my_buildings():
 			if b.completed and b.produces("aircraft"):
 				pads += maxi(b.def.get("pads", []).size(), 1)
-		var flyers := _my_units().filter(func(u): return u.is_air_unit).size()
+		var flyers := _my_units().filter(func(u): return u.is_air_unit and not u.def.get("jetpack", false)).size()
 		if flyers < pads:
 			var t := _pick_unit("aircraft")
 			if t != "" and player.credits() > int(Data.def(t).cost) + reserve * 1.5:
@@ -354,10 +355,10 @@ func _manage_repairs() -> void:
 # ---------------------------------------------------------------- army
 
 func _combat_units() -> Array:
-	return _my_units().filter(func(u): return u.can_attack() and not u.is_harvester and not u.is_naval and not u.is_air_unit)
+	return _my_units().filter(func(u): return u.can_attack() and not u.is_harvester and not u.is_naval and (not u.is_air_unit or u.def.get("jetpack", false)))
 
 func on_unit_built(u) -> void:
-	if u.is_air_unit or u.is_naval:
+	if (u.is_air_unit and not u.def.get("jetpack", false)) or u.is_naval:
 		return
 	if u.can_attack():
 		var rp := _rally_point()
@@ -510,7 +511,7 @@ func _naval_target() -> Vector2:
 func _manage_air() -> void:
 	if not cfg.get("air", false):
 		return
-	var flyers := _my_units().filter(func(u): return u.is_air_unit and u.can_attack())
+	var flyers := _my_units().filter(func(u): return u.is_air_unit and u.can_attack() and not u.def.get("jetpack", false))
 	var ready := flyers.filter(func(u): return (u.order == "guard" or u.order == "idle") and (u.max_ammo < 0 or u.ammo == u.max_ammo))
 	# Defend the base against attackers first.
 	if threat_pos != Vector2.INF and game.sim_time - threat_time < 6.0 and ready.size() > 0:
@@ -519,6 +520,60 @@ func _manage_air() -> void:
 	# Strike in pairs or more once the land army has started attacking.
 	if ready.size() >= 2 and attack_wave > 0:
 		game.command_group(ready, "attack_move", _known_target())
+
+# ---------------------------------------------------------------- special abilities
+
+func _manage_specials() -> void:
+	var sp = game.specials
+	for id in sp.powers_for(player.id):
+		if sp.power_state(player.id, id).ready and game.sim_time > float(cfg.first_attack) * 0.6:
+			var t := _power_target(id)
+			if t != Vector2.INF:
+				sp.use_power(player.id, id, t)
+	# Commandos and demolition troopers go after nearby enemy structures (and units for charges).
+	for u in _my_units():
+		if not u.def.has("planter") or u.plant_cd > 0.0 or u.order == "plant":
+			continue
+		if u.order != "guard" and u.order != "idle" and not (u.order == "attack_move" and u.target == null):
+			continue
+		var best = null
+		var best_d := MapGrid.T * 22.0
+		for e in game.entities_near(u.pos, best_d):
+			if e.dead or not game.are_enemies(player.id, e.pid):
+				continue
+			if u.def.planter.get("buildings_only", false) and not e.is_building():
+				continue
+			if e.is_unit() and e.is_air_unit:
+				continue
+			var d: float = e.edge_distance(u.pos) - (60.0 if e.is_building() else 0.0)
+			if d < best_d:
+				best_d = d
+				best = e
+		if best != null:
+			u.cmd_plant(best)
+
+## Paratroopers land next to an enemy refinery or power plant; bombers hit the densest cluster of structures.
+func _power_target(id: String) -> Vector2:
+	var enemy_b: Array = game.buildings.filter(func(b): return not b.dead and game.are_enemies(player.id, b.pid) and (cfg.counter or player.vis.size() == 0 or player.vis[game.map.idx(b.cell0)] != 0))
+	if enemy_b.is_empty():
+		return Vector2.INF
+	if id == "paradrop":
+		for b in enemy_b:
+			var prov: Array = b.def.get("provides", [])
+			if prov.has("refinery") or prov.has("power"):
+				return b.pos + Vector2(randf_range(-64, 64), randf_range(64, 110))
+		return enemy_b[0].pos + Vector2(0, 96)
+	var best = enemy_b[0]
+	var best_n := -1
+	for b in enemy_b:
+		var n := 0
+		for o in enemy_b:
+			if o.pos.distance_to(b.pos) < MapGrid.T * 4.0:
+				n += 1
+		if n > best_n:
+			best_n = n
+			best = b
+	return best.pos
 
 func to_dict() -> Dictionary:
 	return {"wave": attack_wave, "threshold": threshold, "next_attack": next_attack_time, "group": attack_group.duplicate(),
