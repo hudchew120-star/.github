@@ -70,6 +70,7 @@ Generated maps have a **Water** option (lakes, coastal for naval warfare, or dry
 
 ![Country units: Thai rangers, Japanese mecha, Korean Black Eagle, German tank destroyer, French Grand Cannon, Russian Tsar tank, Chinese Gatling tank, Cuban guerrillas](docs/screenshots/iso_countries.png)
 ![Choosing countries by flag](docs/screenshots/menu_countries.png)
+![New defenses, walls and the card-style build menu](docs/screenshots/iso_defenses.png)
 ![Paratroopers, dug-in riflemen, rocketeers, commando, dogs and a minelayer](docs/screenshots/iso_specials.png)
 ![Naval base on a coastal map](docs/screenshots/iso_naval.png)
 ![Armies and helicopters](docs/screenshots/iso_army.png)

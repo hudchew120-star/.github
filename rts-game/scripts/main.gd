@@ -132,7 +132,7 @@ func _stage_scene(kind: String) -> void:
 			var u = game.spawn_unit(ships[i][1], ships[i][0], MapGrid.cell_center(c))
 			if u != null:
 				u.facing = randf() * TAU
-	var land := [] if kind == "specials" else [["mtank", 0, Vector2(4, 5)], ["mtank", 0, Vector2(5, 4)], ["ltank", 0, Vector2(6, 6)], ["aa_c", 0, Vector2(3, 6)], ["jeep", 0, Vector2(7, 4)],
+	var land := [] if kind == "specials" or kind == "defenses" else [["mtank", 0, Vector2(4, 5)], ["mtank", 0, Vector2(5, 4)], ["ltank", 0, Vector2(6, 6)], ["aa_c", 0, Vector2(3, 6)], ["jeep", 0, Vector2(7, 4)],
 		["e1", 0, Vector2(6, 2)], ["e1", 0, Vector2(6.4, 2.5)], ["e1", 0, Vector2(6.8, 2.1)], ["e3", 0, Vector2(7.2, 2.6)], ["eng", 0, Vector2(5.6, 2.8)],
 		["htank", 1, Vector2(10, 9)], ["aa_d", 1, Vector2(11, 8)], ["e1", 1, Vector2(9, 10.5)], ["e4", 1, Vector2(9.5, 11)], ["flm", 1, Vector2(10, 11.2)], ["e1", 1, Vector2(10.5, 10.6)]]
 	for e in land:
@@ -179,8 +179,38 @@ func _stage_scene(kind: String) -> void:
 		game.specials.use_power(1, "bomber", c0 + Vector2(-260, -200))
 		for f in game.specials.flyovers:
 			f.pos = f.target - f.dir * MapGrid.T * (5.0 if f.kind == "transport" else 9.0)
+	if kind == "defenses":
+		for p in game.players:
+			p.team = 0
+			p.power_bonus = 2000
+		var c0: Vector2i = base + Vector2i(5, 5)
+		var mine := [["gtwr", Vector2i(0, 0)], ["mort", Vector2i(2, 0)], ["mbnk", Vector2i(4, 0)], ["pbox", Vector2i(0, 2)], ["gun", Vector2i(2, 2)], ["sam", Vector2i(4, 2)]]
+		for e in mine:
+			game.create_building(0, e[0], c0 + e[1], true)
+		var theirs := [["bnkr", Vector2i(0, 5)], ["tcan", Vector2i(2, 5)], ["rbat", Vector2i(4, 5)], ["ftur", Vector2i(0, 7)], ["flak", Vector2i(2, 7)]]
+		for e in theirs:
+			game.create_building(1, e[0], c0 + e[1], true)
+		# A wall run with a corner and a T junction on each side.
+		for k in 8:
+			game.create_building(0, "cwal", c0 + Vector2i(-2, -2 + k), true)
+		for k in 6:
+			game.create_building(0, "cwal", c0 + Vector2i(-1 + k, -2), true)
+		for k in 7:
+			game.create_building(1, "iwal", c0 + Vector2i(-2 + k, 9), true)
+		for k in 3:
+			game.create_building(1, "iwal", c0 + Vector2i(1, 10 + k), true)
+		for e in [["mtank", 0, Vector2(7.5, 1.5)], ["ltank", 0, Vector2(8.5, 2.5)], ["htank", 1, Vector2(7.5, 6.5)], ["aa_d", 1, Vector2(8.5, 7.5)]]:
+			var u = game.spawn_unit(e[1], e[0], MapGrid.cell_center(c0) + (e[2] as Vector2) * MapGrid.T)
+			if u != null:
+				u.facing = 2.4
+				u.turret_facing = 2.4
+				u.cmd_hold()
+		for p in game.players:
+			p.recompute(game.buildings)
 	if controller != null:
-		if kind == "specials":
+		if kind == "defenses":
+			controller.center_on(MapGrid.cell_center(base + Vector2i(8, 9)))
+		elif kind == "specials":
 			controller.center_on(bp + Vector2(5, 6) * MapGrid.T)
 		elif kind == "naval" and yard.x >= 0:
 			controller.center_on(MapGrid.cell_center(yard) + Vector2(2.5, 3.5) * MapGrid.T)

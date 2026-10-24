@@ -3,7 +3,7 @@
 Environment: Godot 4.3 stable, Linux, headless run and software-rendered (Mesa llvmpipe)
 screenshots. Command: `godot --headless --path . res://tests/test_runner.tscn`
 
-**Result: 39 tests, 390 checks passed, 0 failed.**
+**Result: 41 tests, 409 checks passed, 0 failed.**
 
 | Test | What it verifies |
 | --- | --- |
@@ -45,6 +45,8 @@ screenshots. Command: `godot --headless --path . res://tests/test_runner.tscn`
 | test_countries | Ten countries with valid sides, unique items and powers; country picks set the side; unique units only for their country; Chinese infantry discount; German vehicle armour; default countries; country saved and loaded |
 | test_thai_rangers_stealth | Thai infantry speed bonus; rangers cloak when still, cannot be targeted from range, are spotted up close |
 | test_country_powers | UK spy plane reveals the enemy base for 30 s, then the fog returns; Cuban revolution raises five guerrillas |
+| test_new_defenses | Each side has at least six defenses; the rocket battery fires a multi-rocket salvo that damages a tank; bunker built with its machine gun |
+| test_walls | One wall purchase gives eight sections that can be placed one by one; walls block ground units; a player with only walls left is defeated |
 | test_country_units | Tsar tank repairs itself and carries anti-air missiles; Gatling spin-up and reset; sniper rifle hits infantry only |
 
 Manual checks (1920x1080 screenshots, Forward+ renderer on a software Vulkan driver): isometric

@@ -1,1 +1,1 @@
-{"ax": 112, "ay": 119.040000915527, "cols": 24, "count": 32, "extra": {"dirs": 32, "pivot": [0, 0, 0], "states": 1}, "fh": 192, "fw": 224, "mask": true, "res": 2, "rows": 2, "separate_shadow": false, "shadow": true, "toon": true}
+{"ax": 112, "ay": 119.040000915527, "cols": 24, "count": 32, "extra": {"dirs": 32, "pivot": [0, 0, 0], "states": 1}, "fh": 192, "fw": 224, "mask": true, "res": 2, "rows": 2, "separate_shadow": false, "shadow": true, "toon": false}

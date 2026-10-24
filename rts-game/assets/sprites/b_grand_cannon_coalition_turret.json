@@ -1,1 +1,1 @@
-{"ax": 160, "ay": 150, "cols": 16, "count": 32, "extra": {"dirs": 32, "pivot": [1, 0.379999995231628, 1]}, "fh": 240, "fw": 320, "mask": true, "res": 2, "rows": 2, "separate_shadow": false, "shadow": false, "toon": true}
+{"ax": 160, "ay": 150, "cols": 16, "count": 32, "extra": {"dirs": 32, "pivot": [1, 0.379999995231628, 1]}, "fh": 240, "fw": 320, "mask": true, "res": 2, "rows": 2, "separate_shadow": false, "shadow": false, "toon": false}
