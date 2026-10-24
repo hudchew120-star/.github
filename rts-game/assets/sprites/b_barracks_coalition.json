@@ -1,1 +1,1 @@
-{"ax": 248, "ay": 148, "cols": 7, "count": 7, "extra": {"frames": ["normal", "damaged", "build1", "build2", "build3", "build4", "build5"], "height": 1, "size": [2, 2], "smoke": []}, "fh": 326, "fw": 426, "mask": true, "res": 2, "rows": 1, "shadow": true}
+{"ax": 248, "ay": 148, "cols": 7, "count": 7, "extra": {"frames": ["normal", "damaged", "build1", "build2", "build3", "build4", "build5"], "height": 1, "size": [2, 2], "smoke": []}, "fh": 326, "fw": 426, "mask": true, "res": 2, "rows": 1, "separate_shadow": false, "shadow": true, "toon": true}

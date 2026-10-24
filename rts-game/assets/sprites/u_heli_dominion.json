@@ -1,1 +1,1 @@
-{"ax": 120, "ay": 124, "cols": 22, "count": 32, "extra": {"air": true, "dirs": 32, "pivot": [0, 0, 0], "rotor": {"blades": 5, "pos": [0, 0.53, 0], "r": 0.6}, "states": 1}, "fh": 200, "fw": 240, "mask": true, "res": 2, "rows": 2, "separate_shadow": true, "shadow": true}
+{"ax": 120, "ay": 124, "cols": 22, "count": 32, "extra": {"air": true, "dirs": 32, "pivot": [0, 0, 0], "rotor": {"blades": 5, "pos": [0, 0.53, 0], "r": 0.6}, "states": 1}, "fh": 200, "fw": 240, "mask": true, "res": 2, "rows": 2, "separate_shadow": true, "shadow": true, "toon": true}

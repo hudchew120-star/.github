@@ -1,1 +1,1 @@
-{"ax": 128, "ay": 150, "cols": 4, "count": 4, "extra": {}, "fh": 224, "fw": 256, "mask": false, "res": 2, "rows": 1, "shadow": true}
+{"ax": 128, "ay": 150, "cols": 4, "count": 4, "extra": {}, "fh": 224, "fw": 256, "mask": false, "res": 2, "rows": 1, "separate_shadow": false, "shadow": true, "toon": true}

@@ -58,7 +58,11 @@ def main():
     flt = sys.argv[1] if len(sys.argv) > 1 else ""
     os.makedirs(DST, exist_ok=True)
     for fn in sorted(os.listdir(SRC)):
-        if not fn.endswith(".json") or flt not in fn:
+        if not fn.endswith(".json"):
+            continue
+        if flt.startswith("^") and fn[:-5] != flt[1:]:
+            continue
+        if not flt.startswith("^") and flt not in fn:
             continue
         name = fn[:-5]
         meta = json.load(open(os.path.join(SRC, fn)))
