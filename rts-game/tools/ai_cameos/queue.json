@@ -1,0 +1,17 @@
+{
+  "_about": "Painted build icons still to make with the Canva image generator, in order. An icon is done when tools/ai_cameos/<file>.png exists; never regenerate a done icon. Canva gives about 3 images a day, so a daily job makes the next ones until the account's credits run out.",
+  "style": "Video game build-menu unit icon, real-time strategy game like Command & Conquer: {subject}, isometric three-quarter view from above, highly detailed semi-realistic 3D render, dramatic studio lighting, dark navy blue gradient background, centered, full body, no text",
+  "aspect": "LANDSCAPE_5_4",
+  "queue": [
+    {"file": "jjet_coalition", "subject": "a single jetpack trooper flying with a twin-nozzle jetpack with flames, grey flight suit, white helmet with orange visor, holding a machine gun"},
+    {"file": "snip_coalition", "subject": "a single British army sniper kneeling and aiming a long scoped sniper rifle, green-brown multi-terrain camouflage, wide-brim boonie hat"},
+    {"file": "rngr_coalition", "subject": "a single Thai army ranger (Thahan Phran) in all-black combat fatigues, black beret, blue neck scarf, holding a carbine rifle"},
+    {"file": "e1_dominion", "subject": "a single eastern-bloc conscript soldier holding an AK assault rifle with wooden furniture, olive-khaki field uniform, steel helmet with a red star, chest rig, tall black boots, red armband"},
+    {"file": "e4_dominion", "subject": "a single eastern-bloc heavy infantryman aiming an RPG rocket launcher on his shoulder, olive uniform, heavy flak vest, steel helmet with a red star, red armband"},
+    {"file": "flm_dominion", "subject": "a single eastern-bloc flamethrower trooper with twin fuel tanks on his back and a gas mask, firing a short burst of flame, olive uniform, red armband"},
+    {"file": "eng_dominion", "subject": "a single eastern-bloc combat engineer with a big tool pack, fur ushanka hat, olive work uniform, holding a wrench, red armband"},
+    {"file": "ivan_dominion", "subject": "a single demolition expert in a brown leather jacket and aviator cap with goggles, dynamite bandoliers across his chest, holding a bundle of dynamite, red armband"},
+    {"file": "dog_dominion", "subject": "a single fierce military attack dog (black and tan German shepherd) lunging forward with a red armoured collar"},
+    {"file": "guer_dominion", "subject": "a single Cuban revolutionary guerrilla with a black beret with a red star, beard, olive fatigues, ammunition bandolier, holding an old assault rifle"}
+  ]
+}
