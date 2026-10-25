@@ -76,6 +76,7 @@ UNITS = {
 }
 
 RENDERS = os.path.join(ROOT, "tools", "_bake_out", "cameos")             # hand-drawn (inked) renders
+AI_CAMEOS = os.path.join(ROOT, "tools", "ai_cameos")                       # painted icons (Canva AI), <type>_<faction|country>.png
 RENDERS_REAL = os.path.join(ROOT, "tools", "_bake_out", "cameos_real")   # realistic renders
 REAL_CATEGORIES = ("building", "defense", "vehicle")
 
@@ -141,5 +142,21 @@ def main():
             bg.convert("RGB").save(os.path.join(OUT, "%s_%s.png" % (t, faction)), optimize=True)
             print("cameo", t, faction)
 
+def apply_ai_cameos():
+    """Painted icons override the rendered ones. Files named after a country (e1_thailand.png)
+    become country-specific cameos that BuildButton prefers over the side's cameo."""
+    if not os.path.isdir(AI_CAMEOS):
+        return
+    for fn in sorted(os.listdir(AI_CAMEOS)):
+        if not fn.endswith(".png"):
+            continue
+        im = Image.open(os.path.join(AI_CAMEOS, fn)).convert("RGB")
+        s = max(W / im.width, H / im.height)
+        im = im.resize((round(im.width * s), round(im.height * s)), Image.LANCZOS)
+        x, y = (im.width - W) // 2, (im.height - H) // 2
+        im.crop((x, y, x + W, y + H)).save(os.path.join(OUT, fn), optimize=True)
+        print("ai cameo", fn[:-4])
+
 if __name__ == "__main__":
     main()
+    apply_ai_cameos()

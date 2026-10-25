@@ -96,7 +96,10 @@ anchor (the model's ground origin; for structures the footprint's top corner), g
 frame count and extras (turret pivot, smoke points, structure height). `_mask.png` holds the
 team-colour mask that `SpriteLib.team_material()` uses to recolour per player.
 
-`make_cameos.py` takes building, defense and vehicle cameos from `cameos_real` and the rest from
+Painted cameos (made with an image generator) live in `tools/ai_cameos/<type>_<faction>.png`
+and override the rendered ones; a file named after a country (`e1_thailand.png`) becomes a
+country-specific cameo that `BuildButton.cameo_for()` prefers. `make_cameos.py` takes building,
+defense and vehicle cameos from `cameos_real` and the rest from
 the inked `cameos` renders, on a navy card plate; `BuildButton` draws the price tag, name bar and
 border on top. Walls use one sheet per side (`b_wall_<faction>`) with 32 frames: the neighbour
 mask (N=1, E=2, S=4, W=8) picks frames 0-15, damaged sections add 16 (`IsoView._wall_mask`).

@@ -15,12 +15,15 @@ var cameo: Texture2D = null
 var emblem: Texture2D = null
 static var _cameo_cache := {}
 
-static func cameo_for(t: String, faction: String) -> Texture2D:
-	var k := "%s_%s" % [t, faction]
+static func cameo_for(t: String, faction: String, country: String = "") -> Texture2D:
+	var k := "%s_%s_%s" % [t, faction, country]
 	if _cameo_cache.has(k):
 		return _cameo_cache[k]
 	var tex: Texture2D = null
-	for f in [faction, "coalition", "dominion"]:
+	# A country's own cameo (e.g. Thai uniforms) wins over the side's.
+	for f in [country, faction, "coalition", "dominion"]:
+		if f == "":
+			continue
 		var p := "res://assets/ui/cameos/%s_%s.png" % [t, f]
 		if ResourceLoader.exists(p):
 			tex = load(p)
@@ -89,7 +92,7 @@ func _draw() -> void:
 		return
 	var p = g.players[g.human_pid]
 	if cameo == null:
-		cameo = cameo_for(type, p.faction)
+		cameo = cameo_for(type, p.faction, p.country)
 	var card := StyleBoxFlat.new()
 	card.bg_color = Color(0.05, 0.08, 0.14)
 	card.set_corner_radius_all(6)

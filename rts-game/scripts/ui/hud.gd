@@ -456,7 +456,7 @@ func _refresh_selection() -> void:
 	var ft: String = first.type
 	var fcol: Color = first.team_color()
 	var ffac: String = first.player().faction
-	var cam_tex: Texture2D = BuildButton.cameo_for(ft, ffac)
+	var cam_tex: Texture2D = BuildButton.cameo_for(ft, ffac, first.player().country)
 	icon.custom_minimum_size = Vector2(84, 66)
 	icon.draw.connect(func():
 		if cam_tex != null:
