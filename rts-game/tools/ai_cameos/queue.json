@@ -1,17 +1,402 @@
 {
-  "_about": "Painted build icons still to make with the Canva image generator, in order. An icon is done when tools/ai_cameos/<file>.png exists; never regenerate a done icon. Canva gives about 3 images a day, so a daily job makes the next ones until the account's credits run out.",
-  "style": "Video game build-menu unit icon, real-time strategy game like Command & Conquer: {subject}, isometric three-quarter view from above, highly detailed semi-realistic 3D render, dramatic studio lighting, dark navy blue gradient background, centered, full body, no text",
-  "aspect": "LANDSCAPE_5_4",
-  "queue": [
-    {"file": "jjet_coalition", "subject": "a single jetpack trooper flying with a twin-nozzle jetpack with flames, grey flight suit, white helmet with orange visor, holding a machine gun"},
-    {"file": "snip_coalition", "subject": "a single British army sniper kneeling and aiming a long scoped sniper rifle, green-brown multi-terrain camouflage, wide-brim boonie hat"},
-    {"file": "rngr_coalition", "subject": "a single Thai army ranger (Thahan Phran) in all-black combat fatigues, black beret, blue neck scarf, holding a carbine rifle"},
-    {"file": "e1_dominion", "subject": "a single eastern-bloc conscript soldier holding an AK assault rifle with wooden furniture, olive-khaki field uniform, steel helmet with a red star, chest rig, tall black boots, red armband"},
-    {"file": "e4_dominion", "subject": "a single eastern-bloc heavy infantryman aiming an RPG rocket launcher on his shoulder, olive uniform, heavy flak vest, steel helmet with a red star, red armband"},
-    {"file": "flm_dominion", "subject": "a single eastern-bloc flamethrower trooper with twin fuel tanks on his back and a gas mask, firing a short burst of flame, olive uniform, red armband"},
-    {"file": "eng_dominion", "subject": "a single eastern-bloc combat engineer with a big tool pack, fur ushanka hat, olive work uniform, holding a wrench, red armband"},
-    {"file": "ivan_dominion", "subject": "a single demolition expert in a brown leather jacket and aviator cap with goggles, dynamite bandoliers across his chest, holding a bundle of dynamite, red armband"},
-    {"file": "dog_dominion", "subject": "a single fierce military attack dog (black and tan German shepherd) lunging forward with a red armoured collar"},
-    {"file": "guer_dominion", "subject": "a single Cuban revolutionary guerrilla with a black beret with a red star, beard, olive fatigues, ammunition bandolier, holding an old assault rifle"}
-  ]
+ "_about": "Painted build icons still to make with the Canva image generator, in order (tab by tab). An icon is done when tools/ai_cameos/<file>.png exists; never regenerate a done icon. Canva gives about 3 images a day; an hourly job makes the next ones as soon as the credits reset and reports only when a whole tab is finished (or a bug is found).",
+ "style": "Video game build-menu unit icon, real-time strategy game like Command & Conquer: {subject}, isometric three-quarter view from above, highly detailed semi-realistic 3D render, dramatic studio lighting, dark navy blue gradient background, centered, full body, no text",
+ "aspect": "LANDSCAPE_5_4",
+ "queue": [
+  {
+   "file": "jjet_coalition",
+   "subject": "a single jetpack trooper flying with a twin-nozzle jetpack with flames, grey flight suit, white helmet with orange visor, holding a machine gun",
+   "tab": "Infantry"
+  },
+  {
+   "file": "snip_coalition",
+   "subject": "a single British army sniper kneeling and aiming a long scoped sniper rifle, green-brown multi-terrain camouflage, wide-brim boonie hat",
+   "tab": "Infantry"
+  },
+  {
+   "file": "rngr_coalition",
+   "subject": "a single Thai army ranger (Thahan Phran) in all-black combat fatigues, black beret, blue neck scarf, holding a carbine rifle",
+   "tab": "Infantry"
+  },
+  {
+   "file": "e1_dominion",
+   "subject": "a single eastern-bloc conscript soldier holding an AK assault rifle with wooden furniture, olive-khaki field uniform, steel helmet with a red star, chest rig, tall black boots, red armband",
+   "tab": "Infantry"
+  },
+  {
+   "file": "e4_dominion",
+   "subject": "a single eastern-bloc heavy infantryman aiming an RPG rocket launcher on his shoulder, olive uniform, heavy flak vest, steel helmet with a red star, red armband",
+   "tab": "Infantry"
+  },
+  {
+   "file": "flm_dominion",
+   "subject": "a single eastern-bloc flamethrower trooper with twin fuel tanks on his back and a gas mask, firing a short burst of flame, olive uniform, red armband",
+   "tab": "Infantry"
+  },
+  {
+   "file": "eng_dominion",
+   "subject": "a single eastern-bloc combat engineer with a big tool pack, fur ushanka hat, olive work uniform, holding a wrench, red armband",
+   "tab": "Infantry"
+  },
+  {
+   "file": "ivan_dominion",
+   "subject": "a single demolition expert in a brown leather jacket and aviator cap with goggles, dynamite bandoliers across his chest, holding a bundle of dynamite, red armband",
+   "tab": "Infantry"
+  },
+  {
+   "file": "dog_dominion",
+   "subject": "a single fierce military attack dog (black and tan German shepherd) lunging forward with a red armoured collar",
+   "tab": "Infantry"
+  },
+  {
+   "file": "guer_dominion",
+   "subject": "a single Cuban revolutionary guerrilla with a black beret with a red star, beard, olive fatigues, ammunition bandolier, holding an old assault rifle",
+   "tab": "Infantry"
+  },
+  {
+   "file": "fact_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a construction yard: main headquarters building with a command tower, a tall construction crane and vehicle bay, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "fact_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a construction yard: main headquarters building with a command tower, a tall construction crane and vehicle bay, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "powr_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a power plant with two concrete cooling towers emitting steam, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "powr_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a power plant with two concrete cooling towers emitting steam, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "apwr_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an advanced power plant: large domed reactor building with cooling towers, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "apwr_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an advanced power plant: large domed reactor building with cooling towers, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "proc_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an ore refinery with big yellow-brown ore storage tanks, a conveyor and an unloading dock, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "proc_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an ore refinery with big yellow-brown ore storage tanks, a conveyor and an unloading dock, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "silo_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an ore storage silo: a round tank with a domed roof and ladder, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "silo_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an ore storage silo: a round tank with a domed roof and ladder, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "tent_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an army barracks: long camp building with a green tent-like roof, flag pole and sandbags, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "barr_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an army barracks: concrete block barracks with a watchtower and a red star flag, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "weap_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a war factory: large curved-roof vehicle assembly hangar with a big door, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "weap_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a war factory: large curved-roof vehicle assembly hangar with a big door, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "dome_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a radar station with a large rotating radar dish on a tower, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "dome_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a radar station with a large rotating radar dish on a tower, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "afld_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an airfield with a curved hangar, control tower and two helipads, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "afld_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of an airfield with a curved hangar, control tower and two helipads, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "syrd_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a naval shipyard built on water: piers around a dock basin with a gantry crane, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "syrd_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a naval shipyard built on water: piers around a dock basin with a gantry crane, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "fix_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a vehicle repair facility: square service pad with a yellow gantry frame and robotic arms, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "fix_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a vehicle repair facility: square service pad with a yellow gantry frame and robotic arms, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "wthr_coalition",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a weather control superweapon: tall tower with a glowing energy orb inside a spinning coil cage and lightning rods, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "msil_dominion",
+   "tab": "Build",
+   "subject": "a single isometric miniature of a nuclear missile silo: armoured pad with half-open blast doors revealing a missile nose cone, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "pbox_coalition",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a concrete pillbox bunker with machine-gun slits and sandbags, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "gun_coalition",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a gun turret emplacement: armoured rotating turret with a long cannon on a concrete base, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "ftur_dominion",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a flame tower: round concrete tower with a flamethrower nozzle and fuel tank, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "tsla_dominion",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of an arc coil tower: tall electric tesla coil crackling with blue lightning, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "gtwr_coalition",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a guard tower: steel lattice watchtower with a sandbagged platform, machine gun and searchlight, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "mort_coalition",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a mortar pit: circular sandbag emplacement with a mortar tube and ammo crates, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "mbnk_coalition",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a missile bunker: low concrete bunker with a twin anti-tank missile launcher on top, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "bnkr_dominion",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a half-buried concrete dome bunker with machine guns poking out in every direction, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "tcan_dominion",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a heavy twin-cannon turret on an octagonal concrete base, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "rbat_dominion",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a rocket battery: rotating rail launcher loaded with rows of rockets, ammo crates, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "cwal_coalition",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a section of concrete jersey-barrier defensive wall with yellow-striped posts, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "iwal_dominion",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a section of riveted steel defensive wall with spikes on top and red-capped posts, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "sam_coalition",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a Patriot SAM site: rotating launcher box of four surface-to-air missiles behind sandbags, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "flak_dominion",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of a flak cannon: twin anti-aircraft guns behind an armoured shield on a concrete base, eastern-bloc military style, dark olive steel and rusty metal with red team-colour trim and red stars, on a small square concrete pad"
+  },
+  {
+   "file": "gcan_coalition",
+   "tab": "Defense",
+   "subject": "a single isometric miniature of the Grand Cannon: huge artillery fortress with a domed turret and an enormously long gun barrel, French tricolour band, modern western military style, light grey concrete and steel with blue team-colour trim, on a small square concrete pad"
+  },
+  {
+   "file": "jeep_coalition",
+   "tab": "Vehicle",
+   "subject": "a single a fast armoured utility jeep with a heavy machine gun, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "ltank_coalition",
+   "tab": "Vehicle",
+   "subject": "a single a light tank with a small turret and autocannon, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "mtank_coalition",
+   "tab": "Vehicle",
+   "subject": "a single a main battle tank with an angular turret and long cannon, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "htank_dominion",
+   "tab": "Vehicle",
+   "subject": "a single a heavy twin-cannon tank with a rounded cast turret and reactive armour, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "harv_coalition",
+   "tab": "Vehicle",
+   "subject": "a single a big armoured ore-mining truck carrying a load of gold ore, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "harv_dominion",
+   "tab": "Vehicle",
+   "subject": "a single a big armoured ore-mining truck carrying a load of gold ore, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "mcv_coalition",
+   "tab": "Vehicle",
+   "subject": "a single a mobile construction vehicle: huge armoured truck with a folded crane, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "mcv_dominion",
+   "tab": "Vehicle",
+   "subject": "a single a mobile construction vehicle: huge armoured truck with a folded crane, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "aa_c_coalition",
+   "tab": "Vehicle",
+   "subject": "a single a wheeled anti-aircraft vehicle carrying a turret of missile pods, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "aa_d_dominion",
+   "tab": "Vehicle",
+   "subject": "a single a tracked surface-to-air missile carrier with three large missiles and a radar dish, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "mnly_dominion",
+   "tab": "Vehicle",
+   "subject": "a single a tracked minelayer vehicle with a mine hopper and dispenser chute, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "tdst_coalition",
+   "tab": "Vehicle",
+   "subject": "a single a low German-style tank destroyer with a long fixed 128mm gun in a sloped casemate, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "mech_coalition",
+   "tab": "Vehicle",
+   "subject": "a single a fast two-legged walking combat mecha with twin rapid-fire guns, Japanese markings, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "tsar_dominion",
+   "tab": "Vehicle",
+   "subject": "a single a super-heavy tank with double tracks, twin huge cannons and missile pods, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "gatl_dominion",
+   "tab": "Vehicle",
+   "subject": "a single a tank with a six-barrel rotary gatling cannon turret, Chinese markings, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "heli_c_coalition",
+   "tab": "Aircraft",
+   "subject": "a single an attack helicopter with rocket pods, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "jet_c_coalition",
+   "tab": "Aircraft",
+   "subject": "a single a sleek strike fighter jet with missiles, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "heli_d_dominion",
+   "tab": "Aircraft",
+   "subject": "a single a heavily armoured assault helicopter with a chin cannon, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "jet_d_dominion",
+   "tab": "Aircraft",
+   "subject": "a single a heavy strike bomber jet with big swept wings and bombs, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "bjet_coalition",
+   "tab": "Aircraft",
+   "subject": "a single a black stealthy strike jet with canards and blue wingtips, South Korean markings, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "bomb_c_coalition",
+   "tab": "Aircraft",
+   "subject": "a single a large four-engine strategic bomber with swept wings, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "kirov_dominion",
+   "tab": "Aircraft",
+   "subject": "a single a huge armoured bomber airship (zeppelin) with riveted bands, tail fins and a gondola, red star, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "boat_c_coalition",
+   "tab": "Naval",
+   "subject": "a single a fast patrol gunboat on the water, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "dest_c_coalition",
+   "tab": "Naval",
+   "subject": "a single a guided-missile destroyer warship on the water, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "sub_d_dominion",
+   "tab": "Naval",
+   "subject": "a single a black attack submarine surfacing from the water, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "cruiser_d_dominion",
+   "tab": "Naval",
+   "subject": "a single a massive missile battlecruiser warship with missile silos and radar towers, on the water, dark olive and red paint, rounded cast armour, red stars"
+  },
+  {
+   "file": "dolph_coalition",
+   "tab": "Naval",
+   "subject": "a single a trained dolphin leaping from the water wearing a blue harness"
+  },
+  {
+   "file": "aegis_coalition",
+   "tab": "Naval",
+   "subject": "a single an air-defence cruiser warship with phased-array radar panels and missile cells, on the water, sand-grey and blue camouflage paint, angular modern armour"
+  },
+  {
+   "file": "squid_dominion",
+   "tab": "Naval",
+   "subject": "a single a giant red squid rising from the water with tentacles wrapping around, glowing yellow eyes"
+  },
+  {
+   "file": "scorp_dominion",
+   "tab": "Naval",
+   "subject": "a single a hydrofoil gunboat raised on foils above the water with a twin flak gun, dark olive and red paint, rounded cast armour, red stars"
+  }
+ ]
 }
